@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>videoapp — マイファイル</title>
+    <link rel="icon" href="/icons/icon-192.png">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+JP:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <script src="/js/nav-theme.js"></script>
+    <link rel="stylesheet" href="/css/common.css">
+    <link rel="stylesheet" href="/css/app.css">
+    <style>
+        .file-name-link {
+            color: var(--accent3);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .file-name-link:hover {
+            color: var(--accent2);
+            text-decoration: underline;
+        }
+
+        .mime-icon {
+            font-size: 1.2rem;
+            margin-right: .35rem;
+        }
+
+        .action-btn-group {
+            display: flex;
+            gap: .4rem;
+            align-items: center;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: .72rem;
+            font-weight: 700;
+        }
+
+        .status-ready {
+            background: rgba(34, 197, 94, .12);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, .25);
+        }
+
+        .status-uploading {
+            background: rgba(59, 130, 246, .12);
+            color: var(--accent2);
+            border: 1px solid rgba(59, 130, 246, .25);
+        }
+
+        .status-error {
+            background: rgba(239, 68, 68, .12);
+            color: var(--red);
+            border: 1px solid rgba(239, 68, 68, .25);
+        }
+
+        .status-other {
+            background: rgba(148, 163, 184, .08);
+            color: var(--text-sub);
+            border: 1px solid rgba(148, 163, 184, .18);
+        }
+
+        .pub-badge {
+            font-size: .68rem;
+            padding: 1px 6px;
+            border-radius: 3px;
+            font-weight: 700;
+            background: rgba(59, 130, 246, .1);
+            color: var(--accent2);
+            border: 1px solid rgba(59, 130, 246, .2);
+        }
+
+        .priv-badge {
+            font-size: .68rem;
+            padding: 1px 6px;
+            border-radius: 3px;
+            font-weight: 700;
+            background: rgba(148, 163, 184, .08);
+            color: var(--text-sub);
+            border: 1px solid rgba(148, 163, 184, .18);
+        }
+
+        .empty-row td {
+            padding: 3rem;
+            text-align: center;
+            color: var(--text-sub);
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="canvas"></canvas>
+    <div class="page-glow page-glow-1"></div>
+    <div class="page-glow page-glow-2"></div>
+
+    <nav id="nav">
+        <a class="nav-logo" href="/">videoapp</a>
+        <ul class="nav-links">
+            <li><a href="/">ホーム</a></li>
+            <li><a href="/upload.html">アップロード</a></li>
+            <li><a href="/files.html" class="active">マイファイル</a></li>
+            <li><a href="/settings.html">設定</a></li>
+            <li id="nav-admin-link" class="hidden"><a href="/admin.html">管理</a></li>
+        </ul>
+        <div class="nav-user">
+            <span id="nav-username"></span>
+            <button class="theme-toggle" id="theme-toggle"></button>
+            <button class="btn btn-ghost btn-sm" id="logout-btn">ログアウト</button>
+        </div>
+    </nav>
+
+    <main>
+        <div class="container">
+            <div class="stat-tag reveal">
+                <span class="stat-tag-dot"></span>
+                My Files
+            </div>
+
+            <div class="sec-eye reveal reveal-d1">
+                <div class="sec-eye-text">
+                    <div class="sec-lbl">Storage</div>
+                    <h1>マイファイル</h1>
+                </div>
+            </div>
+
+            <div class="card mb-2 reveal reveal-d2" id="storage-card" style="display:none">
+                <div class="flex justify-between items-center mb-1">
+                    <span class="text-sm text-sub">ストレージ使用量</span>
+                    <span class="text-sm" id="usage-label">— / —</span>
+                </div>
+                <div class="usage-bar-wrap">
+                    <div class="usage-bar" id="usage-bar" style="width:0%"></div>
+                </div>
+            </div>
+
+            <div class="search-row reveal reveal-d3" style="align-items:center">
+                <input class="input" id="search-input" placeholder="ファイル名で検索..." type="search">
+                <button class="btn btn-primary" id="search-btn">検索</button>
+                <a class="btn btn-ghost btn-sm" href="/upload.html" style="margin-left:auto">+ アップロード</a>
+            </div>
+
+            <div class="table-wrap reveal reveal-d3">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>ファイル名</th>
+                            <th style="width:7rem">サイズ</th>
+                            <th style="width:7rem">状態</th>
+                            <th style="width:6rem">公開</th>
+                            <th style="width:9rem">アップロード日</th>
+                            <th style="width:12rem">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="file-list">
+                        <tr class="empty-row">
+                            <td colspan="6">読み込み中...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="flex justify-between items-center mt-1 reveal reveal-d3" style="padding:0 .5rem">
+                <span class="text-sm text-sub" id="page-info">0件</span>
+                <div style="display:flex;gap:.4rem">
+                    <button class="btn btn-ghost btn-sm" id="page-prev">← 前へ</button>
+                    <button class="btn btn-ghost btn-sm" id="page-next">次へ →</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div class="modal-overlay hidden" id="modal-overlay">
+        <div class="modal">
+            <div class="modal-title" id="modal-title">確認</div>
+            <div id="modal-body"></div>
+            <div class="modal-actions">
+                <button class="btn btn-ghost" id="modal-cancel">キャンセル</button>
+                <button class="btn btn-danger" id="modal-confirm">削除</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/particles.js"></script>
+    <script type="module">
+        import { auth } from '/js/core/auth.js';
+        import { api } from '/js/core/api.js';
+
+        if (!auth.requireAuth()) throw new Error('redirect');
+
+        const me = auth.getUser();
+        document.getElementById('nav-username').textContent = me?.username ?? '';
+        if (auth.isAdmin()) document.getElementById('nav-admin-link').classList.remove('hidden');
+
+        document.getElementById('logout-btn').addEventListener('click', async () => {
+            await api.auth.logout().catch(() => { });
+            auth.clearSession();
+            location.href = '/login.html';
+        });
+
+        // Pagination
+        let allFiles = [], filtered = [], page = 0;
+        const PER = 30;
+
+        function fmtBytes(b) {
+            if (!b) return '0 B';
+            const u = ['B', 'KB', 'MB', 'GB', 'TB'];
+            let i = 0;
+            while (b >= 1024 && i < u.length - 1) { b /= 1024; i++; }
+            return b.toFixed(i ? 1 : 0) + ' ' + u[i];
+        }
+
+        function fmtDate(iso) {
+            if (!iso) return '—';
+            const d = new Date(typeof iso === 'number' ? iso * 1000 : iso);
+            return d.toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' });
+        }
+
+        function mimeEmoji(mime) {
+            if (!mime) return '📄';
+            if (mime.startsWith('video/')) return '🎬';
+            if (mime.startsWith('image/')) return '🖼️';
+            if (mime.startsWith('audio/')) return '🎵';
+            if (mime.includes('zip') || mime.includes('tar') || mime.includes('rar')) return '📦';
+            if (mime.includes('pdf')) return '📑';
+            return '📄';
+        }
+
+        function statusBadge(s) {
+            if (s === 'ready') return '<span class="status-badge status-ready">完了</span>';
+            if (s === 'uploading') return '<span class="status-badge status-uploading">処理中</span>';
+            if (s === 'error') return '<span class="status-badge status-error">エラー</span>';
+            return `<span class="status-badge status-other">${s ?? '—'}</span>`;
+        }
+
+        function esc(s) {
+            return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function render() {
+            const tbody = document.getElementById('file-list');
+            const slice = filtered.slice(page * PER, (page + 1) * PER);
+            if (!slice.length) {
+                tbody.innerHTML = '<tr class="empty-row"><td colspan="6">ファイルがありません</td></tr>';
+                document.getElementById('page-info').textContent = '0件';
+                return;
+            }
+            tbody.innerHTML = slice.map(f => `
+                <tr>
+                    <td>
+                        <span class="mime-icon">${mimeEmoji(f.mime_type)}</span>
+                        <a class="file-name-link" href="/file.html?id=${esc(f.id)}" title="${esc(f.safe_name)}">${esc(f.safe_name)}</a>
+                    </td>
+                    <td class="text-sub">${fmtBytes(f.size)}</td>
+                    <td>${statusBadge(f.status)}</td>
+                    <td>${f.public ? '<span class="pub-badge">公開</span>' : '<span class="priv-badge">非公開</span>'}</td>
+                    <td class="text-sub">${fmtDate(f.created_at)}</td>
+                    <td>
+                        <div class="action-btn-group">
+                            ${f.status === 'ready' ? `<a class="btn btn-ghost btn-sm" href="/files/${f.id}/download" download="${esc(f.safe_name)}">DL</a>` : ''}
+                            <a class="btn btn-outline btn-sm" href="/file.html?id=${esc(f.id)}">詳細</a>
+                            <button class="btn btn-danger btn-sm" data-id="${esc(f.id)}" data-name="${esc(f.safe_name)}">削除</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+            document.getElementById('page-info').textContent = `${filtered.length}件中 ${page * PER + 1}–${Math.min(filtered.length, (page + 1) * PER)}件`;
+        }
+
+        function applyFilter() {
+            const q = document.getElementById('search-input').value.trim().toLowerCase();
+            filtered = q ? allFiles.filter(f => f.safe_name.toLowerCase().includes(q)) : [...allFiles];
+            page = 0;
+            render();
+        }
+
+        function renderStorage() {
+            const used = allFiles.reduce((sum, file) => sum + (file.size ?? 0), 0);
+            const limit = me?.storage_limit_bytes ?? null;
+            const label = limit ? `${fmtBytes(used)} / ${fmtBytes(limit)}` : `${fmtBytes(used)} / 無制限`;
+            const pct = limit && limit > 0 ? Math.min(100, Math.round(used / limit * 100)) : 0;
+
+            document.getElementById('usage-label').textContent = label;
+            document.getElementById('usage-bar').style.width = pct + '%';
+            document.getElementById('storage-card').style.display = '';
+        }
+
+        document.getElementById('search-btn').addEventListener('click', applyFilter);
+        document.getElementById('search-input').addEventListener('keydown', e => { if (e.key === 'Enter') applyFilter(); });
+        document.getElementById('page-prev').addEventListener('click', () => { if (page > 0) { page--; render(); } });
+        document.getElementById('page-next').addEventListener('click', () => { if ((page + 1) * PER < filtered.length) { page++; render(); } });
+
+        // Delete modal
+        let pendingDelete = null;
+        document.getElementById('file-list').addEventListener('click', e => {
+            const btn = e.target.closest('[data-id]');
+            if (!btn) return;
+            pendingDelete = btn.dataset.id;
+            document.getElementById('modal-body').textContent = `「${btn.dataset.name}」を削除しますか？この操作は元に戻せません。`;
+            document.getElementById('modal-overlay').classList.remove('hidden');
+        });
+        document.getElementById('modal-cancel').addEventListener('click', () => {
+            document.getElementById('modal-overlay').classList.add('hidden');
+            pendingDelete = null;
+        });
+        document.getElementById('modal-confirm').addEventListener('click', async () => {
+            if (!pendingDelete) return;
+            try {
+                await api.files.delete(pendingDelete);
+                allFiles = allFiles.filter(f => f.id !== pendingDelete);
+                applyFilter();
+            } catch { }
+            document.getElementById('modal-overlay').classList.add('hidden');
+            pendingDelete = null;
+        });
+
+        // Load
+        async function load() {
+            try {
+                const res = await api.files.list({});
+                allFiles = res.items ?? res.files ?? res ?? [];
+                renderStorage();
+                applyFilter();
+            } catch {
+                document.getElementById('file-list').innerHTML = '<tr class="empty-row"><td colspan="6">読み込みに失敗しました</td></tr>';
+            }
+        }
+        load();
+
+        if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => { });
+    </script>
+</body>
+
+</html>

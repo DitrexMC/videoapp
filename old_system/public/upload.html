@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VideoApp — アップロード</title>
+    <script src="/js/theme.js"></script>
+    <link rel="stylesheet" href="/css/common.css">
+    <link rel="stylesheet" href="/css/app.css">
+</head>
+
+<body>
+    <canvas id="canvas"></canvas>
+    <div class="page-glow page-glow-1"></div>
+    <div class="page-glow page-glow-2"></div>
+
+    <nav id="nav">
+        <a class="nav-logo" href="/">VideoApp</a>
+        <ul class="nav-links">
+            <li><a href="/">ホーム</a></li>
+            <li><a href="/upload" class="active">アップロード</a></li>
+            <li><a href="/myfiles">マイファイル</a></li>
+            <li id="nav-admin-link" class="hidden"><a href="/admin">管理</a></li>
+        </ul>
+        <div class="nav-user">
+            <span id="nav-username"></span>
+            <button class="theme-toggle" id="theme-toggle"></button>
+            <button class="btn btn-ghost btn-sm" id="logout-btn">ログアウト</button>
+        </div>
+    </nav>
+
+    <main>
+        <div class="container">
+            <div class="stat-tag reveal">
+                <span class="stat-tag-dot"></span>
+                File Upload
+            </div>
+
+            <div class="sec-eye reveal reveal-d1">
+                <div class="sec-eye-text">
+                    <div class="sec-lbl">Upload</div>
+                    <h1>ファイルアップロード</h1>
+                </div>
+            </div>
+            <p class="page-sub reveal reveal-d2">複数ファイルをまとめてドロップ、またはクリックして選択できます</p>
+
+            <div class="card reveal reveal-d2">
+                <div class="dropzone" id="dropzone">
+                    <div class="dropzone-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="16 16 12 12 8 16" />
+                            <line x1="12" y1="12" x2="12" y2="21" />
+                            <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" />
+                        </svg>
+                    </div>
+                    <div class="dropzone-text">ここにファイルをドロップ</div>
+                    <div class="dropzone-sub">複数ファイル対応 — 各最大 5GB</div>
+                </div>
+                <input type="file" id="file-input" multiple style="display:none">
+
+                <div class="expiry-row">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        style="flex-shrink:0;opacity:.6">
+                        <circle cx="12" cy="12" r="10" />
+                        <polyline points="12 6 12 12 16 14" />
+                    </svg>
+                    <label for="expiry-select">保存期間</label>
+                    <select id="expiry-select" class="input">
+                        <option value="">期限なし</option>
+                        <option value="1">1日</option>
+                        <option value="7">7日</option>
+                        <option value="30">30日</option>
+                        <option value="90">90日</option>
+                        <option value="custom">カスタム...</option>
+                    </select>
+                    <input type="number" id="custom-days" class="input hidden" placeholder="日数" min="1"
+                        style="width:100px">
+                </div>
+                <div class="form-group" style="margin-top:.8rem">
+                    <label class="form-label" style="display:flex;align-items:center;gap:.6rem;cursor:pointer">
+                        <span>プライベート</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="private-toggle">
+                            <span class="toggle-track"></span>
+                        </label>
+                        <span style="font-size:.75rem;color:var(--text-sub)" id="private-label">オフ（公開）</span>
+                    </label>
+                </div>
+            </div>
+
+            <div id="queue-section" hidden class="mt-2">
+                <div class="sec-eye" style="margin-bottom:1rem">
+                    <div class="sec-eye-text">
+                        <div class="sec-lbl">Queue</div>
+                        <h2 style="font-size:1.1rem;display:flex;align-items:center;gap:.5rem">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <line x1="8" y1="6" x2="21" y2="6" />
+                                <line x1="8" y1="12" x2="21" y2="12" />
+                                <line x1="8" y1="18" x2="21" y2="18" />
+                                <line x1="3" y1="6" x2="3.01" y2="6" />
+                                <line x1="3" y1="12" x2="3.01" y2="12" />
+                                <line x1="3" y1="18" x2="3.01" y2="18" />
+                            </svg>
+                            アップロードキュー
+                        </h2>
+                    </div>
+                </div>
+                <div id="queue-list"></div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        fetch('/api/auth/me').then(r => r.json()).then(me => {
+            document.getElementById('nav-username').textContent = me.label;
+            if (me.isAdmin) document.getElementById('nav-admin-link').classList.remove('hidden');
+        });
+        document.getElementById('logout-btn').addEventListener('click', async () => {
+            await fetch('/api/auth/logout', { method: 'POST' });
+            location.href = '/login';
+        });
+    </script>
+    <script src="/js/particles.js"></script>
+    <script src="/js/upload.js"></script>
+</body>
+
+</html>

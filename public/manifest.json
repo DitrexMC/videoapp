@@ -1,0 +1,51 @@
+{
+    "name": "videoapp",
+    "short_name": "videoapp",
+    "description": "安全でシンプルな動画・ファイル共有サービス",
+    "start_url": "/files.html",
+    "display": "standalone",
+    "background_color": "#0f1117",
+    "theme_color": "#3b82f6",
+    "orientation": "portrait-primary",
+    "lang": "ja",
+    "icons": [
+        {
+            "src": "/icons/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/icons/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "アップロード",
+            "short_name": "Upload",
+            "description": "ファイルをアップロード",
+            "url": "/upload.html",
+            "icons": [
+                {
+                    "src": "/icons/icon-192.png",
+                    "sizes": "192x192"
+                }
+            ]
+        },
+        {
+            "name": "マイファイル",
+            "short_name": "Files",
+            "description": "ファイル一覧を見る",
+            "url": "/files.html",
+            "icons": [
+                {
+                    "src": "/icons/icon-192.png",
+                    "sizes": "192x192"
+                }
+            ]
+        }
+    ]
+}

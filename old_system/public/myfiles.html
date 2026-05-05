@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VideoApp — マイファイル</title>
+    <link rel="stylesheet" href="/css/common.css">
+    <link rel="stylesheet" href="/css/app.css">
+    <script src="/js/theme.js"></script>
+    <style>
+        .table-wrap {
+            overflow-x: hidden;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="canvas"></canvas>
+    <div class="page-glow page-glow-1"></div>
+    <div class="page-glow page-glow-2"></div>
+
+    <nav id="nav">
+        <a class="nav-logo" href="/">VideoApp</a>
+        <ul class="nav-links">
+            <li><a href="/">ホーム</a></li>
+            <li><a href="/upload">アップロード</a></li>
+            <li><a href="/myfiles" class="active">マイファイル</a></li>
+            <li id="nav-admin-link" class="hidden"><a href="/admin">管理</a></li>
+        </ul>
+        <div class="nav-user">
+            <span id="nav-username"></span>
+            <button class="theme-toggle" id="theme-toggle"></button>
+            <button class="btn btn-ghost btn-sm" id="logout-btn">ログアウト</button>
+        </div>
+    </nav>
+
+    <main>
+        <div class="container">
+            <div class="stat-tag reveal">
+                <span class="stat-tag-dot"></span>
+                My Files
+            </div>
+
+            <div class="sec-eye reveal reveal-d1">
+                <div class="sec-eye-text">
+                    <div class="sec-lbl">Storage</div>
+                    <h1>マイファイル</h1>
+                </div>
+            </div>
+
+            <div class="card mb-2 reveal reveal-d2">
+                <div class="flex justify-between items-center mb-1">
+                    <span class="text-sm text-sub">ストレージ使用量</span>
+                    <span class="text-sm" id="usage-label">— / —</span>
+                </div>
+                <div class="usage-bar-wrap">
+                    <div class="usage-bar" id="usage-bar" style="width:0%"></div>
+                </div>
+            </div>
+
+            <div class="search-row reveal reveal-d3" style="align-items:center">
+                <select class="input" id="filter-type" style="width:auto;min-width:120px">
+                    <option value="all">すべて</option>
+                    <option value="group">フォルダのみ</option>
+                    <option value="file">ファイルのみ</option>
+                </select>
+                <input class="input" id="search-input" placeholder="ファイル名で検索... (.拡張子可)" type="search">
+                <button class="btn btn-primary" id="search-btn">検索</button>
+                <button class="btn btn-danger" id="bulk-delete-btn" style="display:none">選択分を削除</button>
+            </div>
+
+            <div class="table-wrap file-table-wrap reveal reveal-d3">
+                <table class="table file-table file-table-myfiles">
+                    <thead>
+                        <tr>
+                            <th class="fr-cb-head">
+                                <label class="custom-cb">
+                                    <input type="checkbox" id="select-all">
+                                    <span class="custom-cb-box"></span>
+                                </label>
+                            </th>
+                            <th class="fr-name-head">ファイル名</th>
+                            <th class="fr-size-head">サイズ</th>
+                            <th class="fr-date-head col-date">アップロード日</th>
+                            <th class="fr-date-head col-date">有効期限</th>
+                            <th class="fr-action-head">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="file-list">
+                        <tr>
+                            <td colspan="6" class="text-sub">読み込み中...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="flex justify-between items-center mt-1 reveal reveal-d3" style="padding:0 .5rem">
+                <span class="text-sm text-sub" id="page-info">0件</span>
+                <div style="display:flex;gap:.4rem">
+                    <button class="btn btn-ghost btn-sm" id="page-prev">← 前へ</button>
+                    <button class="btn btn-ghost btn-sm" id="page-next">次へ →</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="/js/particles.js"></script>
+    <script src="/js/file-row.js"></script>
+    <script src="/js/myfiles.js"></script>
+</body>
+
+</html>

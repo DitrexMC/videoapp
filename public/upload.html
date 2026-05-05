@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>videoapp — アップロード</title>
+    <link rel="icon" href="/icons/icon-192.png">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+JP:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <script src="/js/nav-theme.js"></script>
+    <link rel="stylesheet" href="/css/common.css">
+    <link rel="stylesheet" href="/css/app.css">
+    <style>
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 36px;
+            height: 20px;
+            flex-shrink: 0;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-track {
+            position: absolute;
+            inset: 0;
+            background: var(--bg3);
+            border: 1px solid var(--border);
+            border-radius: 99px;
+            cursor: pointer;
+            transition: background .2s;
+        }
+
+        .toggle-track::after {
+            content: '';
+            position: absolute;
+            width: 14px;
+            height: 14px;
+            left: 2px;
+            top: 2px;
+            background: #fff;
+            border-radius: 50%;
+            transition: transform .2s;
+        }
+
+        .toggle-switch input:checked+.toggle-track {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .toggle-switch input:checked+.toggle-track::after {
+            transform: translateX(16px);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="canvas"></canvas>
+    <div class="page-glow page-glow-1"></div>
+    <div class="page-glow page-glow-2"></div>
+
+    <nav id="nav">
+        <a class="nav-logo" href="/">videoapp</a>
+        <ul class="nav-links">
+            <li><a href="/">ホーム</a></li>
+            <li><a href="/upload.html" class="active">アップロード</a></li>
+            <li><a href="/files.html">マイファイル</a></li>
+            <li><a href="/settings.html">設定</a></li>
+            <li id="nav-admin-link" class="hidden"><a href="/admin.html">管理</a></li>
+        </ul>
+        <div class="nav-user">
+            <span id="nav-username"></span>
+            <button class="theme-toggle" id="theme-toggle"></button>
+            <button class="btn btn-ghost btn-sm" id="logout-btn">ログアウト</button>
+        </div>
+    </nav>
+
+    <main>
+        <div class="container">
+            <div class="stat-tag reveal">
+                <span class="stat-tag-dot"></span>
+                File Upload
+            </div>
+
+            <div class="sec-eye reveal reveal-d1">
+                <div class="sec-eye-text">
+                    <div class="sec-lbl">Upload</div>
+                    <h1>ファイルアップロード</h1>
+                </div>
+            </div>
+            <p class="page-sub reveal reveal-d2">ドラッグ＆ドロップ、貼り付け、クリック — 複数ファイル対応</p>
+
+            <div class="card reveal reveal-d2">
+                <div class="dropzone" id="dropzone">
+                    <div class="dropzone-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="16 16 12 12 8 16" />
+                            <line x1="12" y1="12" x2="12" y2="21" />
+                            <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" />
+                        </svg>
+                    </div>
+                    <div class="dropzone-text">ここにファイルをドロップ</div>
+                    <div class="dropzone-sub">複数ファイル対応 — 各最大 5GB</div>
+                </div>
+                <input type="file" id="file-input" multiple style="display:none">
+
+                <div class="expiry-row">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        style="flex-shrink:0;opacity:.6">
+                        <circle cx="12" cy="12" r="10" />
+                        <polyline points="12 6 12 12 16 14" />
+                    </svg>
+                    <label for="expiry-select">保存期間</label>
+                    <select id="expiry-select" class="input">
+                        <option value="">期限なし</option>
+                        <option value="1">1日</option>
+                        <option value="7">7日</option>
+                        <option value="30">30日</option>
+                        <option value="90">90日</option>
+                        <option value="custom">カスタム...</option>
+                    </select>
+                    <input type="number" id="custom-days" class="input hidden" placeholder="日数" min="1" style="width:100px">
+                </div>
+
+                <div class="form-group" style="margin-top:.8rem">
+                    <label style="display:flex;align-items:center;gap:.6rem;cursor:pointer;text-transform:none;font-size:.85rem;font-weight:normal">
+                        <span style="font-size:.8rem;color:var(--text-sub);font-weight:700;text-transform:uppercase;letter-spacing:.3px">公開設定</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="public-toggle" checked>
+                            <span class="toggle-track"></span>
+                        </label>
+                        <span style="font-size:.75rem;color:var(--text-sub)" id="public-label">オン（公開）</span>
+                    </label>
+                </div>
+            </div>
+
+            <div id="queue-section" hidden class="mt-2">
+                <div class="sec-eye" style="margin-bottom:1rem">
+                    <div class="sec-eye-text">
+                        <div class="sec-lbl">Queue</div>
+                        <h2 style="font-size:1.1rem;display:flex;align-items:center;gap:.5rem">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="8" y1="6" x2="21" y2="6" />
+                                <line x1="8" y1="12" x2="21" y2="12" />
+                                <line x1="8" y1="18" x2="21" y2="18" />
+                                <line x1="3" y1="6" x2="3.01" y2="6" />
+                                <line x1="3" y1="12" x2="3.01" y2="12" />
+                                <line x1="3" y1="18" x2="3.01" y2="18" />
+                            </svg>
+                            アップロードキュー
+                        </h2>
+                    </div>
+                </div>
+                <div id="queue-list"></div>
+            </div>
+        </div>
+    </main>
+
+    <script src="/js/particles.js"></script>
+    <script type="module">
+        import { auth } from '/js/core/auth.js';
+        import { api } from '/js/core/api.js';
+
+        if (!auth.requireAuth()) throw new Error('redirect');
+
+        const me = auth.getUser();
+        if (!me) { location.href = '/login.html'; throw new Error('no user'); }
+        document.getElementById('nav-username').textContent = me.username ?? '';
+        if (auth.isAdmin()) document.getElementById('nav-admin-link').classList.remove('hidden');
+
+        document.getElementById('logout-btn').addEventListener('click', async () => {
+            await api.auth.logout().catch(() => { });
+            auth.clearSession();
+            location.href = '/login.html';
+        });
+
+        // ── UI elements ────────────────────────────────────────
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('file-input');
+        const queueSec = document.getElementById('queue-section');
+        const queueList = document.getElementById('queue-list');
+        const publicToggle = document.getElementById('public-toggle');
+        const publicLabel = document.getElementById('public-label');
+        const expirySelect = document.getElementById('expiry-select');
+        const customDaysInput = document.getElementById('custom-days');
+
+        publicToggle.addEventListener('change', () => {
+            publicLabel.textContent = publicToggle.checked ? 'オン（公開）' : 'オフ（非公開）';
+        });
+
+        expirySelect.addEventListener('change', () => {
+            customDaysInput.classList.toggle('hidden', expirySelect.value !== 'custom');
+        });
+
+        function getExpiryDays() {
+            if (expirySelect.value === 'custom') {
+                const v = parseInt(customDaysInput.value, 10);
+                return v > 0 ? v : null;
+            }
+            const v = parseInt(expirySelect.value, 10);
+            return v > 0 ? v : null;
+        }
+
+        // ── Full-screen Drag & Drop ────────────────────────────
+        let dragCounter = 0;
+
+        document.addEventListener('dragenter', e => {
+            e.preventDefault();
+            dragCounter++;
+            dropzone.classList.add('drag-over');
+        });
+        document.addEventListener('dragover', e => {
+            e.preventDefault();
+        });
+        document.addEventListener('dragleave', () => {
+            dragCounter--;
+            if (dragCounter <= 0) {
+                dragCounter = 0;
+                dropzone.classList.remove('drag-over');
+            }
+        });
+        document.addEventListener('drop', e => {
+            e.preventDefault();
+            dragCounter = 0;
+            dropzone.classList.remove('drag-over');
+            triggerAcceptAnimation();
+            if (e.dataTransfer.files.length > 0) startQueue([...e.dataTransfer.files]);
+        });
+
+        dropzone.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                startQueue([...fileInput.files]);
+                fileInput.value = '';
+            }
+        });
+
+        // ── Paste support ──────────────────────────────────────
+        document.addEventListener('paste', e => {
+            const clipFiles = [];
+            if (e.clipboardData.files && e.clipboardData.files.length > 0) {
+                clipFiles.push(...e.clipboardData.files);
+            } else if (e.clipboardData.items) {
+                for (const item of e.clipboardData.items) {
+                    if (item.kind === 'file') {
+                        const f = item.getAsFile();
+                        if (f) clipFiles.push(f);
+                    }
+                }
+            }
+            if (clipFiles.length > 0) {
+                e.preventDefault();
+                triggerAcceptAnimation();
+                startQueue(clipFiles);
+            }
+        });
+
+        // ── Helpers ────────────────────────────────────────────
+        function fmtBytes(b) {
+            if (!b && b !== 0) return '0 B';
+            if (b >= 1073741824) return (b / 1073741824).toFixed(2) + ' GB';
+            if (b >= 1048576) return (b / 1048576).toFixed(1) + ' MB';
+            if (b >= 1024) return (b / 1024).toFixed(0) + ' KB';
+            return b + ' B';
+        }
+
+        function esc(s) { return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+        function triggerAcceptAnimation() {
+            dropzone.style.transition = 'box-shadow .08s ease,border-color .08s ease,transform .08s ease';
+            dropzone.style.boxShadow = '0 0 60px rgba(59,130,246,1),inset 0 0 40px rgba(59,130,246,.3),0 0 0 4px rgba(59,130,246,.4)';
+            dropzone.style.borderColor = 'var(--accent2)';
+            dropzone.style.transform = 'scale(1.01)';
+            setTimeout(() => {
+                dropzone.style.boxShadow = '';
+                dropzone.style.borderColor = '';
+                dropzone.style.transform = '';
+            }, 500);
+            dropzone.classList.add('drop-accepted');
+            setTimeout(() => dropzone.classList.remove('drop-accepted'), 700);
+        }
+
+        // ── Queue ──────────────────────────────────────────────
+        function createQueueItem(file, idx) {
+            const el = document.createElement('div');
+            el.className = 'qi';
+            el.id = 'qi-' + idx;
+            el.innerHTML = `
+                <div class="qi-header">
+                    <span class="qi-name">${esc(file.name)}</span>
+                    <span class="qi-size">${fmtBytes(file.size)}</span>
+                    <span class="qi-status qi-status--wait">待機中</span>
+                </div>
+                <div class="qi-progress" hidden>
+                    <div class="progress-wrap"><div class="progress-bar qi-bar" style="width:0%"></div></div>
+                    <span class="qi-pct">0%</span>
+                </div>
+                <div class="qi-result" hidden></div>
+            `;
+            return {
+                el,
+                statusEl: el.querySelector('.qi-status'),
+                progressEl: el.querySelector('.qi-progress'),
+                barEl: el.querySelector('.qi-bar'),
+                pctEl: el.querySelector('.qi-pct'),
+                resultEl: el.querySelector('.qi-result'),
+            };
+        }
+
+        function startQueue(files) {
+            const MAX_SIZE = 5 * 1024 * 1024 * 1024;
+            const tooBig = files.filter(f => f.size > MAX_SIZE);
+            const valid = files.filter(f => f.size <= MAX_SIZE);
+
+            queueSec.hidden = false;
+
+            if (tooBig.length > 0) {
+                tooBig.forEach(f => {
+                    const err = document.createElement('div');
+                    err.className = 'qi';
+                    err.innerHTML = `<div class="qi-header"><span class="qi-name">${esc(f.name)}</span><span class="qi-size">${fmtBytes(f.size)}</span><span class="qi-status qi-status--error">サイズ超過 (最大5GB)</span></div>`;
+                    queueList.prepend(err);
+                });
+            }
+            if (valid.length === 0) return;
+
+            const fragment = document.createDocumentFragment();
+            const items = valid.map((file, i) => {
+                const item = createQueueItem(file, i + Date.now());
+                fragment.appendChild(item.el);
+                return { file, ...item };
+            });
+            queueList.insertBefore(fragment, queueList.firstChild);
+
+            const batchSize = valid.length;
+            const isPublic = publicToggle.checked;
+            const expiryDays = getExpiryDays();
+            const expiresAt = expiryDays ? new Date(Date.now() + expiryDays * 86400000).toISOString() : null;
+
+            // Multi-file: create auto-folder
+            if (batchSize >= 2) {
+                uploadConcurrent(items, isPublic, expiresAt, batchSize);
+            } else {
+                uploadConcurrent(items, isPublic, expiresAt, 1);
+            }
+        }
+
+        // ── Concurrent upload ──────────────────────────────────
+        function uploadConcurrent(items, isPublic, expiresAt, totalCount, folderId = null) {
+            let idx = 0;
+            let active = 0;
+            let completed = 0;
+            const hasFolder = totalCount >= 2;
+            let sharedFolderId = folderId;
+
+            function next() {
+                while (active < 5 && idx < items.length) {
+                    active++;
+                    const item = items[idx++];
+                    uploadOne(item, isPublic, expiresAt, totalCount, sharedFolderId, (newFolderId) => {
+                        if (newFolderId) sharedFolderId = newFolderId;
+                        active--;
+                        completed++;
+                        if (completed === items.length && hasFolder && sharedFolderId) {
+                            const groupEl = document.createElement('div');
+                            groupEl.className = 'qi';
+                            groupEl.style.borderColor = 'var(--accent2)';
+                            groupEl.style.borderWidth = '2px';
+                            groupEl.innerHTML = `
+                                <div style="text-align:center;padding:.5rem">
+                                    <div style="font-weight:700;margin-bottom:.5rem;color:var(--accent2)">${items.length}ファイルのグループ</div>
+                                    <a class="btn btn-primary btn-sm" href="/files.html" style="text-decoration:none">ファイル一覧 →</a>
+                                </div>`;
+                            queueList.insertBefore(groupEl, queueList.firstChild);
+                        }
+                        next();
+                    });
+                }
+            }
+            next();
+        }
+
+        // ── Single file upload (chunked) ───────────────────────
+        async function uploadOne(item, isPublic, expiresAt, totalCount, sharedFolderId, onDone) {
+            item.statusEl.textContent = 'アップロード中';
+            item.statusEl.className = 'qi-status qi-status--uploading';
+            item.progressEl.hidden = false;
+
+            const file = item.file;
+            let uploadId = null;
+
+            try {
+                // Build folder context for multi-file
+                const folderContext = totalCount >= 2
+                    ? (sharedFolderId
+                        ? { mode: 'existing', folderId: sharedFolderId, itemCount: totalCount }
+                        : { mode: 'batch', itemCount: totalCount })
+                    : undefined;
+
+                // Always set expiry (default 30 days) so BackgroundWorker cleans orphans
+                const resolvedExpiresAt = expiresAt || new Date(Date.now() + 30 * 86400000).toISOString();
+
+                const initPayload = {
+                    name: file.name,
+                    size: file.size,
+                    mime_type: file.type || 'application/octet-stream',
+                    public: isPublic,
+                    expiresAt: resolvedExpiresAt,
+                };
+                if (folderContext) initPayload.folderContext = folderContext;
+
+                const initRes = await api.upload.init(initPayload);
+                uploadId = initRes.uploadId;
+                const fileId = initRes.fileId;
+                const chunkSize = initRes.chunkSize;
+                const maxChunks = initRes.maxChunks;
+
+                if (initRes.folderId && !sharedFolderId) {
+                    onDone(initRes.folderId);
+                }
+
+                const startTime = Date.now();
+                let uploadedBytes = 0;
+
+                for (let i = 0; i < maxChunks; i++) {
+                    const start = i * chunkSize;
+                    const end = Math.min(start + chunkSize, file.size);
+                    const chunk = file.slice(start, end);
+                    const buf = await chunk.arrayBuffer();
+
+                    await api.upload.chunk(uploadId, i, buf, { 'X-File-Id': fileId });
+
+                    uploadedBytes += buf.byteLength;
+                    const pct = Math.round(((i + 1) / maxChunks) * 100);
+                    const elapsed = (Date.now() - startTime) / 1000 || 0.001;
+                    const speedMB = (uploadedBytes / elapsed) / 1048576;
+                    const remaining = speedMB > 0 ? (file.size - uploadedBytes) / (speedMB * 1048576) : 0;
+
+                    let etaStr = '';
+                    if (remaining > 0 && pct < 100) {
+                        etaStr = remaining < 60
+                            ? ` — 残り${Math.ceil(remaining)}秒`
+                            : ` — 残り${Math.ceil(remaining / 60)}分`;
+                    }
+
+                    item.barEl.style.width = pct + '%';
+                    item.pctEl.textContent = `${pct}% — ${speedMB.toFixed(1)} MB/s${etaStr}`;
+                }
+
+                const compRes = await api.upload.complete({
+                    fileId,
+                    totalChunks: maxChunks,
+                    totalSize: file.size,
+                    uploadId,
+                });
+
+                item.progressEl.hidden = true;
+                item.statusEl.textContent = '完了';
+                item.statusEl.className = 'qi-status qi-status--done';
+                item.resultEl.hidden = false;
+
+                const dlUrl = `${location.origin}/files/${fileId}/download`;
+                const fileUrl = `${location.origin}/file.html?id=${fileId}`;
+                item.resultEl.innerHTML = `
+                    <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin-top:.3rem">
+                        <button class="copy-btn" data-url="${esc(dlUrl)}">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                            </svg> URLコピー
+                        </button>
+                        <a class="btn btn-primary btn-sm" href="${fileUrl}" style="text-decoration:none">プレビュー →</a>
+                        <a class="btn btn-ghost btn-sm" href="${dlUrl}" download="${esc(file.name)}">ダウンロード</a>
+                    </div>
+                `;
+
+                item.resultEl.querySelectorAll('.copy-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const url = btn.dataset.url;
+                        const orig = btn.textContent;
+                        navigator.clipboard.writeText(url).then(() => {
+                            btn.textContent = '✓ コピー済み';
+                            btn.classList.add('copied');
+                            setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 2000);
+                        }).catch(() => {
+                            const ta = document.createElement('textarea');
+                            ta.value = url;
+                            ta.style.cssText = 'position:fixed;top:-999px;left:-999px;opacity:0;';
+                            document.body.appendChild(ta);
+                            ta.focus();
+                            ta.select();
+                            try { document.execCommand('copy'); btn.textContent = '✓ コピー済み'; btn.classList.add('copied'); setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 2000); } catch (_) { }
+                            document.body.removeChild(ta);
+                        });
+                    });
+                });
+
+                if (totalCount < 2) onDone(null);
+            } catch (err) {
+                item.progressEl.hidden = true;
+                item.statusEl.textContent = 'エラー';
+                item.statusEl.className = 'qi-status qi-status--error';
+                item.resultEl.hidden = false;
+                item.resultEl.innerHTML = `<span class="qi-error-msg">${esc(err?.message ?? 'アップロードに失敗しました')}</span>`;
+
+                // Clean up server-side: cancel the upload to delete file record + temp data
+                if (uploadId) {
+                    api.upload.cancel(uploadId).catch(() => {});
+                }
+                onDone(null);
+                setTimeout(() => { item.el.style.opacity = '0'; item.el.style.transition = 'opacity .3s'; setTimeout(() => item.el.remove(), 300); }, 4000);
+            }
+        }
+
+        if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => { });
+    </script>
+</body>
+
+</html>

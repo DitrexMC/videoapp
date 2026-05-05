@@ -1,0 +1,290 @@
+import archiver from "archiver";
+import { createReadStream } from "node:fs";
+import type { Readable } from "node:stream";
+
+import type { ServicePolicyRepository } from "../../../shared/application/ServicePolicyRepository.js";
+import type { AuthApplicationService } from "../../identity/application/AuthApplicationService.js";
+import type { User } from "../../identity/domain/User.js";
+import type { Clock } from "../../../shared/domain/clock.js";
+import { NotFoundError, ValidationError, ConflictError } from "../../../shared/domain/errors.js";
+import type { LocalFileStorage } from "../../../shared/infrastructure/storage/LocalFileStorage.js";
+import { assertCanManageFile, assertCanReadFile, assertFileIsDownloadable, type FileRecord } from "../domain/FileRecord.js";
+import { resolveSafeName } from "../domain/NameCollisionResolver.js";
+import type { CreateFolderInput, FileRepository } from "./FileRepository.js";
+
+export interface FileApplicationServiceDependencies {
+  authService: AuthApplicationService;
+  clock: Clock;
+  fileRepository: FileRepository;
+  policyRepository: ServicePolicyRepository;
+  storage: LocalFileStorage;
+}
+
+export interface FileArchiveResult {
+  archive: archiver.Archiver;
+  excluded: number;
+  included: number;
+}
+
+export class FileApplicationService {
+  private readonly authService: AuthApplicationService;
+  private readonly clock: Clock;
+  private readonly fileRepository: FileRepository;
+  private readonly policyRepository: ServicePolicyRepository;
+  private readonly storage: LocalFileStorage;
+
+  constructor(dependencies: FileApplicationServiceDependencies) {
+    this.authService = dependencies.authService;
+    this.clock = dependencies.clock;
+    this.fileRepository = dependencies.fileRepository;
+    this.policyRepository = dependencies.policyRepository;
+    this.storage = dependencies.storage;
+  }
+
+  async createZipArchive(sessionToken: string | null, fileIds: string[]): Promise<FileArchiveResult> {
+    const policies = this.policyRepository.findPolicies();
+
+    if (fileIds.length === 0) {
+      throw new ValidationError("file_ids は1件以上必要です。");
+    }
+
+    if (fileIds.length > policies.maxZipFileCount) {
+      throw new ValidationError("ZIPに含められるファイル数の上限を超えています。");
+    }
+
+    this.authenticateOptional(sessionToken);
+    const files = this.fileRepository.findFilesByIds(fileIds);
+    const includedFiles: FileRecord[] = [];
+    let excluded = 0;
+    let totalSize = 0;
+    const reservedNames: string[] = [];
+    const archive = archiver("zip", { zlib: { level: 9 } });
+
+    for (const file of files) {
+      try {
+        if (!file.public) {
+          excluded += 1;
+          continue;
+        }
+
+        assertFileIsDownloadable(file);
+
+        totalSize += file.sizeBytes;
+
+        if (totalSize > policies.maxZipTotalBytes) {
+          throw new ValidationError("ZIP合計サイズの上限を超えています。");
+        }
+
+        if (!file.storagePath) {
+          throw new NotFoundError("ファイル本体が見つかりません。");
+        }
+
+        const zipEntryName = resolveSafeName(file.safeName, reservedNames);
+        reservedNames.push(zipEntryName);
+        archive.append(createReadStream(file.storagePath), { name: zipEntryName });
+        includedFiles.push(file);
+      } catch (error) {
+        if (error instanceof ValidationError) {
+          throw error;
+        }
+
+        excluded += 1;
+      }
+    }
+
+    if (includedFiles.length === 0) {
+      throw new ValidationError("ZIP対象のファイルがありません。");
+    }
+
+    void archive.finalize();
+
+    return {
+      archive,
+      excluded,
+      included: includedFiles.length
+    };
+  }
+
+  createFolder(sessionToken: string, name: string): CreateFolderInput {
+    const actor = this.authService.authenticate(sessionToken).user;
+    const normalizedName = name.trim();
+
+    if (normalizedName.length === 0) {
+      throw new ValidationError("フォルダ名は必須です。");
+    }
+
+    const timestamp = this.clock.nowIsoString();
+
+    return this.fileRepository.createFolder({
+      createdAt: timestamp,
+      id: crypto.randomUUID(),
+      name: normalizedName,
+      ownerUserId: actor.id,
+      updatedAt: timestamp
+    });
+  }
+
+  async getDownload(sessionToken: string | null, fileId: string): Promise<{ file: FileRecord; stream: Readable }> {
+    const actor = this.authenticateOptional(sessionToken);
+    const file = this.getReadableFile(fileId, actor);
+
+    if (!file.storagePath) {
+      throw new NotFoundError("ファイル本体が見つかりません。");
+    }
+
+    await this.storage.ensureReadable(file.storagePath);
+
+    return {
+      file,
+      stream: createReadStream(file.storagePath)
+    };
+  }
+
+  async getPreview(sessionToken: string | null, fileId: string): Promise<{ file: FileRecord; stream: Readable }> {
+    const actor = this.authenticateOptional(sessionToken);
+    const file = this.getReadableFile(fileId, actor);
+
+    if (file.previewStatus !== "ready" || !file.previewPath) {
+      throw new NotFoundError("プレビューがありません。");
+    }
+
+    await this.storage.ensureReadable(file.previewPath);
+
+    return {
+      file,
+      stream: createReadStream(file.previewPath)
+    };
+  }
+
+  async getStream(sessionToken: string | null, fileId: string): Promise<FileRecord> {
+    const actor = this.authenticateOptional(sessionToken);
+
+    return this.getReadableFile(fileId, actor);
+  }
+
+  getFileDetail(sessionToken: string | null, fileId: string): FileRecord {
+    const actor = this.authenticateOptional(sessionToken);
+    const file = this.fileRepository.findFileById(fileId);
+
+    if (!file || file.isDeleted) {
+      throw new NotFoundError("ファイルが見つかりません。");
+    }
+
+    assertCanReadFile(file, actor);
+
+    return file;
+  }
+
+  listFiles(sessionToken: string, filters: { cursor?: string; folderId?: string; limit?: number; status?: FileRecord["status"] }): FileRecord[] {
+    const actor = this.authService.authenticate(sessionToken).user;
+    const limit = Math.min(Math.max(filters.limit ?? 50, 1), 100);
+    const fileListFilters: Parameters<FileRepository["listFiles"]>[0] = {
+      limit,
+      ownerUserId: actor.id
+    };
+
+    if (filters.cursor) {
+      fileListFilters.cursor = filters.cursor;
+    }
+
+    if (filters.folderId) {
+      fileListFilters.folderId = filters.folderId;
+    }
+
+    if (filters.status) {
+      fileListFilters.status = filters.status;
+    }
+
+    return this.fileRepository.listFiles(fileListFilters);
+  }
+
+  listFolders(sessionToken: string) {
+    const actor = this.authService.authenticate(sessionToken).user;
+
+    return this.fileRepository.listFolders(actor.id);
+  }
+
+  renameFolder(sessionToken: string, folderId: string, name: string): void {
+    const actor = this.authService.authenticate(sessionToken).user;
+    const folder = this.fileRepository.findFolderById(folderId);
+    const normalizedName = name.trim();
+
+    if (!folder || folder.deletedAt) {
+      throw new NotFoundError("フォルダが見つかりません。");
+    }
+
+    if (normalizedName.length === 0) {
+      throw new ValidationError("フォルダ名は必須です。");
+    }
+
+    if (folder.ownerUserId !== actor.id) {
+      throw new NotFoundError("フォルダが見つかりません。");
+    }
+
+    this.fileRepository.renameFolder(folderId, normalizedName, this.clock.nowIsoString());
+  }
+
+  removeFile(sessionToken: string, fileId: string): void {
+    const actor = this.authService.authenticate(sessionToken).user;
+    const file = this.fileRepository.findFileById(fileId);
+
+    if (!file || file.isDeleted) {
+      throw new NotFoundError("ファイルが見つかりません。");
+    }
+
+    assertCanManageFile(file, actor);
+    this.fileRepository.softDeleteFile(file.id, this.clock.nowIsoString());
+  }
+
+  removeFolder(sessionToken: string, folderId: string): void {
+    const actor = this.authService.authenticate(sessionToken).user;
+    const folder = this.fileRepository.findFolderById(folderId);
+
+    if (!folder || folder.deletedAt) {
+      throw new NotFoundError("フォルダが見つかりません。");
+    }
+
+    if (folder.ownerUserId !== actor.id) {
+      throw new NotFoundError("フォルダが見つかりません。");
+    }
+
+    if (this.fileRepository.countFilesInFolder(folderId) > 0) {
+      throw new ConflictError("空ではないフォルダは削除できません。");
+    }
+
+    this.fileRepository.deleteFolder(folderId, this.clock.nowIsoString());
+  }
+
+  setFileVisibility(sessionToken: string, fileId: string, isPublic: boolean): void {
+    const actor = this.authService.authenticate(sessionToken).user;
+    const file = this.fileRepository.findFileById(fileId);
+
+    if (!file || file.isDeleted) {
+      throw new NotFoundError("ファイルが見つかりません。");
+    }
+
+    assertCanManageFile(file, actor);
+    this.fileRepository.updateFileVisibility(file.id, isPublic, this.clock.nowIsoString());
+  }
+
+  private authenticateOptional(sessionToken: string | null): User | null {
+    if (!sessionToken) {
+      return null;
+    }
+
+    return this.authService.authenticate(sessionToken).user;
+  }
+
+  private getReadableFile(fileId: string, actor: User | null): FileRecord {
+    const file = this.fileRepository.findFileById(fileId);
+
+    if (!file || file.isDeleted) {
+      throw new NotFoundError("ファイルが見つかりません。");
+    }
+
+    assertCanReadFile(file, actor);
+    assertFileIsDownloadable(file);
+
+    return file;
+  }
+}
