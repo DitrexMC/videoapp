@@ -35,6 +35,7 @@
         var isFolder = item.type === 'folder';
         var cbClass = opts.cbClass || 'file-check';
         var showDl = opts.showDl !== false && !isFolder;
+        var showUser = opts.showUser === true;
         var cbValue = isFolder ? 'd:' + item.id : 'f:' + item.id;
         var extraActions = resolveExtraActions(opts.actionExtras, item);
 
@@ -58,6 +59,11 @@
         }
         var nameCell = '<td class="fr-name-cell">' + nameInner + '</td>';
 
+        var userCell = '';
+        if (showUser) {
+            userCell = '<td class="fr-user-cell" style="font-size:.82rem;color:var(--text-sub)">' + frEsc(item.owner_username || '\u2014') + '</td>';
+        }
+
         var size = isFolder ? '\u2014' : frFmtBytes(item.size || 0);
         var sizeCell = '<td class="fr-size-cell">' + size + '</td>';
 
@@ -80,7 +86,7 @@
         var actionCell = '<td class="fr-action-cell"><div class="fr-actions">' + actions.join('') + '</div></td>';
 
         var rowCls = isFolder ? 'fr-row fr-row-folder' : 'fr-row';
-        return '<tr class="' + rowCls + '">' + cbCell + nameCell + sizeCell + dateCell + expiresCell + actionCell + '</tr>';
+        return '<tr class="' + rowCls + '">' + cbCell + nameCell + userCell + sizeCell + dateCell + expiresCell + actionCell + '</tr>';
     };
 
     window.frFmtBytes = frFmtBytes;

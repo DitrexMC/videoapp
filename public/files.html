@@ -365,7 +365,9 @@
                     api.files.list({ limit: 100 }),
                     api.folders.list(),
                 ]);
-                const files = (fRes?.items ?? []).map(f => ({
+                const files = (fRes?.items ?? [])
+                    .filter(f => !f.folder_id)
+                    .map(f => ({
                     id: f.id,
                     safe_name: f.safe_name,
                     size: f.size,

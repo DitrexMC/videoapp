@@ -222,7 +222,7 @@ export class SqliteFileRepository implements FileRepository {
       FROM files
       WHERE owner_user_id = @ownerUserId
         AND is_deleted = 0
-        AND ((@folderId IS NULL AND folder_id IS NULL) OR folder_id = @folderId)
+        AND (@folderId IS NULL OR folder_id = @folderId)
         AND (@status IS NULL OR status = @status)
         AND (@cursor IS NULL OR created_at < @cursor)
       ORDER BY created_at DESC
