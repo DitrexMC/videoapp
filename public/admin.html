@@ -34,6 +34,49 @@
             color: var(--text-sub);
         }
 
+        .fr-cb-cell,
+        .fr-cb-head {
+            width: 2rem;
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        .fr-actions {
+            white-space: nowrap;
+            display: flex;
+            gap: .25rem;
+            align-items: center;
+        }
+
+        .fr-action-cell {
+            white-space: nowrap;
+        }
+
+        .table td,
+        .table th {
+            white-space: nowrap;
+        }
+
+        .fr-name-cell {
+            max-width: 280px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .fr-name-row {
+            display: flex;
+            align-items: center;
+            gap: .15rem;
+        }
+
+        .fr-name-text {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 240px;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
         #msg {
             min-height: 1.2rem;
             font-size: .82rem;
@@ -218,23 +261,23 @@
                     <button class="btn btn-primary" id="file-search-btn">検索</button>
                 </div>
                 <div class="table-wrap">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th style="width:2rem">
-                                    <label class="custom-cb" style="padding:0;margin:0">
-                                        <input type="checkbox" id="admin-select-all">
-                                        <span class="custom-cb-box"></span>
-                                    </label>
-                                </th>
-                                <th>ファイル名</th>
-                                <th>ユーザー</th>
-                                <th>サイズ</th>
-                                <th>作成日</th>
-                                <th>期限</th>
-                                <th>操作</th>
-                            </tr>
-                        </thead>
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th class="fr-cb-head">
+                                        <label class="custom-cb" style="display:inline-flex;align-items:center;justify-content:center;padding:0;margin:0">
+                                            <input type="checkbox" id="admin-select-all">
+                                            <span class="custom-cb-box"></span>
+                                        </label>
+                                    </th>
+                                    <th class="fr-name-head">ファイル名</th>
+                                    <th class="fr-user-head">ユーザー</th>
+                                    <th class="fr-size-head">サイズ</th>
+                                    <th class="fr-date-head">作成日</th>
+                                    <th class="fr-date-head">期限</th>
+                                    <th class="fr-action-head">操作</th>
+                                </tr>
+                            </thead>
                         <tbody id="admin-file-list">
                             <tr class="empty-row">
                                 <td colspan="7">読み込み中...</td>
