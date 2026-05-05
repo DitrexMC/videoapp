@@ -823,8 +823,8 @@ main, .viewer-wrap {
   display: inline-flex;
   align-items: center;
   cursor: pointer;
-  padding: 14px 20px;
-  margin: -14px -20px;
+  padding: 18px 24px;
+  margin: -18px -24px;
 }
 .custom-cb input[type="checkbox"] {
   position: absolute;
@@ -833,10 +833,10 @@ main, .viewer-wrap {
   height: 0;
 }
 .custom-cb-box {
-  width: 18px;
-  height: 18px;
-  border: 1.5px solid var(--border);
-  border-radius: 5px;
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--border);
+  border-radius: 6px;
   background: var(--bg3);
   display: inline-flex;
   align-items: center;
@@ -854,9 +854,9 @@ main, .viewer-wrap {
 .custom-cb input:checked + .custom-cb-box::after {
   content: '';
   display: block;
-  width: 5px;
-  height: 9px;
-  border: 2px solid #fff;
+  width: 6px;
+  height: 10px;
+  border: 2.5px solid #fff;
   border-top: none;
   border-left: none;
   transform: rotate(45deg) translateY(-1px);

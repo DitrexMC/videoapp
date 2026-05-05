@@ -32,34 +32,21 @@
 
     window.buildFileRow = function (item, opts) {
         opts = opts || {};
-        var isGroup = item.type === 'group';
         var isFolder = item.type === 'folder';
         var cbClass = opts.cbClass || 'file-check';
-        var showDl = opts.showDl !== false && !isFolder && !isGroup;
-        var cbValue = isGroup ? 'g:' + item.id : isFolder ? 'd:' + item.id : 'f:' + item.id;
+        var showDl = opts.showDl !== false && !isFolder;
+        var cbValue = isFolder ? 'd:' + item.id : 'f:' + item.id;
         var extraActions = resolveExtraActions(opts.actionExtras, item);
 
-        var cbCell = '<td class="fr-cb-cell"><label class="custom-cb" style="padding:0;margin:0"><input type="checkbox" class="' + frEsc(cbClass) + '" data-id="' + frEsc(cbValue) + '"><span class="custom-cb-box"></span></label></td>';
+        var cbCell = '<td class="fr-cb-cell"><label class="custom-cb"><input type="checkbox" class="' + frEsc(cbClass) + '" data-id="' + frEsc(cbValue) + '"><span class="custom-cb-box"></span></label></td>';
 
         var nameInner;
-        if (isGroup) {
-            var label = item.label || item.name || 'グループ';
-            var fileCount = item.file_count || 0;
-            var displayName = label.length > 30 ? label.slice(0, 30) + '\u2026' : label;
-            nameInner = '<div class="fr-name-row">'
-                + '<span class="fr-link fr-group-name" style="cursor:default" title="' + frEsc(label) + '">'
-                + FOLDER_ICON
-                + '<span class="fr-name-text">' + frEsc(displayName) + '</span>'
-                + '</span>'
-                + '<span class="fr-group-count" style="font-size:.72rem;color:var(--text-sub);margin-left:.25rem">(' + fileCount + '\u4ef6)</span>'
-                + '</div>';
-        } else if (isFolder) {
+        if (isFolder) {
             nameInner = '<div class="fr-name-row">'
                 + '<span class="fr-link fr-folder-name" data-folder-id="' + frEsc(item.id) + '" data-folder-name="' + frEsc(item.name) + '" style="cursor:pointer" title="' + frEsc(item.name) + '">'
                 + FOLDER_ICON
                 + '<span class="fr-name-text">' + frEsc(item.name) + '</span>'
                 + '</span>'
-                + (item.public === false ? '<span class="badge badge-gray" style="margin-left:.3rem;font-size:.65rem">\u975e\u516c\u958b</span>' : '')
                 + '</div>';
         } else {
             nameInner = '<div class="fr-name-row">'
@@ -71,14 +58,7 @@
         }
         var nameCell = '<td class="fr-name-cell">' + nameInner + '</td>';
 
-        var size;
-        if (isGroup) {
-            size = frFmtBytes(item.total_size || 0);
-        } else if (isFolder) {
-            size = '\u2014';
-        } else {
-            size = frFmtBytes(item.size || 0);
-        }
+        var size = isFolder ? '\u2014' : frFmtBytes(item.size || 0);
         var sizeCell = '<td class="fr-size-cell">' + size + '</td>';
 
         var dateCell = '<td class="fr-date-cell">' + frFmtDate(item.created_at) + '</td>';
@@ -91,15 +71,15 @@
             actions.push('<button class="btn btn-ghost btn-sm fr-discord-btn" data-url="/files/' + frEsc(item.id) + '/stream" style="padding:.22rem .55rem;font-size:.74rem;color:#7289da" title="Discord\u5411\u3051\u751fURL\u3092\u30b3\u30d4\u30fc">' + DISCORD_ICON + '<span class="fr-action-label">Discord</span></button>');
             actions.push('<button class="btn btn-ghost btn-sm fr-urlcopy-btn" data-url="/file.html?id=' + frEsc(item.id) + '" style="padding:.22rem .55rem;font-size:.74rem" title="\u30d7\u30ec\u30d3\u30e5\u30fc\u30da\u30fc\u30b8URL\u3092\u30b3\u30d4\u30fc">' + LINK_ICON + '<span class="fr-action-label">URL</span></button>');
         }
-        if (isGroup) {
-            actions.push('<a class="btn btn-ghost btn-sm fr-grp-zip-btn" href="/groups/' + frEsc(item.id) + '/download" style="padding:.22rem .55rem;font-size:.74rem" title="ZIP\u30c0\u30a6\u30f3\u30ed\u30fc\u30c9">' + DL_ICON + '<span class="fr-action-label">ZIP</span></a>');
+        if (isFolder) {
+            actions.push('<button class="btn btn-ghost btn-sm fr-urlcopy-btn" data-url="/folder.html?id=' + frEsc(item.id) + '" style="padding:.22rem .55rem;font-size:.74rem" title="\u30d5\u30a9\u30eb\u30c0URL\u3092\u30b3\u30d4\u30fc">' + LINK_ICON + '<span class="fr-action-label">URL</span></button>');
         }
-        var delCls = isGroup ? 'fr-del-group-btn' : isFolder ? 'fr-del-folder-btn' : 'fr-del-btn';
+        var delCls = isFolder ? 'fr-del-folder-btn' : 'fr-del-btn';
         actions.push('<button class="btn btn-danger btn-sm ' + delCls + '" data-id="' + frEsc(item.id) + '" style="padding:.22rem .55rem;font-size:.74rem">\u524a\u9664</button>');
 
         var actionCell = '<td class="fr-action-cell"><div class="fr-actions">' + actions.join('') + '</div></td>';
 
-        var rowCls = isGroup ? 'fr-row fr-row-group' : isFolder ? 'fr-row fr-row-folder' : 'fr-row';
+        var rowCls = isFolder ? 'fr-row fr-row-folder' : 'fr-row';
         return '<tr class="' + rowCls + '">' + cbCell + nameCell + sizeCell + dateCell + expiresCell + actionCell + '</tr>';
     };
 

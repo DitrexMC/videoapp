@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'fv-v7';
+const CACHE_VERSION = 'fv-v11';
 const STATIC_CACHE  = `${CACHE_VERSION}-static`;
 const API_PREFIX    = '/api/';
 
