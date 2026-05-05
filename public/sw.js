@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'fv-v1';
+const CACHE_VERSION = 'fv-v2';
 const STATIC_CACHE  = `${CACHE_VERSION}-static`;
 const API_PREFIX    = '/api/';
 
@@ -40,10 +40,11 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   const { request } = event;
+  const path = new URL(request.url).pathname;
 
-  // Always use network for API calls
-  if (request.url.includes(API_PREFIX) || isApiRoute(request.url)) {
-    event.respondWith(fetch(request));
+  // Let all API routes pass through without SW interference
+  // SW's fetch(request) can corrupt binary bodies (chunk uploads get 415)
+  if (path.startsWith('/api/') || isApiRoute(path)) {
     return;
   }
 
@@ -80,12 +81,12 @@ function isStaticAsset(url) {
   return /\.(css|js|png|jpg|jpeg|gif|svg|woff2?|ttf)(\?.*)?$/.test(url);
 }
 
-function isApiRoute(url) {
-  const path = new URL(url).pathname;
+function isApiRoute(path) {
   return (
     path.startsWith('/upload/') ||
     path.startsWith('/files/') ||
     path.startsWith('/admin/') ||
-    path.startsWith('/auth/')
+    path.startsWith('/auth/') ||
+    path.startsWith('/folders/')
   );
 }

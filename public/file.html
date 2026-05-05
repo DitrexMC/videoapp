@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>videoapp — ファイル詳細</title>
     <link rel="icon" href="/icons/icon-192.png">
     <link rel="manifest" href="/manifest.json">
@@ -15,67 +15,160 @@
     <link rel="stylesheet" href="/css/common.css">
     <link rel="stylesheet" href="/css/app.css">
     <style>
-        .file-detail-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
+        .viewer {
+            display: flex;
+            flex-direction: column;
             gap: 1.5rem;
         }
 
-        @media(max-width:600px) {
-            .file-detail-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .meta-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: .55rem 0;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .meta-row:last-child {
-            border-bottom: none;
-        }
-
-        .meta-key {
-            color: var(--text-sub);
-            font-size: .78rem;
-            text-transform: uppercase;
-            letter-spacing: .5px;
-            font-weight: 700;
-        }
-
-        .meta-val {
-            font-size: .88rem;
-            font-weight: 600;
-        }
-
-        .preview-area {
-            border: 1px solid var(--border);
-            border-radius: 10px;
+        .media-wrap {
+            position: relative;
+            border-radius: 12px;
             overflow: hidden;
-            text-align: center;
-            background: var(--bg3);
-            min-height: 180px;
+            background: #000;
             display: flex;
             align-items: center;
             justify-content: center;
+            min-height: 240px;
         }
 
-        .preview-area img,
-        .preview-area video,
-        .preview-area audio {
+        .media-wrap video,
+        .media-wrap img {
             max-width: 100%;
-            max-height: 400px;
+            max-height: 70vh;
             display: block;
-            margin: auto;
         }
 
-        .preview-no {
+        .media-wrap audio {
+            width: 100%;
+            max-width: 500px;
+            margin: 2rem;
+        }
+
+        .media-glow {
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse at center, rgba(59, 130, 246, .06) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .binary-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: .8rem;
+            padding: 3rem 2rem;
+            text-align: center;
+            position: relative;
+        }
+
+        .binary-icon-box {
+            width: 80px;
+            height: 80px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--border);
+            background: var(--bg3);
+        }
+
+        .binary-icon-box svg {
+            width: 36px;
+            height: 36px;
+        }
+
+        .binary-label {
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .binary-sub {
+            font-size: .82rem;
             color: var(--text-sub);
-            font-size: .85rem;
+        }
+
+        .info-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .info-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .file-name {
+            font-size: 1.2rem;
+            font-weight: 700;
+            word-break: break-all;
+        }
+
+        .file-mime {
+            font-size: .78rem;
+            color: var(--text-sub);
+            margin-top: .2rem;
+        }
+
+        .actions {
+            display: flex;
+            gap: .5rem;
+            flex-wrap: wrap;
+        }
+
+        .meta-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .5rem;
+        }
+
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: .35rem;
+            padding: .3rem .65rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            font-size: .78rem;
+            color: var(--text-sub);
+        }
+
+        .chip svg {
+            width: 12px;
+            height: 12px;
+            opacity: .6;
+        }
+
+        .owner-section {
+            border-top: 1px solid var(--border);
+            padding-top: 1rem;
+        }
+
+        .owner-section-title {
+            font-size: .75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            color: var(--text-sub);
+            margin-bottom: .8rem;
+        }
+
+        .owner-row {
+            display: flex;
+            align-items: center;
+            gap: .6rem;
+            padding: .35rem 0;
+            flex-wrap: wrap;
+        }
+
+        .owner-label {
+            font-size: .78rem;
+            color: var(--text-sub);
+            min-width: 100px;
         }
     </style>
 </head>
@@ -106,7 +199,6 @@
             <div style="margin-bottom:1rem">
                 <a href="/files.html" class="btn btn-ghost btn-sm">← マイファイルへ戻る</a>
             </div>
-
             <div id="page-content">
                 <div class="card">読み込み中...</div>
             </div>
@@ -120,10 +212,6 @@
 
         if (!auth.requireAuth()) throw new Error('redirect');
 
-        const me = auth.getUser();
-        document.getElementById('nav-username').textContent = me?.username ?? '';
-        if (auth.isAdmin()) document.getElementById('nav-admin-link').classList.remove('hidden');
-
         document.getElementById('logout-btn').addEventListener('click', async () => {
             await api.auth.logout().catch(() => { });
             auth.clearSession();
@@ -133,106 +221,229 @@
         function esc(s) { return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
         function fmtBytes(b) {
-            if (!b) return '0 B';
-            const u = ['B', 'KB', 'MB', 'GB'];
-            let i = 0;
-            while (b >= 1024 && i < u.length - 1) { b /= 1024; i++; }
-            return b.toFixed(i ? 1 : 0) + ' ' + u[i];
+            if (!b && b !== 0) return '0 B';
+            if (b >= 1073741824) return (b / 1073741824).toFixed(2) + ' GB';
+            if (b >= 1048576) return (b / 1048576).toFixed(1) + ' MB';
+            if (b >= 1024) return (b / 1024).toFixed(0) + ' KB';
+            return b + ' B';
         }
 
-        function fmtDate(iso) {
-            if (!iso) return '—';
-            return new Date(typeof iso === 'number' ? iso * 1000 : iso)
-                .toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+        function fmtDate(ts) {
+            if (!ts) return '—';
+            const d = new Date(ts);
+            return d.toLocaleDateString('ja-JP') + ' ' + d.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
         }
 
-        function renderPreview(f) {
-            if (!f.mime_type) return '';
-            const src = `/files/${f.id}/download`;
-            if (f.mime_type.startsWith('image/')) return `<img src="${esc(src)}" alt="${esc(f.safe_name)}">`;
-            if (f.mime_type.startsWith('video/')) return `<video src="${esc(src)}" controls></video>`;
-            if (f.mime_type.startsWith('audio/')) return `<audio src="${esc(src)}" controls></audio>`;
-            return '<div class="preview-no">プレビュー非対応</div>';
+        function getExt(name) {
+            if (!name) return '';
+            const idx = name.lastIndexOf('.');
+            return idx > 0 ? name.slice(idx + 1).toLowerCase() : '';
         }
 
         const id = new URLSearchParams(location.search).get('id');
         if (!id) { location.href = '/files.html'; throw new Error('no id'); }
 
-        const dl = `${location.origin}/files/${id}/download`;
+        async function init() {
+            const me = await api.auth.me();
+            auth.updateUser(me);
+            document.getElementById('nav-username').textContent = me.username ?? '';
+            if (auth.isAdmin()) document.getElementById('nav-admin-link').classList.remove('hidden');
 
-        try {
-            const f = await api.files.get(id);
-            document.title = `videoapp — ${f.safe_name}`;
+            try {
+                const f = await api.files.get(id);
+                document.title = 'videoapp — ' + f.safe_name;
+                render(f, me);
+            } catch {
+                document.getElementById('page-content').innerHTML = '<div class="card">ファイルの読み込みに失敗しました</div>';
+            }
+        }
+
+        function render(f, me) {
+            const mime = f.mime_type || '';
+            const isVideo = mime.startsWith('video/');
+            const isImage = mime.startsWith('image/');
+            const isAudio = mime.startsWith('audio/');
+            const isPdf = mime === 'application/pdf';
+            const isText = mime.startsWith('text/');
+            const ext = getExt(f.safe_name);
+            const streamUrl = `/files/${id}/stream`;
+            const dlUrl = `/files/${id}/download`;
+            const previewUrl = `/files/${id}/preview`;
+            const pageUrl = location.origin + '/file.html?id=' + id;
+            const isOwner = me && (me.id === f.owner_user_id);
+
+            let previewSection = '';
+            if (isVideo) {
+                previewSection = `<div class="media-wrap">
+                    <div class="media-glow"></div>
+                    <video id="vid" controls preload="metadata" playsinline poster="${previewUrl}">
+                        <source src="${streamUrl}" type="${esc(mime)}">
+                    </video>
+                </div>`;
+            } else if (isImage) {
+                previewSection = `<div class="media-wrap" style="background:#111;cursor:pointer" onclick="window.open('${dlUrl}','_blank')">
+                    <div class="media-glow"></div>
+                    <img src="${dlUrl}" alt="${esc(f.safe_name)}" style="max-height:70vh;object-fit:contain" onerror="this.parentElement.innerHTML='<div class=\\'binary-wrap\\'><div class=\\'binary-icon-box\\'>🖼️</div><div class=\\'binary-sub\\'>画像を読み込めませんでした</div></div>'">
+                </div>`;
+            } else if (isAudio) {
+                previewSection = `<div class="media-wrap" style="background:var(--bg2);min-height:auto;padding:2rem">
+                    <audio controls preload="metadata" style="width:100%;max-width:500px">
+                        <source src="${streamUrl}" type="${esc(mime)}">
+                    </audio>
+                </div>`;
+            } else if (isPdf) {
+                previewSection = `<div class="media-wrap" style="background:var(--bg2);min-height:auto;padding:0">
+                    <div class="binary-wrap">
+                        <div class="binary-icon-box">📄</div>
+                        <div class="binary-sub">PDFプレビューは対応していません</div>
+                        <a class="btn btn-primary btn-sm" href="${dlUrl}" target="_blank">別タブで開く</a>
+                    </div>
+                </div>`;
+            } else if (isText) {
+                previewSection = `<div class="media-wrap" style="background:var(--bg2);min-height:auto;padding:0">
+                    <div class="binary-wrap">
+                        <div class="binary-icon-box">📝</div>
+                        <div class="binary-label">${esc(f.safe_name)}</div>
+                        <div class="binary-sub">${esc(mime)}</div>
+                        <a class="btn btn-primary btn-sm" href="${dlUrl}" download>ダウンロード</a>
+                    </div>
+                </div>`;
+            } else {
+                previewSection = `<div class="media-wrap" style="background:var(--bg2);min-height:auto;padding:0">
+                    <div class="binary-wrap">
+                        <div class="binary-icon-box">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+                                <polyline points="13 2 13 9 20 9"/>
+                            </svg>
+                        </div>
+                        <div class="binary-label">${esc(ext ? ext.toUpperCase() + ' ファイル' : '不明なファイル')}</div>
+                        <div class="binary-sub">このファイル形式はブラウザでプレビューできません</div>
+                        <a class="btn btn-primary btn-sm" href="${dlUrl}" download>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            ダウンロード
+                        </a>
+                    </div>
+                </div>`;
+            }
+
+            const ownerData = isOwner ? `<div id="owner-data" data-owner-id="${esc(f.owner_user_id)}"></div>` : '';
+            const ownerStyle = isOwner ? '' : ' style="display:none"';
 
             document.getElementById('page-content').innerHTML = `
-                <div class="stat-tag reveal"><span class="stat-tag-dot"></span>File Detail</div>
-                <div class="sec-eye reveal reveal-d1">
-                    <div class="sec-eye-text">
-                        <div class="sec-lbl">File</div>
-                        <h1>${esc(f.safe_name)}</h1>
-                    </div>
-                </div>
+                <div class="viewer">
+                    ${previewSection}
 
-                <div class="file-detail-grid mt-2">
-                    <div class="card reveal reveal-d2">
-                        <div class="meta-row"><span class="meta-key">ファイル名</span><span class="meta-val">${esc(f.safe_name)}</span></div>
-                        <div class="meta-row"><span class="meta-key">サイズ</span><span class="meta-val">${fmtBytes(f.size)}</span></div>
-                        <div class="meta-row"><span class="meta-key">MIMEタイプ</span><span class="meta-val">${esc(f.mime_type)}</span></div>
-                        <div class="meta-row"><span class="meta-key">状態</span><span class="meta-val">${esc(f.status)}</span></div>
-                        <div class="meta-row"><span class="meta-key">公開設定</span><span class="meta-val">${f.public ? '<span class="badge badge-blue">公開</span>' : '<span class="badge badge-gray">非公開</span>'}</span></div>
-                        <div class="meta-row"><span class="meta-key">アップロード日</span><span class="meta-val">${fmtDate(f.created_at)}</span></div>
-                        <div class="meta-row"><span class="meta-key">有効期限</span><span class="meta-val">${fmtDate(f.expires_at)}</span></div>
-                        <div style="margin-top:1rem;display:flex;gap:.5rem;flex-wrap:wrap">
-                            ${f.status === 'ready' ? `<a class="btn btn-primary btn-sm" href="${esc(dl)}" download="${esc(f.safe_name)}">ダウンロード</a>` : ''}
-                            <button class="btn btn-ghost btn-sm" id="toggle-pub-btn">${f.public ? '非公開にする' : '公開にする'}</button>
-                            <button class="btn btn-danger btn-sm" id="delete-btn">削除</button>
+                    <div class="info-panel card">
+                        <div class="info-top">
+                            <div>
+                                <div class="file-name">${esc(f.safe_name)}</div>
+                                <div class="file-mime">${esc(mime)}</div>
+                            </div>
+                            <div class="actions">
+                                <a class="btn btn-primary btn-sm" href="${dlUrl}" download="${esc(f.safe_name)}">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                    ダウンロード
+                                </a>
+                                <button class="btn btn-ghost btn-sm copy-btn" data-url="${esc(pageUrl)}">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                                    URLコピー
+                                </button>
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="card reveal reveal-d3">
-                        <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-sub);margin-bottom:.8rem">プレビュー</div>
-                        <div class="preview-area">${renderPreview(f)}</div>
-                        <div style="margin-top:1rem">
-                            <label style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-sub)">ダウンロードリンク</label>
-                            <div class="url-row" style="margin-top:.4rem">
-                                <input class="input" type="text" id="dl-url" value="${esc(dl)}" readonly onclick="this.select()">
-                                <button class="copy-btn" id="copy-btn">コピー</button>
+                        <div class="meta-chips">
+                            <span class="chip">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+                                ${fmtBytes(f.size)}
+                            </span>
+                            <span class="chip">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                ${fmtDate(f.created_at)} アップロード
+                            </span>
+                            ${f.expires_at ? `<span class="chip" style="border-color:rgba(245,158,11,.3);color:#f59e0b">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                ${fmtDate(f.expires_at)} まで有効
+                            </span>` : ''}
+                            <span class="chip">${esc(ext ? ext.toUpperCase() : mime.split('/').pop() || '—')}</span>
+                            <span class="chip">${f.public ? '公開' : '非公開'}</span>
+                            ${f.status !== 'ready' ? `<span class="chip" style="color:#f59e0b">${esc(f.status)}</span>` : ''}
+                        </div>
+
+                        <div class="owner-section" id="owner-panel"${ownerStyle}>
+                            ${ownerData}
+                            <div class="owner-section-title">オーナー操作</div>
+
+                            <div class="owner-row">
+                                <span class="owner-label">公開設定</span>
+                                <button class="btn btn-ghost btn-sm" id="toggle-pub-btn">${f.public ? '非公開にする' : '公開にする'}</button>
+                            </div>
+                            <div class="owner-row">
+                                <span class="owner-label">ダウンロードリンク</span>
+                                <div class="url-row" style="flex:1;min-width:200px">
+                                    <input class="input" type="text" id="dl-url-input" value="${esc(location.origin + dlUrl)}" readonly onclick="this.select()">
+                                    <button class="copy-btn" id="copy-dl-btn">コピー</button>
+                                </div>
+                            </div>
+                            <div class="owner-row">
+                                <span class="owner-label">削除</span>
+                                <button class="btn btn-danger btn-sm" id="delete-btn">このファイルを削除</button>
                             </div>
                         </div>
                     </div>
                 </div>
             `;
 
-            const isPublicRef = { v: !!f.public };
-            document.getElementById('copy-btn').addEventListener('click', () => {
-                navigator.clipboard.writeText(dl).catch(() => { });
-                const btn = document.getElementById('copy-btn');
-                btn.textContent = 'コピー済み';
-                btn.classList.add('copied');
-                setTimeout(() => { btn.textContent = 'コピー'; btn.classList.remove('copied'); }, 2000);
+            bindEvents(f, isOwner);
+        }
+
+        function bindEvents(f, isOwner) {
+            document.querySelectorAll('.copy-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const url = btn.dataset.url || document.getElementById('dl-url-input')?.value;
+                    if (!url) return;
+                    const orig = btn.textContent;
+                    navigator.clipboard.writeText(url).then(() => {
+                        btn.textContent = '✓ コピー済み';
+                        btn.classList.add('copied');
+                        setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 2000);
+                    }).catch(() => {
+                        const ta = document.createElement('textarea');
+                        ta.value = url;
+                        ta.style.cssText = 'position:fixed;top:-999px;left:-999px;opacity:0;';
+                        document.body.appendChild(ta);
+                        ta.focus(); ta.select();
+                        try { document.execCommand('copy'); btn.textContent = '✓ コピー済み'; btn.classList.add('copied'); setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 2000); } catch (_) { }
+                        document.body.removeChild(ta);
+                    });
+                });
             });
 
+            if (!isOwner) return;
+
+            let isPublic = !!f.public;
             document.getElementById('toggle-pub-btn').addEventListener('click', async () => {
                 const btn = document.getElementById('toggle-pub-btn');
                 btn.disabled = true;
                 try {
-                    await api.files.setPublic(id, !isPublicRef.v);
-                    isPublicRef.v = !isPublicRef.v;
-                    btn.textContent = isPublicRef.v ? '非公開にする' : '公開にする';
+                    await api.files.setPublic(id, !isPublic);
+                    isPublic = !isPublic;
+                    btn.textContent = isPublic ? '非公開にする' : '公開にする';
                 } finally { btn.disabled = false; }
             });
 
             document.getElementById('delete-btn').addEventListener('click', async () => {
-                if (!confirm(`「${f.safe_name}」を削除しますか？`)) return;
+                if (!confirm('このファイルを削除しますか？この操作は取り消せません。')) return;
                 await api.files.delete(id);
                 location.href = '/files.html';
             });
-
-        } catch {
-            document.getElementById('page-content').innerHTML = '<div class="card">ファイルの読み込みに失敗しました</div>';
         }
 
-        if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => { });
+        init();
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(() => { });
+        }
     </script>
 </body>
 
