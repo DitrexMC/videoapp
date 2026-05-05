@@ -15,25 +15,57 @@
     <link rel="stylesheet" href="/css/common.css">
     <link rel="stylesheet" href="/css/app.css">
     <style>
-        .table-wrap {
-            overflow-x: hidden;
-        }
-
-        .search-row {
+        .files-toolbar {
             display: flex;
             gap: .5rem;
             align-items: center;
             flex-wrap: wrap;
+            margin-bottom: .75rem;
         }
 
-        .search-row .input {
+        .files-toolbar .input {
             min-width: 0;
+            flex: 1 1 180px;
+        }
+
+        .breadcrumb {
+            display: none;
+            align-items: center;
+            gap: .4rem;
+            padding: .4rem 0 .6rem;
+            font-size: .85rem;
+            color: var(--text-sub);
+        }
+
+        .breadcrumb.visible {
+            display: flex;
+        }
+
+        .breadcrumb-sep {
+            opacity: .4;
+        }
+
+        .breadcrumb-folder {
+            font-weight: 600;
+            color: var(--text);
         }
 
         .empty-row td {
-            padding: 2rem;
+            padding: 2.5rem;
             text-align: center;
             color: var(--text-sub);
+            font-size: .9rem;
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: .5rem .25rem 0;
         }
     </style>
 </head>
@@ -73,27 +105,37 @@
                 </div>
             </div>
 
+            <!-- Storage bar -->
             <div class="card mb-2 reveal reveal-d2">
                 <div class="flex justify-between items-center mb-1">
                     <span class="text-sm text-sub">ストレージ使用量</span>
-                    <span class="text-sm" id="usage-label">— / —</span>
+                    <span class="text-sm" id="usage-label">読み込み中…</span>
                 </div>
                 <div class="usage-bar-wrap">
                     <div class="usage-bar" id="usage-bar" style="width:0%"></div>
                 </div>
             </div>
 
-            <div class="search-row reveal reveal-d3">
-                <select class="input" id="filter-type" style="width:auto;min-width:120px">
+            <!-- Toolbar -->
+            <div class="files-toolbar reveal reveal-d2">
+                <select class="input" id="filter-type" style="width:auto;flex:0 0 auto;min-width:130px">
                     <option value="all">すべて</option>
                     <option value="folder">フォルダのみ</option>
                     <option value="file">ファイルのみ</option>
                 </select>
-                <input class="input" id="search-input" placeholder="ファイル名で検索..." type="search">
-                <button class="btn btn-primary" id="search-btn">検索</button>
-                <button class="btn btn-danger btn-sm" id="bulk-delete-btn" style="display:none">選択分を削除</button>
+                <input class="input" id="search-input" placeholder="ファイル名で検索…" type="search" autocomplete="off">
+                <button class="btn btn-ghost btn-sm" id="refresh-btn">更新</button>
+                <button class="btn btn-danger btn-sm" id="bulk-delete-btn" style="display:none">選択を削除</button>
             </div>
 
+            <!-- Breadcrumb -->
+            <div class="breadcrumb" id="breadcrumb">
+                <button class="btn btn-ghost btn-sm" id="breadcrumb-root" style="padding:.15rem .5rem">← マイファイル</button>
+                <span class="breadcrumb-sep">/</span>
+                <span class="breadcrumb-folder" id="breadcrumb-name"></span>
+            </div>
+
+            <!-- Table -->
             <div class="table-wrap reveal reveal-d3">
                 <table class="table">
                     <thead>
@@ -106,20 +148,21 @@
                             </th>
                             <th>ファイル名</th>
                             <th style="width:7rem">サイズ</th>
-                            <th style="width:9rem">アップロード日</th>
-                            <th style="width:9rem">有効期限</th>
-                            <th style="width:7rem">操作</th>
+                            <th style="width:9.5rem">アップロード日</th>
+                            <th style="width:9.5rem">有効期限</th>
+                            <th style="width:10rem">操作</th>
                         </tr>
                     </thead>
-                    <tbody id="file-list">
+                    <tbody id="file-tbody">
                         <tr class="empty-row">
-                            <td colspan="6">読み込み中...</td>
+                            <td colspan="6">読み込み中…</td>
                         </tr>
                     </tbody>
                 </table>
             </div>
 
-            <div class="flex justify-between items-center mt-1 reveal reveal-d3" style="padding:0 .5rem">
+            <!-- Pagination -->
+            <div class="pagination reveal reveal-d3">
                 <span class="text-sm text-sub" id="page-info">0件</span>
                 <div style="display:flex;gap:.4rem">
                     <button class="btn btn-ghost btn-sm" id="page-prev">← 前へ</button>
@@ -135,20 +178,18 @@
         import { auth } from '/js/core/auth.js';
         import { api } from '/js/core/api.js';
 
-        if (!auth.requireAuth()) throw new Error('redirect');
+        if (!auth.requireAuth()) throw new Error('auth required');
 
-        document.getElementById('logout-btn').addEventListener('click', async () => {
-            await api.auth.logout().catch(() => { });
-            auth.clearSession();
-            location.href = '/login.html';
-        });
+        /* ─── state ─────────────────────────────────────────── */
+        const PAGE_SIZE = 50;
+        let allItems = [];
+        let page = 1;
+        let folderId = null;
+        let folderName = null;
 
-        var PAGE_SIZE = 50;
-        var allItems = [];
-        var currentPage = 1;
-
+        /* ─── helpers ───────────────────────────────────────── */
         function fmtBytes(b) {
-            if (!b && b !== 0) return '0 B';
+            if (b == null || isNaN(b)) return '0 B';
             if (b >= 1073741824) return (b / 1073741824).toFixed(2) + ' GB';
             if (b >= 1048576) return (b / 1048576).toFixed(1) + ' MB';
             if (b >= 1024) return (b / 1024).toFixed(0) + ' KB';
@@ -159,210 +200,215 @@
             return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         }
 
-        // ── Init ───────────────────────────────────────────────
+        function filtered() {
+            const q = document.getElementById('search-input').value.trim().toLowerCase();
+            const t = document.getElementById('filter-type').value;
+
+            return allItems.filter(item => {
+                if (t === 'folder' && item.type !== 'folder') return false;
+                if (t === 'file' && item.type !== 'file') return false;
+                if (!q) return true;
+                if (q.startsWith('.')) {
+                    if (item.type !== 'file') return false;
+                    const ext = (item.safe_name || '').split('.').pop().toLowerCase();
+                    return ext === q.slice(1);
+                }
+                const name = item.type === 'file' ? (item.safe_name || '') : (item.name || '');
+                return name.toLowerCase().includes(q);
+            });
+        }
+
+        /* ─── render ─────────────────────────────────────────── */
+        function render() {
+            const items = filtered();
+            const total = items.length;
+            const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+            if (page > totalPages) page = totalPages;
+
+            const start = (page - 1) * PAGE_SIZE;
+            const slice = items.slice(start, start + PAGE_SIZE);
+
+            const tbody = document.getElementById('file-tbody');
+
+            if (total === 0) {
+                tbody.innerHTML = '<tr class="empty-row"><td colspan="6">ファイルがありません</td></tr>';
+            } else {
+                tbody.innerHTML = slice.map(item => {
+                    const extras = item.type === 'folder'
+                        ? ['<button class="btn btn-ghost btn-sm fr-rename-btn" data-id="' + esc(item.id) + '" data-name="' + esc(item.name) + '" style="padding:.22rem .45rem;font-size:.74rem" title="名前変更">✎</button>']
+                        : [];
+                    return window.buildFileRow(item, { cbClass: 'file-cb', actionExtras: extras });
+                }).join('');
+            }
+
+            document.getElementById('page-info').textContent =
+                total > 0 ? (start + 1) + '–' + Math.min(start + PAGE_SIZE, total) + ' / ' + total + '件' : '0件';
+            document.getElementById('page-prev').disabled = page <= 1;
+            document.getElementById('page-next').disabled = page >= totalPages;
+            document.getElementById('select-all').checked = false;
+
+            updateBulkBtn();
+            bindRowEvents();
+        }
+
+        function bindRowEvents() {
+            document.querySelectorAll('.file-cb').forEach(cb =>
+                cb.addEventListener('change', updateBulkBtn));
+
+            document.querySelectorAll('.fr-del-btn').forEach(btn =>
+                btn.addEventListener('click', async () => {
+                    if (!confirm('このファイルを削除しますか？')) return;
+                    btn.disabled = true;
+                    try { await api.files.delete(btn.dataset.id); await reload(); }
+                    catch { btn.disabled = false; }
+                }));
+
+            document.querySelectorAll('.fr-del-folder-btn').forEach(btn =>
+                btn.addEventListener('click', async () => {
+                    if (!confirm('このフォルダを削除しますか？（中のファイルは残ります）')) return;
+                    btn.disabled = true;
+                    try { await api.folders.delete(btn.dataset.id); await reload(); }
+                    catch { btn.disabled = false; }
+                }));
+
+            document.querySelectorAll('.fr-folder-name').forEach(el =>
+                el.addEventListener('click', () => {
+                    folderId = el.dataset.folderId;
+                    folderName = el.dataset.folderName;
+                    page = 1;
+                    reload();
+                }));
+
+            document.querySelectorAll('.fr-rename-btn').forEach(btn =>
+                btn.addEventListener('click', async () => {
+                    const name = prompt('新しいフォルダ名:', btn.dataset.name);
+                    if (!name || !name.trim()) return;
+                    try { await api.folders.rename(btn.dataset.id, name.trim()); await reload(); }
+                    catch { alert('名前変更に失敗しました'); }
+                }));
+
+            document.querySelectorAll('.fr-discord-btn').forEach(btn =>
+                btn.addEventListener('click', async () => {
+                    const url = location.origin + btn.dataset.url;
+                    const orig = btn.innerHTML;
+                    try { await navigator.clipboard.writeText(url); btn.textContent = 'コピー済み'; }
+                    catch { window.prompt('コピーしてください:', url); }
+                    setTimeout(() => { btn.innerHTML = orig; }, 1800);
+                }));
+        }
+
+        function updateBulkBtn() {
+            const count = document.querySelectorAll('.file-cb:checked').length;
+            const btn = document.getElementById('bulk-delete-btn');
+            btn.style.display = count > 0 ? '' : 'none';
+            btn.textContent = '選択を削除 (' + count + ')';
+        }
+
+        function updateBreadcrumb() {
+            const crumb = document.getElementById('breadcrumb');
+            if (folderId) {
+                document.getElementById('breadcrumb-name').textContent = folderName || 'フォルダ';
+                crumb.classList.add('visible');
+                document.getElementById('filter-type').style.display = 'none';
+            } else {
+                crumb.classList.remove('visible');
+                document.getElementById('filter-type').style.display = '';
+            }
+        }
+
+        /* ─── data loading ───────────────────────────────────── */
+        async function loadStorage() {
+            try {
+                const me = await api.auth.me();
+                const used = me.storage_used_bytes ?? 0;
+                const limit = me.storage_limit_bytes ?? 0;
+                const pct = limit > 0 ? Math.min(100, used / limit * 100) : 0;
+                document.getElementById('usage-bar').style.width = pct.toFixed(1) + '%';
+                document.getElementById('usage-label').textContent =
+                    limit > 0 ? fmtBytes(used) + ' / ' + fmtBytes(limit) : fmtBytes(used) + ' / 無制限';
+            } catch { /* ignore */ }
+        }
+
+        async function loadItems() {
+            if (folderId) {
+                const res = await api.folders.files(folderId);
+                allItems = (res?.items ?? []).map(f => ({ ...f, type: 'file' }));
+            } else {
+                const [fRes, dRes] = await Promise.all([
+                    api.files.list({ limit: 100 }),
+                    api.folders.list(),
+                ]);
+                const files = (fRes?.items ?? []).map(f => ({ ...f, type: 'file' }));
+                const folders = (dRes?.items ?? []).map(d => ({ ...d, type: 'folder' }));
+                allItems = [...folders, ...files];
+            }
+            allItems.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        }
+
+        async function reload() {
+            try {
+                await Promise.all([loadStorage(), loadItems()]);
+            } catch (e) {
+                document.getElementById('file-tbody').innerHTML =
+                    '<tr class="empty-row"><td colspan="6">読み込みに失敗しました: ' + esc(String(e?.message ?? e)) + '</td></tr>';
+                return;
+            }
+            updateBreadcrumb();
+            render();
+        }
+
+        /* ─── init ───────────────────────────────────────────── */
         async function init() {
             const me = await api.auth.me();
             auth.updateUser(me);
             document.getElementById('nav-username').textContent = me.username ?? '';
             if (auth.isAdmin()) document.getElementById('nav-admin-link').classList.remove('hidden');
 
-            loadStorageStats();
-            loadAllData();
-
-            document.getElementById('search-btn').addEventListener('click', function () { currentPage = 1; applyFilter(); });
-            document.getElementById('search-input').addEventListener('keydown', function (e) { if (e.key === 'Enter') { currentPage = 1; applyFilter(); } });
-            document.getElementById('search-input').addEventListener('input', function () { currentPage = 1; applyFilter(); });
-            document.getElementById('filter-type').addEventListener('change', function () { currentPage = 1; applyFilter(); });
-
-            document.getElementById('page-prev').addEventListener('click', function () {
-                if (currentPage > 1) { currentPage--; applyFilter(); }
+            document.getElementById('logout-btn').addEventListener('click', async () => {
+                await api.auth.logout().catch(() => { });
+                auth.clearSession();
+                location.href = '/login.html';
             });
-            document.getElementById('page-next').addEventListener('click', function () {
-                var total = Math.ceil(getFilteredItems().length / PAGE_SIZE) || 1;
-                if (currentPage < total) { currentPage++; applyFilter(); }
+
+            document.getElementById('breadcrumb-root').addEventListener('click', () => {
+                folderId = null; folderName = null; page = 1; reload();
             });
+
+            document.getElementById('refresh-btn').addEventListener('click', () => reload());
+
+            document.getElementById('search-input').addEventListener('input', () => { page = 1; render(); });
+            document.getElementById('filter-type').addEventListener('change', () => { page = 1; render(); });
+
+            document.getElementById('page-prev').addEventListener('click', () => { if (page > 1) { page--; render(); } });
+            document.getElementById('page-next').addEventListener('click', () => { page++; render(); });
 
             document.getElementById('select-all').addEventListener('change', function () {
-                document.querySelectorAll('.file-check').forEach(function (cb) { cb.checked = this.checked; });
+                document.querySelectorAll('.file-cb').forEach(cb => { cb.checked = this.checked; });
                 updateBulkBtn();
             });
 
-            document.getElementById('bulk-delete-btn').addEventListener('click', async function () {
-                var checked = Array.from(document.querySelectorAll('.file-check:checked'));
-                if (checked.length === 0) return;
+            document.getElementById('bulk-delete-btn').addEventListener('click', async () => {
+                const checked = Array.from(document.querySelectorAll('.file-cb:checked'));
+                if (!checked.length) return;
                 if (!confirm(checked.length + ' 件を削除しますか？')) return;
 
-                var fileIds = checked.filter(function (cb) { return cb.dataset.id.startsWith('f:'); }).map(function (cb) { return cb.dataset.id.slice(2); });
-                var folderIds = checked.filter(function (cb) { return cb.dataset.id.startsWith('d:'); }).map(function (cb) { return cb.dataset.id.slice(2); });
+                const fileIds = checked.filter(c => c.dataset.id.startsWith('f:')).map(c => c.dataset.id.slice(2));
+                const folderIds = checked.filter(c => c.dataset.id.startsWith('d:')).map(c => c.dataset.id.slice(2));
 
                 await Promise.all([
-                    ...fileIds.map(function (id) { return api.files.delete(id).catch(function () { }); }),
-                    ...folderIds.map(function (id) { return api.folders.delete(id).catch(function () { }); }),
+                    ...fileIds.map(id => api.files.delete(id).catch(() => { })),
+                    ...folderIds.map(id => api.folders.delete(id).catch(() => { })),
                 ]);
-                loadStorageStats();
-                loadAllData();
-            });
-        }
-
-        // ── Data loading ───────────────────────────────────────
-        async function loadStorageStats() {
-            try {
-                const me = await api.auth.me();
-                const res = await api.files.list({ limit: 100 });
-                const files = res?.items ?? [];
-                var used = files.reduce(function (sum, f) { return sum + (f.size ?? 0); }, 0);
-                var limit = me.storage_limit_bytes ?? 0;
-                var pct = limit > 0 ? Math.min(100, (used / limit) * 100) : 0;
-
-                document.getElementById('usage-bar').style.width = pct.toFixed(1) + '%';
-                document.getElementById('usage-label').textContent =
-                    limit > 0 ? fmtBytes(used) + ' / ' + fmtBytes(limit) : fmtBytes(used) + ' / 無制限';
-            } catch (e) { console.error(e); }
-        }
-
-        async function loadAllData() {
-            try {
-                const [filesRes, foldersRes] = await Promise.all([
-                    api.files.list({ limit: 100 }),
-                    api.folders.list(),
-                ]);
-
-                var files = (filesRes?.items ?? []).map(function (f) { return Object.assign({ type: 'file' }, f); });
-                var folders = (foldersRes?.items ?? []).map(function (d) { return Object.assign({ type: 'folder' }, d); });
-
-                allItems = files.concat(folders);
-                allItems.sort(function (a, b) {
-                    return new Date(b.created_at) - new Date(a.created_at);
-                });
-
-                currentPage = 1;
-                applyFilter();
-            } catch (e) {
-                document.getElementById('file-list').innerHTML = '<tr class="empty-row"><td colspan="6">読み込みに失敗しました</td></tr>';
-            }
-        }
-
-        // ── Filter & render ────────────────────────────────────
-        function getFilteredItems() {
-            var searchInput = document.getElementById('search-input').value.trim().toLowerCase();
-            var filterType = document.getElementById('filter-type').value;
-
-            var filtered = allItems;
-
-            if (filterType === 'folder') {
-                filtered = filtered.filter(function (item) { return item.type === 'folder'; });
-            } else if (filterType === 'file') {
-                filtered = filtered.filter(function (item) { return item.type === 'file'; });
-            }
-
-            if (searchInput) {
-                if (searchInput.startsWith('.')) {
-                    var ext = searchInput.slice(1);
-                    filtered = filtered.filter(function (item) {
-                        if (item.type === 'file') {
-                            var e = ((item.safe_name || '').split('.').pop() || '').toLowerCase();
-                            return e === ext;
-                        }
-                        return false;
-                    });
-                } else {
-                    filtered = filtered.filter(function (item) {
-                        var name = item.type === 'file' ? (item.safe_name || '') : (item.name || 'フォルダ');
-                        return name.toLowerCase().includes(searchInput);
-                    });
-                }
-            }
-            return filtered;
-        }
-
-        function applyFilter() {
-            var filtered = getFilteredItems();
-            renderList(filtered);
-        }
-
-        function renderList(items) {
-            var tbody = document.getElementById('file-list');
-            var totalPages = Math.ceil(items.length / PAGE_SIZE) || 1;
-            if (currentPage > totalPages) currentPage = totalPages;
-            var start = (currentPage - 1) * PAGE_SIZE;
-            var pageItems = items.slice(start, start + PAGE_SIZE);
-
-            document.getElementById('page-info').textContent = items.length > 0
-                ? (start + 1) + '–' + Math.min(start + PAGE_SIZE, items.length) + ' / ' + items.length + '件'
-                : '0件';
-            document.getElementById('page-prev').disabled = currentPage <= 1;
-            document.getElementById('page-next').disabled = currentPage >= totalPages;
-
-            if (items.length === 0) {
-                tbody.innerHTML = '<tr class="empty-row"><td colspan="6">ファイルがありません</td></tr>';
-                updateBulkBtn();
-                return;
-            }
-
-            tbody.innerHTML = pageItems.map(function (item) {
-                return window.buildFileRow(item, {
-                    cbClass: 'file-check',
-                    actionExtras: item.type === 'folder'
-                        ? [
-                            '<button class="btn btn-ghost btn-sm rename-folder-btn" data-id="' + esc(item.id) + '" data-name="' + esc(item.name) + '" style="padding:.22rem .45rem;font-size:.7rem" title="名前変更">✎</button>'
-                        ]
-                        : '',
-                });
-            }).join('');
-
-            document.querySelectorAll('.file-check').forEach(function (cb) {
-                cb.addEventListener('change', updateBulkBtn);
+                await reload();
             });
 
-            document.querySelectorAll('.fr-del-btn').forEach(function (btn) {
-                btn.addEventListener('click', async function () {
-                    if (!confirm('このファイルを削除しますか？')) return;
-                    btn.disabled = true;
-                    try {
-                        await api.files.delete(btn.dataset.id);
-                        loadStorageStats();
-                        loadAllData();
-                    } catch (e) { btn.disabled = false; }
-                });
-            });
-
-            document.querySelectorAll('.fr-del-folder-btn').forEach(function (btn) {
-                btn.addEventListener('click', async function () {
-                    if (!confirm('このフォルダを削除しますか？')) return;
-                    btn.disabled = true;
-                    try {
-                        await api.folders.delete(btn.dataset.id);
-                        loadAllData();
-                    } catch (e) { btn.disabled = false; }
-                });
-            });
-
-            document.querySelectorAll('.rename-folder-btn').forEach(function (btn) {
-                btn.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    var name = prompt('新しいフォルダ名:', btn.dataset.name);
-                    if (name === null || name.trim() === '') return;
-                    api.folders.rename(btn.dataset.id, name.trim()).then(function () {
-                        loadAllData();
-                    });
-                });
-            });
-
-            document.getElementById('select-all').checked = false;
-            updateBulkBtn();
+            await reload();
         }
 
-        function updateBulkBtn() {
-            var count = document.querySelectorAll('.file-check:checked').length;
-            var btn = document.getElementById('bulk-delete-btn');
-            btn.style.display = count > 0 ? '' : 'none';
-            btn.textContent = count > 0 ? '選択分を削除 (' + count + ')' : '選択分を削除';
-        }
-
-        init();
+        init().catch(e => console.error('init error:', e));
 
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js').catch(function () { });
+            navigator.serviceWorker.register('/sw.js').catch(() => { });
         }
     </script>
 </body>

@@ -46,9 +46,20 @@ export async function registerAuthRoutes(
 
   app.get("/auth/me", async (request) => {
     const sessionToken = getBearerToken(request.headers.authorization);
+    const user = runtime.authService.getCurrentUser(sessionToken);
+
+    const storageRow = runtime.database.connection
+      .prepare<
+        string,
+        { used: number }
+      >("SELECT COALESCE(SUM(size_bytes), 0) AS used FROM files WHERE owner_user_id = ? AND is_deleted = 0")
+      .get((user as { user_id: string }).user_id);
 
     return {
-      user: runtime.authService.getCurrentUser(sessionToken),
+      user: {
+        ...user,
+        storage_used_bytes: storageRow?.used ?? 0,
+      },
     };
   });
 

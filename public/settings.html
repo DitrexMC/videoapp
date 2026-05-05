@@ -150,8 +150,7 @@
             const user = await api.auth.me();
             document.getElementById('info-username').textContent = user.username ?? '—';
             document.getElementById('info-role').textContent = user.role ?? '—';
-            const files = await api.files.list({ limit: 100 });
-            const used = (files?.items ?? []).reduce((sum, file) => sum + (file.size ?? 0), 0);
+            const used = user.storage_used_bytes ?? 0;
             const limit = user.storage_limit_bytes;
             document.getElementById('info-storage').textContent = limit
                 ? `${fmtBytes(used)} / ${fmtBytes(limit)}`

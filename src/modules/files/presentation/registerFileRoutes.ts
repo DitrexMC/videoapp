@@ -4,17 +4,52 @@ import { stat } from "node:fs/promises";
 import { z } from "zod";
 
 import type { AppRuntime } from "../../../app/runtime.js";
-import { AuthenticationError, ValidationError } from "../../../shared/domain/errors.js";
+import {
+  AuthenticationError,
+  ValidationError,
+} from "../../../shared/domain/errors.js";
 
 const setVisibilitySchema = z.object({
-  public: z.boolean()
+  public: z.boolean(),
 });
 
 const zipRequestSchema = z.object({
-  file_ids: z.array(z.string().uuid()).min(1)
+  file_ids: z.array(z.string().uuid()).min(1),
 });
 
-export async function registerFileRoutes(app: FastifyInstance, runtime: AppRuntime): Promise<void> {
+export async function registerFileRoutes(
+  app: FastifyInstance,
+  runtime: AppRuntime,
+): Promise<void> {
+  const serializeFileListItem = (
+    file: ReturnType<AppRuntime["fileService"]["listFiles"]>[number],
+  ) => ({
+    created_at: file.createdAt,
+    expires_at: file.expiresAt,
+    folder_id: file.folderId,
+    id: file.id,
+    mime_type: file.mimeType,
+    name: file.name,
+    owner_user_id: file.ownerUserId,
+    preview_status: file.previewStatus,
+    public: file.public,
+    safe_name: file.safeName,
+    size: file.sizeBytes,
+    status: file.status,
+    updated_at: file.updatedAt,
+  });
+
+  const serializeFolderListItem = (
+    folder: ReturnType<AppRuntime["fileService"]["listFolders"]>[number],
+  ) => ({
+    created_at: folder.createdAt,
+    deleted_at: folder.deletedAt,
+    id: folder.id,
+    name: folder.name,
+    owner_user_id: folder.ownerUserId,
+    updated_at: folder.updatedAt,
+  });
+
   const sendFileDetail = (sessionToken: string | null, fileId: string) => {
     const file = runtime.fileService.getFileDetail(sessionToken, fileId);
 
@@ -31,19 +66,28 @@ export async function registerFileRoutes(app: FastifyInstance, runtime: AppRunti
       safe_name: file.safeName,
       size: file.sizeBytes,
       status: file.status,
-      updated_at: file.updatedAt
+      updated_at: file.updatedAt,
     };
   };
 
   app.get("/files", async (request) => {
     const sessionToken = getRequiredBearerToken(request.headers.authorization);
-    const query = z.object({
-      cursor: z.string().optional(),
-      folderId: z.string().uuid().optional(),
-      limit: z.coerce.number().int().positive().max(100).optional(),
-      status: z.enum(["uploading", "processing", "ready", "expired", "deleted"]).optional()
-    }).parse(request.query);
-    const fileListQuery: { cursor?: string; folderId?: string; limit?: number; status?: "uploading" | "processing" | "ready" | "expired" | "deleted" } = {};
+    const query = z
+      .object({
+        cursor: z.string().optional(),
+        folderId: z.string().uuid().optional(),
+        limit: z.coerce.number().int().positive().max(100).optional(),
+        status: z
+          .enum(["uploading", "processing", "ready", "expired", "deleted"])
+          .optional(),
+      })
+      .parse(request.query);
+    const fileListQuery: {
+      cursor?: string;
+      folderId?: string;
+      limit?: number;
+      status?: "uploading" | "processing" | "ready" | "expired" | "deleted";
+    } = {};
 
     if (query.cursor !== undefined) {
       fileListQuery.cursor = query.cursor;
@@ -62,41 +106,58 @@ export async function registerFileRoutes(app: FastifyInstance, runtime: AppRunti
     }
 
     return {
-      items: runtime.fileService.listFiles(sessionToken, fileListQuery)
+      items: runtime.fileService
+        .listFiles(sessionToken, fileListQuery)
+        .map(serializeFileListItem),
     };
   });
 
   app.get("/files/:fileId", async (request) => {
     const sessionToken = getOptionalBearerToken(request.headers.authorization);
-    const params = z.object({ fileId: z.string().uuid() }).parse(request.params);
+    const params = z
+      .object({ fileId: z.string().uuid() })
+      .parse(request.params);
 
     return sendFileDetail(sessionToken, params.fileId);
   });
 
   app.get("/file/:fileId", async (request) => {
     const sessionToken = getOptionalBearerToken(request.headers.authorization);
-    const params = z.object({ fileId: z.string().uuid() }).parse(request.params);
+    const params = z
+      .object({ fileId: z.string().uuid() })
+      .parse(request.params);
 
     return sendFileDetail(sessionToken, params.fileId);
   });
 
   app.patch("/files/:fileId/public", async (request, reply) => {
     const sessionToken = getRequiredBearerToken(request.headers.authorization);
-    const params = z.object({ fileId: z.string().uuid() }).parse(request.params);
+    const params = z
+      .object({ fileId: z.string().uuid() })
+      .parse(request.params);
     const body = setVisibilitySchema.safeParse(request.body);
 
     if (!body.success) {
-      throw new ValidationError("公開設定の入力が不正です。", body.error.flatten());
+      throw new ValidationError(
+        "公開設定の入力が不正です。",
+        body.error.flatten(),
+      );
     }
 
-    runtime.fileService.setFileVisibility(sessionToken, params.fileId, body.data.public);
+    runtime.fileService.setFileVisibility(
+      sessionToken,
+      params.fileId,
+      body.data.public,
+    );
 
     return reply.status(204).send();
   });
 
   app.delete("/files/:fileId", async (request, reply) => {
     const sessionToken = getRequiredBearerToken(request.headers.authorization);
-    const params = z.object({ fileId: z.string().uuid() }).parse(request.params);
+    const params = z
+      .object({ fileId: z.string().uuid() })
+      .parse(request.params);
 
     runtime.fileService.removeFile(sessionToken, params.fileId);
 
@@ -105,10 +166,18 @@ export async function registerFileRoutes(app: FastifyInstance, runtime: AppRunti
 
   app.get("/files/:fileId/download", async (request, reply) => {
     const sessionToken = getOptionalBearerToken(request.headers.authorization);
-    const params = z.object({ fileId: z.string().uuid() }).parse(request.params);
-    const { file, stream } = await runtime.fileService.getDownload(sessionToken, params.fileId);
+    const params = z
+      .object({ fileId: z.string().uuid() })
+      .parse(request.params);
+    const { file, stream } = await runtime.fileService.getDownload(
+      sessionToken,
+      params.fileId,
+    );
 
-    reply.header("Content-Disposition", `attachment; filename*=UTF-8''${encodeURIComponent(file.safeName)}`);
+    reply.header(
+      "Content-Disposition",
+      `attachment; filename*=UTF-8''${encodeURIComponent(file.safeName)}`,
+    );
     reply.header("Content-Type", file.mimeType);
 
     return reply.send(stream);
@@ -116,14 +185,22 @@ export async function registerFileRoutes(app: FastifyInstance, runtime: AppRunti
 
   app.get("/files/:fileId/stream", async (request, reply) => {
     const sessionToken = getOptionalBearerToken(request.headers.authorization);
-    const params = z.object({ fileId: z.string().uuid() }).parse(request.params);
-    const file = await runtime.fileService.getStream(sessionToken, params.fileId);
+    const params = z
+      .object({ fileId: z.string().uuid() })
+      .parse(request.params);
+    const file = await runtime.fileService.getStream(
+      sessionToken,
+      params.fileId,
+    );
 
     if (!file.storagePath) {
       throw new ValidationError("ファイル本体が見つかりません。");
     }
 
-    const rangeHeader = typeof request.headers.range === "string" ? request.headers.range : undefined;
+    const rangeHeader =
+      typeof request.headers.range === "string"
+        ? request.headers.range
+        : undefined;
 
     if (!rangeHeader) {
       reply.header("Content-Type", file.mimeType);
@@ -148,14 +225,16 @@ export async function registerFileRoutes(app: FastifyInstance, runtime: AppRunti
 
     const parsedStart = hasStart ? Number.parseInt(rawStart, 10) : null;
     const parsedEnd = hasEnd ? Number.parseInt(rawEnd, 10) : null;
-    const start = hasStart
-      ? parsedStart
-      : Math.max(size - (parsedEnd ?? 0), 0);
-    const end = hasStart
-      ? (parsedEnd ?? size - 1)
-      : size - 1;
+    const start = hasStart ? parsedStart : Math.max(size - (parsedEnd ?? 0), 0);
+    const end = hasStart ? (parsedEnd ?? size - 1) : size - 1;
 
-    if (start === null || start < 0 || end === null || end >= size || start > end) {
+    if (
+      start === null ||
+      start < 0 ||
+      end === null ||
+      end >= size ||
+      start > end
+    ) {
       throw new ValidationError("Range ヘッダが不正です。");
     }
 
@@ -170,10 +249,18 @@ export async function registerFileRoutes(app: FastifyInstance, runtime: AppRunti
 
   app.get("/files/:fileId/preview", async (request, reply) => {
     const sessionToken = getOptionalBearerToken(request.headers.authorization);
-    const params = z.object({ fileId: z.string().uuid() }).parse(request.params);
-    const { file, stream } = await runtime.fileService.getPreview(sessionToken, params.fileId);
+    const params = z
+      .object({ fileId: z.string().uuid() })
+      .parse(request.params);
+    const { file, stream } = await runtime.fileService.getPreview(
+      sessionToken,
+      params.fileId,
+    );
 
-    reply.header("Content-Type", file.previewPath?.endsWith(".jpg") ? "image/jpeg" : file.mimeType);
+    reply.header(
+      "Content-Type",
+      file.previewPath?.endsWith(".jpg") ? "image/jpeg" : file.mimeType,
+    );
 
     return reply.send(stream);
   });
@@ -183,10 +270,16 @@ export async function registerFileRoutes(app: FastifyInstance, runtime: AppRunti
     const body = zipRequestSchema.safeParse(request.body);
 
     if (!body.success) {
-      throw new ValidationError("file_ids の入力が不正です。", body.error.flatten());
+      throw new ValidationError(
+        "file_ids の入力が不正です。",
+        body.error.flatten(),
+      );
     }
 
-    const result = await runtime.fileService.createZipArchive(sessionToken, body.data.file_ids);
+    const result = await runtime.fileService.createZipArchive(
+      sessionToken,
+      body.data.file_ids,
+    );
 
     reply.header("Content-Disposition", "attachment; filename=files.zip");
     reply.header("Content-Type", "application/zip");
@@ -196,11 +289,28 @@ export async function registerFileRoutes(app: FastifyInstance, runtime: AppRunti
     return reply.send(result.archive);
   });
 
+  app.get("/folders/:folderId/files", async (request) => {
+    const sessionToken = getRequiredBearerToken(request.headers.authorization);
+    const params = z
+      .object({ folderId: z.string().uuid() })
+      .parse(request.params);
+
+    return {
+      items: runtime.fileService
+        .listFiles(sessionToken, {
+          folderId: params.folderId,
+        })
+        .map(serializeFileListItem),
+    };
+  });
+
   app.get("/folders", async (request) => {
     const sessionToken = getRequiredBearerToken(request.headers.authorization);
 
     return {
-      items: runtime.fileService.listFolders(sessionToken)
+      items: runtime.fileService
+        .listFolders(sessionToken)
+        .map(serializeFolderListItem),
     };
   });
 
@@ -217,21 +327,29 @@ export async function registerFileRoutes(app: FastifyInstance, runtime: AppRunti
 
   app.patch("/folders/:folderId", async (request, reply) => {
     const sessionToken = getRequiredBearerToken(request.headers.authorization);
-    const params = z.object({ folderId: z.string().uuid() }).parse(request.params);
+    const params = z
+      .object({ folderId: z.string().uuid() })
+      .parse(request.params);
     const body = z.object({ name: z.string().min(1) }).safeParse(request.body);
 
     if (!body.success) {
       throw new ValidationError("フォルダ名が不正です。", body.error.flatten());
     }
 
-    runtime.fileService.renameFolder(sessionToken, params.folderId, body.data.name);
+    runtime.fileService.renameFolder(
+      sessionToken,
+      params.folderId,
+      body.data.name,
+    );
 
     return reply.status(204).send();
   });
 
   app.delete("/folders/:folderId", async (request, reply) => {
     const sessionToken = getRequiredBearerToken(request.headers.authorization);
-    const params = z.object({ folderId: z.string().uuid() }).parse(request.params);
+    const params = z
+      .object({ folderId: z.string().uuid() })
+      .parse(request.params);
 
     runtime.fileService.removeFolder(sessionToken, params.folderId);
 
@@ -239,7 +357,9 @@ export async function registerFileRoutes(app: FastifyInstance, runtime: AppRunti
   });
 }
 
-function getRequiredBearerToken(authorizationHeader: string | string[] | undefined): string {
+function getRequiredBearerToken(
+  authorizationHeader: string | string[] | undefined,
+): string {
   const token = getOptionalBearerToken(authorizationHeader, true);
 
   if (!token) {
@@ -249,7 +369,10 @@ function getRequiredBearerToken(authorizationHeader: string | string[] | undefin
   return token;
 }
 
-function getOptionalBearerToken(authorizationHeader: string | string[] | undefined, required = false): string | null {
+function getOptionalBearerToken(
+  authorizationHeader: string | string[] | undefined,
+  required = false,
+): string | null {
   if (authorizationHeader === undefined) {
     if (required) {
       throw new AuthenticationError();
