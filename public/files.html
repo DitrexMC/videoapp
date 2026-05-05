@@ -67,6 +67,13 @@
             align-items: center;
             padding: .5rem .25rem 0;
         }
+
+        .fr-actions {
+            white-space: nowrap;
+            display: flex;
+            gap: .25rem;
+            align-items: center;
+        }
     </style>
 </head>
 
@@ -121,6 +128,7 @@
                 <select class="input" id="filter-type" style="width:auto;flex:0 0 auto;min-width:130px">
                     <option value="all">すべて</option>
                     <option value="folder">フォルダのみ</option>
+                    <option value="group">グループのみ</option>
                     <option value="file">ファイルのみ</option>
                 </select>
                 <input class="input" id="search-input" placeholder="ファイル名で検索…" type="search" autocomplete="off">
@@ -206,6 +214,7 @@
 
             return allItems.filter(item => {
                 if (t === 'folder' && item.type !== 'folder') return false;
+                if (t === 'group' && item.type !== 'group') return false;
                 if (t === 'file' && item.type !== 'file') return false;
                 if (!q) return true;
                 if (q.startsWith('.')) {
@@ -213,7 +222,9 @@
                     const ext = (item.safe_name || '').split('.').pop().toLowerCase();
                     return ext === q.slice(1);
                 }
-                const name = item.type === 'file' ? (item.safe_name || '') : (item.name || '');
+                const name = item.type === 'file' ? (item.safe_name || '') :
+                        item.type === 'group' ? ((item.label || item.name) + ' (' + (item.file_count || 0) + '件)') :
+                        (item.name || '');
                 return name.toLowerCase().includes(q);
             });
         }
@@ -234,9 +245,15 @@
                 tbody.innerHTML = '<tr class="empty-row"><td colspan="6">ファイルがありません</td></tr>';
             } else {
                 tbody.innerHTML = slice.map(item => {
-                    const extras = item.type === 'folder'
-                        ? ['<button class="btn btn-ghost btn-sm fr-rename-btn" data-id="' + esc(item.id) + '" data-name="' + esc(item.name) + '" style="padding:.22rem .45rem;font-size:.74rem" title="名前変更">✎</button>']
-                        : [];
+                    const extras = [];
+                    if (item.type === 'folder') {
+                        extras.push('<button class="btn btn-ghost btn-sm fr-rename-btn" data-id="' + esc(item.id) + '" data-name="' + esc(item.name) + '" style="padding:.22rem .45rem;font-size:.74rem" title="名前変更">\u270e</button>');
+                        extras.push('<button class="btn btn-ghost btn-sm fr-toggle-folder-btn" data-id="' + esc(item.id) + '" data-public="' + (item.public !== false ? '1' : '0') + '" style="padding:.12rem .5rem;font-size:.62rem;color:' + (item.public !== false ? 'var(--g)' : 'var(--r)') + '" title="公開設定切替">' + (item.public !== false ? '\u516c\u958b' : '\u975e\u516c\u958b') + '</button>');
+                    }
+                    if (item.type === 'group') {
+                        extras.push('<button class="btn btn-ghost btn-sm fr-rename-btn" data-id="' + esc(item.id) + '" data-name="' + esc(item.label || item.name) + '" style="padding:.22rem .45rem;font-size:.74rem" title="名前変更">\u270e</button>');
+                        extras.push('<button class="btn btn-ghost btn-sm fr-toggle-privacy-btn" data-id="' + esc(item.id) + '" data-private="' + (item.is_private ? '1' : '0') + '" style="padding:.12rem .5rem;font-size:.62rem;color:' + (item.is_private ? 'var(--r)' : 'var(--g)') + '" title="公開設定切替">' + (item.is_private ? '\u975e\u516c\u958b' : '\u516c\u958b') + '</button>');
+                    }
                     return window.buildFileRow(item, { cbClass: 'file-cb', actionExtras: extras });
                 }).join('');
             }
@@ -263,9 +280,17 @@
                     catch { btn.disabled = false; }
                 }));
 
+            document.querySelectorAll('.fr-del-group-btn').forEach(btn =>
+                btn.addEventListener('click', async () => {
+                    if (!confirm('このグループとその中のファイルをすべて削除しますか？')) return;
+                    btn.disabled = true;
+                    try { await api.groups.delete(btn.dataset.id); await reload(); }
+                    catch { btn.disabled = false; }
+                }));
+
             document.querySelectorAll('.fr-del-folder-btn').forEach(btn =>
                 btn.addEventListener('click', async () => {
-                    if (!confirm('このフォルダを削除しますか？（中のファイルは残ります）')) return;
+                    if (!confirm('このフォルダを削除しますか？\n中のファイルもすべて削除されます。')) return;
                     btn.disabled = true;
                     try { await api.folders.delete(btn.dataset.id); await reload(); }
                     catch { btn.disabled = false; }
@@ -281,19 +306,49 @@
 
             document.querySelectorAll('.fr-rename-btn').forEach(btn =>
                 btn.addEventListener('click', async () => {
-                    const name = prompt('新しいフォルダ名:', btn.dataset.name);
+                    const name = prompt('新しい名前:', btn.dataset.name);
                     if (!name || !name.trim()) return;
-                    try { await api.folders.rename(btn.dataset.id, name.trim()); await reload(); }
+                    try {
+                        if (btn.closest('.fr-row-group')) {
+                            await api.groups.rename(btn.dataset.id, name.trim());
+                        } else {
+                            await api.folders.rename(btn.dataset.id, name.trim());
+                        }
+                        await reload();
+                    }
                     catch { alert('名前変更に失敗しました'); }
+                }));
+
+            document.querySelectorAll('.fr-toggle-privacy-btn').forEach(btn =>
+                btn.addEventListener('click', async () => {
+                    const isPrivate = btn.dataset.private === '1';
+                    try { await api.groups.togglePrivacy(btn.dataset.id, !isPrivate); await reload(); }
+                    catch { alert('公開設定の変更に失敗しました'); }
+                }));
+
+            document.querySelectorAll('.fr-toggle-folder-btn').forEach(btn =>
+                btn.addEventListener('click', async () => {
+                    const isPublic = btn.dataset.public === '1';
+                    try { await api.folders.setVisibility(btn.dataset.id, !isPublic); await reload(); }
+                    catch { alert('公開設定の変更に失敗しました'); }
                 }));
 
             document.querySelectorAll('.fr-discord-btn').forEach(btn =>
                 btn.addEventListener('click', async () => {
                     const url = location.origin + btn.dataset.url;
                     const orig = btn.innerHTML;
-                    try { await navigator.clipboard.writeText(url); btn.textContent = 'コピー済み'; }
+                    try { await navigator.clipboard.writeText(url); btn.innerHTML = 'コピー済み'; }
                     catch { window.prompt('コピーしてください:', url); }
                     setTimeout(() => { btn.innerHTML = orig; }, 1800);
+                }));
+
+            document.querySelectorAll('.fr-urlcopy-btn').forEach(btn =>
+                btn.addEventListener('click', async () => {
+                    const url = location.origin + btn.dataset.url;
+                    const orig = btn.innerHTML;
+                    try { await navigator.clipboard.writeText(url); btn.innerHTML = 'コピー完了';
+                        setTimeout(() => { btn.innerHTML = orig; }, 1800);
+                    } catch { window.prompt('コピーしてください:', url); }
                 }));
         }
 
@@ -332,15 +387,51 @@
         async function loadItems() {
             if (folderId) {
                 const res = await api.folders.files(folderId);
-                allItems = (res?.items ?? []).map(f => ({ ...f, type: 'file' }));
+                allItems = (res?.items ?? []).map(f => ({
+                    id: f.id,
+                    safe_name: f.safe_name,
+                    size: f.size,
+                    created_at: f.created_at,
+                    expires_at: f.expires_at,
+                    public: f.public,
+                    status: f.status,
+                    type: 'file'
+                }));
             } else {
-                const [fRes, dRes] = await Promise.all([
+                const [fRes, dRes, gRes] = await Promise.all([
                     api.files.list({ limit: 100 }),
                     api.folders.list(),
+                    api.groups.list(),
                 ]);
-                const files = (fRes?.items ?? []).map(f => ({ ...f, type: 'file' }));
-                const folders = (dRes?.items ?? []).map(d => ({ ...d, type: 'folder' }));
-                allItems = [...folders, ...files];
+                const files = (fRes?.items ?? []).map(f => ({
+                    id: f.id,
+                    safe_name: f.safe_name,
+                    size: f.size,
+                    created_at: f.created_at,
+                    expires_at: f.expires_at,
+                    public: f.public,
+                    status: f.status,
+                    type: 'file'
+                }));
+                const folders = (dRes?.items ?? []).map(d => ({
+                    id: d.id,
+                    name: d.name,
+                    public: d.public,
+                    created_at: d.created_at,
+                    type: 'folder'
+                }));
+                const groups = (gRes?.items ?? []).map(g => ({
+                    id: g.id,
+                    label: g.label,
+                    name: g.label || 'グループ',
+                    created_at: g.created_at,
+                    expires_at: g.expires_at,
+                    is_private: g.is_private,
+                    file_count: g.file_count,
+                    total_size: g.total_size,
+                    type: 'group'
+                }));
+                allItems = [...folders, ...groups, ...files];
             }
             allItems.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
         }
@@ -394,10 +485,12 @@
 
                 const fileIds = checked.filter(c => c.dataset.id.startsWith('f:')).map(c => c.dataset.id.slice(2));
                 const folderIds = checked.filter(c => c.dataset.id.startsWith('d:')).map(c => c.dataset.id.slice(2));
+                const groupIds = checked.filter(c => c.dataset.id.startsWith('g:')).map(c => c.dataset.id.slice(2));
 
                 await Promise.all([
                     ...fileIds.map(id => api.files.delete(id).catch(() => { })),
                     ...folderIds.map(id => api.folders.delete(id).catch(() => { })),
+                    ...groupIds.map(id => api.groups.delete(id).catch(() => { })),
                 ]);
                 await reload();
             });

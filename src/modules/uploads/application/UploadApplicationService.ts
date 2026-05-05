@@ -314,7 +314,8 @@ export class UploadApplicationService {
       deletedAt: null,
       id: generateId(),
       name: `フォルダ (${folderContext.itemCount ?? 0}件)`,
-      ownerUserId,
+      ownerUserId: ownerUserId,
+      public: true,
       updatedAt: timestamp
     };
 

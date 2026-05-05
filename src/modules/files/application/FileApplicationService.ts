@@ -105,7 +105,7 @@ export class FileApplicationService {
     };
   }
 
-  createFolder(sessionToken: string, name: string): CreateFolderInput {
+  createFolder(sessionToken: string, name: string, isPublic: boolean = true): CreateFolderInput {
     const actor = this.authService.authenticate(sessionToken).user;
     const normalizedName = name.trim();
 
@@ -120,6 +120,7 @@ export class FileApplicationService {
       id: crypto.randomUUID(),
       name: normalizedName,
       ownerUserId: actor.id,
+      public: isPublic,
       updatedAt: timestamp
     });
   }
@@ -204,6 +205,62 @@ export class FileApplicationService {
     return this.fileRepository.listFolders(actor.id);
   }
 
+  listGroups(sessionToken: string) {
+    const actor = this.authService.authenticate(sessionToken).user;
+
+    return this.fileRepository.listGroups(actor.id);
+  }
+
+  renameGroup(sessionToken: string, groupId: string, label: string): void {
+    const actor = this.authService.authenticate(sessionToken).user;
+    const group = this.fileRepository.findGroupById(groupId);
+
+    if (!group) {
+      throw new NotFoundError("グループが見つかりません。");
+    }
+
+    if (group.ownerUserId !== actor.id) {
+      throw new NotFoundError("グループが見つかりません。");
+    }
+
+    const normalizedLabel = label.trim();
+    if (normalizedLabel.length === 0) {
+      throw new ValidationError("グループ名は必須です。");
+    }
+
+    this.fileRepository.renameGroup(groupId, normalizedLabel, this.clock.nowIsoString());
+  }
+
+  updateGroupPrivacy(sessionToken: string, groupId: string, isPrivate: boolean): void {
+    const actor = this.authService.authenticate(sessionToken).user;
+    const group = this.fileRepository.findGroupById(groupId);
+
+    if (!group) {
+      throw new NotFoundError("グループが見つかりません。");
+    }
+
+    if (group.ownerUserId !== actor.id) {
+      throw new NotFoundError("グループが見つかりません。");
+    }
+
+    this.fileRepository.updateGroupPrivacy(groupId, isPrivate, this.clock.nowIsoString());
+  }
+
+  removeGroup(sessionToken: string, groupId: string): void {
+    const actor = this.authService.authenticate(sessionToken).user;
+    const group = this.fileRepository.findGroupById(groupId);
+
+    if (!group) {
+      throw new NotFoundError("グループが見つかりません。");
+    }
+
+    if (group.ownerUserId !== actor.id) {
+      throw new NotFoundError("グループが見つかりません。");
+    }
+
+    this.fileRepository.deleteGroup(groupId, this.clock.nowIsoString());
+  }
+
   renameFolder(sessionToken: string, folderId: string, name: string): void {
     const actor = this.authService.authenticate(sessionToken).user;
     const folder = this.fileRepository.findFolderById(folderId);
@@ -248,10 +305,6 @@ export class FileApplicationService {
       throw new NotFoundError("フォルダが見つかりません。");
     }
 
-    if (this.fileRepository.countFilesInFolder(folderId) > 0) {
-      throw new ConflictError("空ではないフォルダは削除できません。");
-    }
-
     this.fileRepository.deleteFolder(folderId, this.clock.nowIsoString());
   }
 
@@ -265,6 +318,21 @@ export class FileApplicationService {
 
     assertCanManageFile(file, actor);
     this.fileRepository.updateFileVisibility(file.id, isPublic, this.clock.nowIsoString());
+  }
+
+  setFolderVisibility(sessionToken: string, folderId: string, isPublic: boolean): void {
+    const actor = this.authService.authenticate(sessionToken).user;
+    const folder = this.fileRepository.findFolderById(folderId);
+
+    if (!folder || folder.deletedAt) {
+      throw new NotFoundError("フォルダが見つかりません。");
+    }
+
+    if (folder.ownerUserId !== actor.id) {
+      throw new NotFoundError("フォルダが見つかりません。");
+    }
+
+    this.fileRepository.updateFolderVisibility(folder.id, isPublic, this.clock.nowIsoString());
   }
 
   private authenticateOptional(sessionToken: string | null): User | null {

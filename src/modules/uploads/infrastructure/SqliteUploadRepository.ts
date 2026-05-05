@@ -23,6 +23,7 @@ interface FolderRow {
   id: string;
   name: string;
   owner_user_id: string;
+  public: number;
   updated_at: string;
 }
 
@@ -110,9 +111,9 @@ export class SqliteUploadRepository implements UploadRepository {
 
   createSystemFolder(folder: FolderRecord): void {
     this.connection.prepare(`
-      INSERT INTO folders (id, owner_user_id, name, created_at, updated_at, deleted_at)
-      VALUES (?, ?, ?, ?, ?, NULL)
-    `).run(folder.id, folder.ownerUserId, folder.name, folder.createdAt, folder.updatedAt);
+      INSERT INTO folders (id, owner_user_id, name, public, created_at, updated_at, deleted_at)
+      VALUES (?, ?, ?, ?, ?, ?, NULL)
+    `).run(folder.id, folder.ownerUserId, folder.name, folder.public ? 1 : 0, folder.createdAt, folder.updatedAt);
   }
 
   expireDueResources(nowIso: string): void {
@@ -235,7 +236,7 @@ export class SqliteUploadRepository implements UploadRepository {
 
   findUserFolder(folderId: string, ownerUserId: string): FolderRecord | null {
     const row = this.connection.prepare<unknown[], FolderRow>(`
-      SELECT id, owner_user_id, name, created_at, updated_at, deleted_at
+      SELECT id, owner_user_id, name, public, created_at, updated_at, deleted_at
       FROM folders
       WHERE id = ?
         AND owner_user_id = ?
@@ -252,6 +253,7 @@ export class SqliteUploadRepository implements UploadRepository {
       id: row.id,
       name: row.name,
       ownerUserId: row.owner_user_id,
+      public: row.public === 1,
       updatedAt: row.updated_at
     };
   }

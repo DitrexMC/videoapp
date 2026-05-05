@@ -1,9 +1,9 @@
 import type Database from "better-sqlite3";
 
-import type { FileRecord } from "../../files/domain/FileRecord.js";
+import type { FileRecord, GroupRecord } from "../../files/domain/FileRecord.js";
 import type { UserRole, UserStatus } from "../../identity/domain/User.js";
 import type { ServicePolicies } from "../../../shared/domain/ServicePolicies.js";
-import type { AdminFileRecord, AdminSessionRecord, AdministrationRepository, AdminUserRecord, CreateManagedUserInput } from "../application/AdministrationRepository.js";
+import type { AdminFileRecord, AdminGroupRecord, AdminSessionRecord, AdministrationRepository, AdminUserRecord, CreateManagedUserInput } from "../application/AdministrationRepository.js";
 
 interface PolicyRow {
   default_chunk_size_bytes: number;
@@ -66,6 +66,19 @@ interface AdminFileRow {
   storage_path: string | null;
   updated_at: string;
   upload_id: string | null;
+}
+
+interface AdminGroupRow {
+  created_at: string;
+  expires_at: string | null;
+  file_count: number;
+  id: string;
+  is_private: number;
+  label: string;
+  owner_user_id: string;
+  owner_username: string;
+  total_size: number;
+  updated_at: string;
 }
 
 export class SqliteAdministrationRepository implements AdministrationRepository {
@@ -202,6 +215,52 @@ export class SqliteAdministrationRepository implements AdministrationRepository 
     `).all();
 
     return rows.map(mapAdminFile);
+  }
+
+  listAdminGroups(search?: string): AdminGroupRecord[] {
+    const baseQuery = `
+      SELECT
+        g.id,
+        g.owner_user_id,
+        u.username AS owner_username,
+        g.label,
+        g.created_at,
+        g.updated_at,
+        g.expires_at,
+        g.is_private,
+        COALESCE((SELECT COUNT(*) FROM files f WHERE f.group_id = g.id AND f.is_deleted = 0), 0) AS file_count,
+        COALESCE((SELECT SUM(f.size_bytes) FROM files f WHERE f.group_id = g.id AND f.is_deleted = 0), 0) AS total_size
+      FROM groups g
+      INNER JOIN users u ON u.id = g.owner_user_id
+    `;
+
+    if (search) {
+      const rows = this.connection.prepare<unknown[], AdminGroupRow>(`
+        ${baseQuery}
+        WHERE g.label LIKE ? OR EXISTS (SELECT 1 FROM files f WHERE f.group_id = g.id AND f.safe_name LIKE ?)
+        ORDER BY g.created_at DESC
+      `).all(`%${search}%`, `%${search}%`);
+
+      return rows.map(mapAdminGroup);
+    }
+
+    const rows = this.connection.prepare<unknown[], AdminGroupRow>(`
+      ${baseQuery}
+      ORDER BY g.created_at DESC
+    `).all();
+
+    return rows.map(mapAdminGroup);
+  }
+
+  deleteAdminGroup(groupId: string): void {
+    this.connection.transaction(() => {
+      this.connection.prepare(`
+        UPDATE files SET group_id = NULL WHERE group_id = ?
+      `).run(groupId);
+      this.connection.prepare(`
+        DELETE FROM groups WHERE id = ?
+      `).run(groupId);
+    })();
   }
 
   findPolicies(): ServicePolicies {
@@ -419,6 +478,7 @@ function mapAdminFile(row: AdminFileRow): AdminFileRecord {
     createdAt: row.created_at,
     expiresAt: row.expires_at,
     folderId: row.folder_id,
+    groupId: null,
     id: row.id,
     isDeleted: row.is_deleted === 1,
     mimeType: row.mime_type,
@@ -465,5 +525,20 @@ function mapSession(row: SessionRow): AdminSessionRecord {
     revokedReason: row.revoked_reason,
     userAgent: row.user_agent,
     userId: row.user_id
+  };
+}
+
+function mapAdminGroup(row: AdminGroupRow): AdminGroupRecord {
+  return {
+    createdAt: row.created_at,
+    expiresAt: row.expires_at,
+    fileCount: row.file_count,
+    id: row.id,
+    isPrivate: row.is_private === 1,
+    label: row.label,
+    ownerUserId: row.owner_user_id,
+    ownerUsername: row.owner_username,
+    totalSize: row.total_size,
+    updatedAt: row.updated_at
   };
 }

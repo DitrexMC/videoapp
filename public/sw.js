@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'fv-v2';
+const CACHE_VERSION = 'fv-v7';
 const STATIC_CACHE  = `${CACHE_VERSION}-static`;
 const API_PREFIX    = '/api/';
 
@@ -87,6 +87,7 @@ function isApiRoute(path) {
     path.startsWith('/files/') ||
     path.startsWith('/admin/') ||
     path.startsWith('/auth/') ||
-    path.startsWith('/folders/')
+    path.startsWith('/folders/') ||
+    path.startsWith('/groups/')
   );
 }

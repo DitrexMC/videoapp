@@ -220,6 +220,27 @@ export async function registerAdminRoutes(app: FastifyInstance, runtime: AppRunt
     return reply.status(204).send();
   });
 
+  app.get("/admin/groups", async (request) => {
+    const sessionToken = getRequiredBearerToken(request.headers.authorization);
+    const query = z.object({
+      search: z.string().optional()
+    }).parse(request.query);
+    const groups = runtime.administrationService.listGroups(sessionToken, query.search);
+
+    return {
+      items: groups
+    };
+  });
+
+  app.delete("/admin/groups/:groupId", async (request, reply) => {
+    const sessionToken = getRequiredBearerToken(request.headers.authorization);
+    const params = z.object({ groupId: z.string().uuid() }).parse(request.params);
+
+    runtime.administrationService.deleteGroup(sessionToken, params.groupId);
+
+    return reply.status(204).send();
+  });
+
   app.get("/admin/policies", async (request) => runtime.administrationService.getPolicies(getRequiredBearerToken(request.headers.authorization)));
 
   app.patch("/admin/policies", async (request) => {

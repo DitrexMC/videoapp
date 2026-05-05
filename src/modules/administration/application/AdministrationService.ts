@@ -109,6 +109,16 @@ export class AdministrationService {
     return this.administrationRepository.listAdminFiles(search);
   }
 
+  listGroups(sessionToken: string, search?: string) {
+    this.requireAdmin(sessionToken);
+    return this.administrationRepository.listAdminGroups(search);
+  }
+
+  deleteGroup(sessionToken: string, groupId: string): void {
+    this.requireAdmin(sessionToken);
+    this.administrationRepository.deleteAdminGroup(groupId);
+  }
+
   getPolicies(sessionToken: string): ServicePolicies {
     this.requireAdmin(sessionToken);
     return this.administrationRepository.findPolicies();

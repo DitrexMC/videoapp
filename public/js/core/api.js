@@ -174,14 +174,25 @@ export const api = {
 
   folders: {
     list: (params) => request('GET', '/folders', { params }),
-    create: (name) =>
-      request('POST', '/folders', { body: { name } }),
+    create: (name, isPublic) =>
+      request('POST', '/folders', { body: { name, public: isPublic } }),
     rename: (id, name) =>
       request('PATCH', `/folders/${id}`, { body: { name } }),
+    setVisibility: (id, isPublic) =>
+      request('PATCH', `/folders/${id}/visibility`, { body: { public: isPublic } }),
     delete: (id) => request('DELETE', `/folders/${id}`),
 
     files: (id) =>
       request('GET', `/folders/${id}/files`),
+  },
+
+  groups: {
+    list: (params) => request('GET', '/groups', { params }),
+    rename: (id, label) =>
+      request('PATCH', `/groups/${id}`, { body: { label } }),
+    togglePrivacy: (id, isPrivate) =>
+      request('PATCH', `/groups/${id}`, { body: { is_private: isPrivate } }),
+    delete: (id) => request('DELETE', `/groups/${id}`),
   },
 
   admin: {

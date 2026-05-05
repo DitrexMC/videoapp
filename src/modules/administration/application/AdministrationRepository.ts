@@ -1,8 +1,12 @@
 import type { UserRole, UserStatus } from "../../identity/domain/User.js";
-import type { FileRecord } from "../../files/domain/FileRecord.js";
+import type { FileRecord, GroupRecord } from "../../files/domain/FileRecord.js";
 import type { ServicePolicies } from "../../../shared/domain/ServicePolicies.js";
 
 export interface AdminFileRecord extends FileRecord {
+  ownerUsername: string;
+}
+
+export interface AdminGroupRecord extends GroupRecord {
   ownerUsername: string;
 }
 
@@ -51,6 +55,8 @@ export interface AdministrationRepository {
   deleteUser(userId: string, updatedAt: string): void;
   findAdminFileById(fileId: string): AdminFileRecord | null;
   listAdminFiles(search?: string): AdminFileRecord[];
+  listAdminGroups(search?: string): AdminGroupRecord[];
+  deleteAdminGroup(groupId: string): void;
   findPolicies(): ServicePolicies;
   findUserById(userId: string): AdminUserRecord | null;
   listUserSessions(userId: string): AdminSessionRecord[];

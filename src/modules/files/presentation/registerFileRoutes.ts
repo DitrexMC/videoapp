@@ -27,6 +27,7 @@ export async function registerFileRoutes(
     created_at: file.createdAt,
     expires_at: file.expiresAt,
     folder_id: file.folderId,
+    group_id: file.groupId,
     id: file.id,
     mime_type: file.mimeType,
     name: file.name,
@@ -47,6 +48,7 @@ export async function registerFileRoutes(
     id: folder.id,
     name: folder.name,
     owner_user_id: folder.ownerUserId,
+    public: folder.public,
     updated_at: folder.updatedAt,
   });
 
@@ -316,13 +318,13 @@ export async function registerFileRoutes(
 
   app.post("/folders", async (request) => {
     const sessionToken = getRequiredBearerToken(request.headers.authorization);
-    const body = z.object({ name: z.string().min(1) }).safeParse(request.body);
+    const body = z.object({ name: z.string().min(1), public: z.boolean().optional() }).safeParse(request.body);
 
     if (!body.success) {
       throw new ValidationError("フォルダ名が不正です。", body.error.flatten());
     }
 
-    return runtime.fileService.createFolder(sessionToken, body.data.name);
+    return runtime.fileService.createFolder(sessionToken, body.data.name, body.data.public ?? true);
   });
 
   app.patch("/folders/:folderId", async (request, reply) => {
@@ -345,6 +347,26 @@ export async function registerFileRoutes(
     return reply.status(204).send();
   });
 
+  app.patch("/folders/:folderId/visibility", async (request, reply) => {
+    const sessionToken = getRequiredBearerToken(request.headers.authorization);
+    const params = z
+      .object({ folderId: z.string().uuid() })
+      .parse(request.params);
+    const body = z.object({ public: z.boolean() }).safeParse(request.body);
+
+    if (!body.success) {
+      throw new ValidationError("公開設定が不正です。", body.error.flatten());
+    }
+
+    runtime.fileService.setFolderVisibility(
+      sessionToken,
+      params.folderId,
+      body.data.public,
+    );
+
+    return reply.status(204).send();
+  });
+
   app.delete("/folders/:folderId", async (request, reply) => {
     const sessionToken = getRequiredBearerToken(request.headers.authorization);
     const params = z
@@ -352,6 +374,63 @@ export async function registerFileRoutes(
       .parse(request.params);
 
     runtime.fileService.removeFolder(sessionToken, params.folderId);
+
+    return reply.status(204).send();
+  });
+
+  app.get("/groups", async (request) => {
+    const sessionToken = getRequiredBearerToken(request.headers.authorization);
+
+    return {
+      items: runtime.fileService
+        .listGroups(sessionToken)
+        .map((g) => ({
+          created_at: g.createdAt,
+          expires_at: g.expiresAt,
+          file_count: g.fileCount,
+          id: g.id,
+          is_private: g.isPrivate,
+          label: g.label,
+          total_size: g.totalSize,
+          updated_at: g.updatedAt,
+        })),
+    };
+  });
+
+  app.patch("/groups/:groupId", async (request, reply) => {
+    const sessionToken = getRequiredBearerToken(request.headers.authorization);
+    const params = z
+      .object({ groupId: z.string().uuid() })
+      .parse(request.params);
+    const body = z
+      .object({
+        label: z.string().min(1).optional(),
+        is_private: z.boolean().optional(),
+      })
+      .safeParse(request.body);
+
+    if (!body.success) {
+      throw new ValidationError("入力が不正です。", body.error.flatten());
+    }
+
+    if (body.data.label !== undefined) {
+      runtime.fileService.renameGroup(sessionToken, params.groupId, body.data.label);
+    }
+
+    if (body.data.is_private !== undefined) {
+      runtime.fileService.updateGroupPrivacy(sessionToken, params.groupId, body.data.is_private);
+    }
+
+    return reply.status(204).send();
+  });
+
+  app.delete("/groups/:groupId", async (request, reply) => {
+    const sessionToken = getRequiredBearerToken(request.headers.authorization);
+    const params = z
+      .object({ groupId: z.string().uuid() })
+      .parse(request.params);
+
+    runtime.fileService.removeGroup(sessionToken, params.groupId);
 
     return reply.status(204).send();
   });

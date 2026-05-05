@@ -9,6 +9,7 @@ export interface FileRecord {
   createdAt: string;
   expiresAt: string | null;
   folderId: string | null;
+  groupId: string | null;
   id: string;
   isDeleted: boolean;
   mimeType: string;
@@ -31,7 +32,20 @@ export interface FolderRecord {
   id: string;
   name: string;
   ownerUserId: string;
+  public: boolean;
   updatedAt: string;
+}
+
+export interface GroupRecord {
+  createdAt: string;
+  expiresAt: string | null;
+  id: string;
+  isPrivate: boolean;
+  label: string;
+  ownerUserId: string;
+  updatedAt: string;
+  fileCount?: number | undefined;
+  totalSize?: number | undefined;
 }
 
 export function assertCanManageFile(file: FileRecord, actor: User): void {

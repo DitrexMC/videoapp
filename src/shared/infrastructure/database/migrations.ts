@@ -51,15 +51,27 @@ const migrations = [
         id TEXT PRIMARY KEY,
         owner_user_id TEXT NOT NULL REFERENCES users(id),
         name TEXT NOT NULL,
+        public INTEGER NOT NULL CHECK (public IN (0, 1)) DEFAULT 1,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
         deleted_at TEXT
+      );
+
+      CREATE TABLE IF NOT EXISTS groups (
+        id TEXT PRIMARY KEY,
+        owner_user_id TEXT NOT NULL REFERENCES users(id),
+        label TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        expires_at TEXT,
+        is_private INTEGER NOT NULL CHECK (is_private IN (0, 1)) DEFAULT 0
       );
 
       CREATE TABLE IF NOT EXISTS files (
         id TEXT PRIMARY KEY,
         upload_id TEXT UNIQUE,
         folder_id TEXT REFERENCES folders(id),
+        group_id TEXT REFERENCES groups(id) ON DELETE SET NULL,
         name TEXT NOT NULL,
         safe_name TEXT NOT NULL,
         size_bytes INTEGER NOT NULL,
@@ -125,6 +137,16 @@ const migrations = [
         created_at TEXT NOT NULL
       );
 
+      CREATE TABLE IF NOT EXISTS groups (
+        id TEXT PRIMARY KEY,
+        owner_user_id TEXT NOT NULL REFERENCES users(id),
+        label TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        expires_at TEXT,
+        is_private INTEGER NOT NULL CHECK (is_private IN (0, 1)) DEFAULT 0
+      );
+
       CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
       CREATE INDEX IF NOT EXISTS idx_sessions_active_lookup ON sessions(session_token_hash, revoked_at);
       CREATE INDEX IF NOT EXISTS idx_files_owner_created_at ON files(owner_user_id, created_at DESC);
@@ -134,6 +156,28 @@ const migrations = [
       CREATE UNIQUE INDEX IF NOT EXISTS idx_files_safe_name_owner_folder_active
         ON files(owner_user_id, IFNULL(folder_id, ''), safe_name)
         WHERE is_deleted = 0;
+    `
+  },
+  {
+    id: "002_add_groups",
+    sql: `
+      CREATE TABLE IF NOT EXISTS groups (
+        id TEXT PRIMARY KEY,
+        owner_user_id TEXT NOT NULL REFERENCES users(id),
+        label TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        expires_at TEXT,
+        is_private INTEGER NOT NULL CHECK (is_private IN (0, 1)) DEFAULT 0
+      );
+
+      ALTER TABLE files ADD COLUMN group_id TEXT REFERENCES groups(id) ON DELETE SET NULL;
+    `
+  },
+  {
+    id: "003_add_folder_visibility",
+    sql: `
+      ALTER TABLE folders ADD COLUMN public INTEGER NOT NULL CHECK (public IN (0, 1)) DEFAULT 1;
     `
   }
 ] as const;
