@@ -8,9 +8,7 @@
     <link rel="icon" href="/icons/icon-192.png">
     <link rel="manifest" href="/manifest.json">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+JP:wght@400;500;700&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
     <script src="/js/nav-theme.js"></script>
     <link rel="stylesheet" href="/css/common.css">
     <link rel="stylesheet" href="/css/app.css">
@@ -34,6 +32,55 @@
 
         #msg.err {
             color: var(--red);
+        }
+
+        .session-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: .6rem 0;
+            border-bottom: 1px solid var(--border);
+            gap: .5rem;
+        }
+
+        .session-row:last-child {
+            border-bottom: none;
+        }
+
+        .session-meta {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .session-device {
+            font-weight: 600;
+            font-size: .82rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .session-detail {
+            font-size: .72rem;
+            color: var(--text-sub);
+            display: flex;
+            gap: .8rem;
+            flex-wrap: wrap;
+        }
+
+        .session-badge {
+            font-size: .64rem;
+            padding: .1rem .45rem;
+            border-radius: 99px;
+            font-weight: 600;
+            letter-spacing: .02em;
+            flex-shrink: 0;
+        }
+
+        .session-badge-current {
+            background: rgba(34, 197, 94, .12);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, .3);
         }
     </style>
 </head>
@@ -73,38 +120,46 @@
                 <div class="card reveal reveal-d2">
                     <div class="section-title">アカウント情報</div>
                     <div style="display:grid;gap:.6rem;margin-top:1rem">
-                        <div
-                            style="display:flex;justify-content:space-between;align-items:center;padding:.4rem 0;border-bottom:1px solid var(--border)">
-                            <span
-                                style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-sub)">ユーザー名</span>
-                            <span id="info-username">—</span>
+                        <div style="display:flex;justify-content:space-between;align-items:center;padding:.4rem 0;border-bottom:1px solid var(--border)">
+                            <span style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-sub)">ユーザー名</span>
+                            <div style="display:flex;gap:.3rem;align-items:center">
+                                <input class="input" id="edit-username" style="width:auto;min-width:100px;font-size:.82rem;padding:.25rem .5rem" maxlength="32">
+                                <button class="btn btn-ghost btn-sm" id="save-username-btn" style="font-size:.7rem;padding:.18rem .6rem;flex-shrink:0">保存</button>
+                            </div>
                         </div>
-                        <div
-                            style="display:flex;justify-content:space-between;align-items:center;padding:.4rem 0;border-bottom:1px solid var(--border)">
-                            <span
-                                style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-sub)">権限</span>
+                        <div style="display:flex;justify-content:space-between;align-items:center;padding:.4rem 0;border-bottom:1px solid var(--border)">
+                            <span style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-sub)">ユーザーID</span>
+                            <span id="info-uid" style="font-size:.72rem;font-family:monospace;color:var(--text-sub)">—</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;padding:.4rem 0;border-bottom:1px solid var(--border)">
+                            <span style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-sub)">権限</span>
                             <span id="info-role">—</span>
                         </div>
                         <div style="display:flex;justify-content:space-between;align-items:center;padding:.4rem 0">
-                            <span
-                                style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-sub)">ストレージ</span>
+                            <span style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-sub)">ストレージ</span>
                             <span id="info-storage">—</span>
                         </div>
                     </div>
                 </div>
 
                 <div class="card reveal reveal-d3">
-                    <div class="section-title">セッション管理</div>
-                    <p style="color:var(--text-sub);font-size:.85rem;margin-top:.4rem;margin-bottom:1rem">
-                        ログイントークンを再生成するか、全セッションをログアウトします。</p>
+                    <div class="section-title">ログインセッション</div>
+                    <p style="color:var(--text-sub);font-size:.82rem;margin-top:.3rem;margin-bottom:.8rem">現在ログインしている端末の一覧です。不要なセッションはここから削除できます。</p>
+                    <div id="session-list">
+                        <span class="text-sm text-sub">読み込み中…</span>
+                    </div>
+                </div>
+
+                <div class="card reveal reveal-d4">
+                    <div class="section-title">セキュリティ</div>
+                    <p style="color:var(--text-sub);font-size:.85rem;margin-top:.4rem;margin-bottom:1rem">ログイントークンを再生成するか、全セッションをログアウトします。</p>
                     <div style="display:flex;gap:.6rem;flex-wrap:wrap">
                         <button class="btn btn-outline btn-sm" id="rotate-btn">トークンを再生成</button>
-                        <button class="btn btn-danger btn-sm" id="logout-all-btn">全セッションをログアウト</button>
+                        <button class="btn btn-danger btn-sm" id="logout-all-btn">全ログアウト</button>
                     </div>
                     <div id="msg"></div>
                     <div id="new-token-wrap" style="display:none;margin-top:1rem">
-                        <label
-                            style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-sub)">新しいトークン</label>
+                        <label style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-sub)">新しいトークン</label>
                         <div class="url-row" style="margin-top:.4rem">
                             <input class="input" id="new-token-input" type="text" readonly onclick="this.select()">
                             <button class="copy-btn" id="copy-token-btn">コピー</button>
@@ -117,8 +172,8 @@
 
     <script src="/js/particles.js"></script>
     <script type="module">
-        import { auth } from '/js/core/auth.js';
-        import { api } from '/js/core/api.js';
+        import { auth } from '/js/core/auth.js?v=1';
+        import { api } from '/js/core/api.js?v=1';
 
         if (!auth.requireAuth()) throw new Error('redirect');
 
@@ -132,6 +187,10 @@
             location.href = '/login.html';
         });
 
+        function esc(s) {
+            return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
         function fmtBytes(b) {
             if (!b) return '—';
             const u = ['B', 'KB', 'MB', 'GB'];
@@ -140,15 +199,25 @@
             return b.toFixed(i ? 1 : 0) + ' ' + u[i];
         }
 
+        function fmtDate(ts) {
+            if (!ts) return '—';
+            const d = new Date(ts);
+            return d.toLocaleDateString('ja-JP') + ' ' + d.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+        }
+
         function showMsg(text, ok) {
             const el = document.getElementById('msg');
             el.textContent = text;
             el.className = ok ? 'ok' : 'err';
         }
 
+        // Session validity check on load (redirects to login if invalid)
+        await api.auth.check();
+
         try {
             const user = await api.auth.me();
-            document.getElementById('info-username').textContent = user.username ?? '—';
+            document.getElementById('edit-username').value = user.username ?? '';
+            document.getElementById('info-uid').textContent = user.user_id ?? user.id ?? '—';
             document.getElementById('info-role').textContent = user.role ?? '—';
             const used = user.storage_used_bytes ?? 0;
             const limit = user.storage_limit_bytes;
@@ -157,8 +226,68 @@
                 : `${fmtBytes(used)} (無制限)`;
         } catch { }
 
+        document.getElementById('save-username-btn').addEventListener('click', async () => {
+            const val = document.getElementById('edit-username').value.trim();
+            if (!val) return;
+            try {
+                await api.auth.updateUsername(val);
+                document.getElementById('nav-username').textContent = val;
+                auth.updateUser({ ...(auth.getUser() || {}), username: val });
+                showMsg('ユーザー名を更新しました', true);
+            } catch {
+                showMsg('更新に失敗しました', false);
+            }
+        });
+
+        // Load sessions
+        async function loadSessions() {
+            const listEl = document.getElementById('session-list');
+            try {
+                const res = await api.auth.sessions();
+                const sessions = res?.items ?? [];
+                if (!sessions.length) {
+                    listEl.innerHTML = '<span class="text-sm text-sub">セッションがありません</span>';
+                    return;
+                }
+                const currentAgo = ' (現在)';
+                listEl.innerHTML = sessions.map((s, i) => {
+                    const ua = (s.user_agent || '不明').replace(/</g, '');
+                    const ip = s.ip_address || '—';
+                    const last = fmtDate(s.last_used_at || s.created_at);
+                    const expires = new Date(s.expires_at).getTime() > Date.now() ? '<span style="color:var(--green)">有効</span>' : '<span style="color:var(--red)">期限切れ</span>';
+                    const isCurrent = i === 0;
+                    return `
+                        <div class="session-row">
+                            <div class="session-meta">
+                                <div class="session-device">
+                                    ${esc(ua)}${isCurrent ? ' <span class="session-badge session-badge-current">現在</span>' : ''}
+                                </div>
+                                <div class="session-detail">
+                                    <span>IP: ${esc(ip)}</span>
+                                    <span>最終: ${esc(last)}</span>
+                                    <span>${expires}</span>
+                                </div>
+                            </div>
+                            ${!isCurrent ? `<button class="btn btn-danger btn-sm revoke-session-btn" data-id="${esc(s.id)}" style="font-size:.7rem;flex-shrink:0">ログアウト</button>` : ''}
+                        </div>`;
+                }).join('');
+
+                document.querySelectorAll('.revoke-session-btn').forEach(btn => {
+                    btn.addEventListener('click', async () => {
+                        if (!confirm('このセッションをログアウトしますか？')) return;
+                        btn.disabled = true;
+                        try { await api.auth.revokeSession(btn.dataset.id); loadSessions(); }
+                        catch { btn.disabled = false; alert('失敗しました'); }
+                    });
+                });
+            } catch {
+                listEl.innerHTML = '<span class="text-sm text-sub" style="color:var(--red)">セッションの取得に失敗しました</span>';
+            }
+        }
+        await loadSessions();
+
         document.getElementById('rotate-btn').addEventListener('click', async () => {
-            if (!confirm('ログイントークンを再生成しますか？現在のトークンは無効になります。')) return;
+            if (!confirm('ログイントークンを再生成しますか？\n全セッションがログアウトされます。')) return;
             try {
                 const res = await api.auth.rotateToken();
                 const token = res.token ?? res.login_token ?? res.loginToken;

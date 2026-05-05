@@ -156,10 +156,6 @@
                     id="submit-btn">
                     ログイン
                 </button>
-                <button type="button" class="btn btn-outline w-full" style="justify-content:center;margin-top:.6rem"
-                    id="admin-bypass-btn">
-                    管理者で入る
-                </button>
                 <div id="error-msg"></div>
             </form>
         </div>
@@ -177,7 +173,6 @@
         const tokenEl = document.getElementById('token-input');
         const errorEl = document.getElementById('error-msg');
         const submitBtn = document.getElementById('submit-btn');
-        const adminBypassBtn = document.getElementById('admin-bypass-btn');
         const toggleVis = document.getElementById('toggle-vis');
 
         function finishLogin(result) {
@@ -185,11 +180,9 @@
             window.location.href = '/files.html';
         }
 
-        function setLoadingState(isLoading, label) {
+        function setLoadingState(isLoading) {
             submitBtn.disabled = isLoading;
-            adminBypassBtn.disabled = isLoading;
-            submitBtn.textContent = isLoading && label === 'login' ? '認証中...' : 'ログイン';
-            adminBypassBtn.textContent = isLoading && label === 'admin' ? '管理者ログイン中...' : '管理者で入る';
+            submitBtn.textContent = isLoading ? '認証中...' : 'ログイン';
         }
 
         toggleVis.addEventListener('click', () => {
@@ -200,27 +193,16 @@
         form.addEventListener('submit', async e => {
             e.preventDefault();
             errorEl.textContent = '';
-            setLoadingState(true, 'login');
+            setLoadingState(true);
             try {
                 const res = await api.auth.login(tokenEl.value.trim());
                 finishLogin(res);
             } catch (err) {
                 errorEl.textContent = err.status === 401 ? 'トークンが正しくありません' : 'ログインに失敗しました';
-                setLoadingState(false, 'login');
+                setLoadingState(false);
             }
         });
 
-        adminBypassBtn.addEventListener('click', async () => {
-            errorEl.textContent = '';
-            setLoadingState(true, 'admin');
-            try {
-                const res = await api.request('POST', '/auth/admin-bypass', { skipAuth: true });
-                finishLogin(res);
-            } catch (err) {
-                errorEl.textContent = err.status === 401 ? '管理者用の抜け道は利用できません' : '管理者ログインに失敗しました';
-                setLoadingState(false, 'admin');
-            }
-        });
     </script>
 </body>
 

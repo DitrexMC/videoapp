@@ -123,6 +123,13 @@
             margin-bottom: 1rem;
         }
 
+        .pagination {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: .5rem .25rem 0;
+        }
+
         .search-row .input {
             flex: 1;
         }
@@ -291,6 +298,13 @@
                         </tbody>
                     </table>
                 </div>
+                <div class="pagination" id="file-pagination">
+                    <span class="text-sm text-sub" id="file-page-info">0件</span>
+                    <div style="display:flex;gap:.4rem">
+                        <button class="btn btn-ghost btn-sm" id="file-page-prev">← 前へ</button>
+                        <button class="btn btn-ghost btn-sm" id="file-page-next">次へ →</button>
+                    </div>
+                </div>
             </div>
 
             <!-- Policies tab -->
@@ -406,6 +420,7 @@
             try {
                 const res = await api.admin.files.list({});
                 allFiles = res?.items ?? [];
+                filePage = 1;
                 document.getElementById('stat-files').textContent = allFiles.length;
                 renderAdminFiles();
             } catch (e) { console.error(e); }
@@ -557,28 +572,41 @@
         });
 
         // ── File Management ────────────────────────────────────
+        const FILE_PAGE_SIZE = 100;
+        let filePage = 1;
+
         function renderAdminFiles() {
             const tbody = document.getElementById('admin-file-list');
+            const totalPages = Math.max(1, Math.ceil(allFiles.length / FILE_PAGE_SIZE));
+            if (filePage > totalPages) filePage = totalPages;
+            const start = (filePage - 1) * FILE_PAGE_SIZE;
+            const slice = allFiles.slice(start, start + FILE_PAGE_SIZE);
+
             if (!allFiles.length) {
                 tbody.innerHTML = '<tr class="empty-row"><td colspan="7">ファイルがありません</td></tr>';
-                return;
+            } else {
+                tbody.innerHTML = slice.map(f => {
+                    return window.buildFileRow({
+                        id: f.id,
+                        safe_name: f.safe_name,
+                        size: f.size,
+                        created_at: f.created_at,
+                        expires_at: f.expires_at,
+                        owner_username: f.owner_username,
+                        public: f.public
+                    }, {
+                        cbClass: 'admin-file-check',
+                        showUser: true,
+                        showDl: false
+                    });
+                }).join('');
             }
-            tbody.innerHTML = allFiles.map(f => {
-                const usedPct = 0;
-                return window.buildFileRow({
-                    id: f.id,
-                    safe_name: f.safe_name,
-                    size: f.size,
-                    created_at: f.created_at,
-                    expires_at: f.expires_at,
-                    owner_username: f.owner_username,
-                    public: f.public
-                }, {
-                    cbClass: 'admin-file-check',
-                    showUser: true,
-                    showDl: false
-                });
-            }).join('');
+
+            document.getElementById('file-page-info').textContent = allFiles.length > 0
+                ? (start + 1) + '\u2013' + Math.min(start + FILE_PAGE_SIZE, allFiles.length) + ' / ' + allFiles.length + '\u4ef6'
+                : '0\u4ef6';
+            document.getElementById('file-page-prev').disabled = filePage <= 1;
+            document.getElementById('file-page-next').disabled = filePage >= totalPages;
 
             document.querySelectorAll('.fr-del-btn').forEach(btn => {
                 btn.addEventListener('click', async () => {
@@ -607,6 +635,7 @@
             try {
                 const res = await api.admin.files.list({ search: q || undefined });
                 allFiles = res?.items ?? [];
+                filePage = 1;
                 document.getElementById('stat-files').textContent = allFiles.length;
                 renderAdminFiles();
             } catch (e) { console.error(e); }
@@ -614,6 +643,13 @@
 
         document.getElementById('file-search-input').addEventListener('keydown', e => {
             if (e.key === 'Enter') document.getElementById('file-search-btn').click();
+        });
+
+        document.getElementById('file-page-prev').addEventListener('click', () => {
+            if (filePage > 1) { filePage--; renderAdminFiles(); }
+        });
+        document.getElementById('file-page-next').addEventListener('click', () => {
+            filePage++; renderAdminFiles();
         });
 
         // ── Policies ───────────────────────────────────────────

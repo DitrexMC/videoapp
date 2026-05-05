@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'fv-v12';
+const CACHE_VERSION = 'fv-v17';
 const STATIC_CACHE  = `${CACHE_VERSION}-static`;
 const API_PREFIX    = '/api/';
 
@@ -8,8 +8,6 @@ const STATIC_ASSETS = [
   '/css/layout.css',
   '/css/components.css',
   '/css/animations.css',
-  '/js/core/api.js',
-  '/js/core/auth.js',
   '/js/ui/toast.js',
   '/js/ui/theme.js',
   '/js/ui/shell.js',
@@ -17,6 +15,7 @@ const STATIC_ASSETS = [
   '/js/ui/format.js',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
+  '/folder.html',
 ];
 
 self.addEventListener('install', event => {
@@ -78,6 +77,8 @@ self.addEventListener('fetch', event => {
 });
 
 function isStaticAsset(url) {
+  // Skip core JS modules — network-first to avoid stale cache
+  if (url.includes('/js/core/')) return false;
   return /\.(css|js|png|jpg|jpeg|gif|svg|woff2?|ttf)(\?.*)?$/.test(url);
 }
 

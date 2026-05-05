@@ -85,23 +85,7 @@ export async function createRuntime(config: AppConfig): Promise<AppRuntime> {
       config.BOOTSTRAP_ADMIN_USERNAME,
     );
 
-    if (existingAdminUser) {
-      identityRepository.updateUser({
-        icon: config.BOOTSTRAP_ADMIN_ICON,
-        loginTokenHash: hashedLoginToken,
-        maxFileSizeBytes: config.DEFAULT_MAX_FILE_SIZE_BYTES,
-        role: "admin",
-        status: "active",
-        storageLimitBytes: config.DEFAULT_STORAGE_LIMIT_BYTES,
-        updatedAt: timestamp,
-        userId: existingAdminUser.id,
-      });
-      identityRepository.revokeSessionsForUser(
-        existingAdminUser.id,
-        timestamp,
-        "bootstrap_admin_synced",
-      );
-    } else {
+    if (!existingAdminUser) {
       identityRepository.createUser({
         createdAt: timestamp,
         icon: config.BOOTSTRAP_ADMIN_ICON,

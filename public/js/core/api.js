@@ -147,6 +147,12 @@ export const api = {
         token: res?.login_token ?? res?.token,
       };
     },
+
+    sessions: () => request('GET', '/auth/sessions'),
+    revokeSession: (sessionId) =>
+      request('DELETE', `/auth/sessions/${sessionId}`),
+    updateUsername: (username) =>
+      request('PATCH', '/auth/username', { body: { username } }),
   },
 
   upload: {

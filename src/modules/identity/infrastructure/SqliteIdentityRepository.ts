@@ -243,6 +243,18 @@ export class SqliteIdentityRepository implements IdentityRepository {
     return row !== undefined;
   }
 
+  listSessions(userId: string): Session[] {
+    const rows = this.connection.prepare<unknown[], SessionRow>(`
+      SELECT id, user_id, session_token_hash, created_at, last_used_at, expires_at, revoked_at, revoked_reason, user_agent, ip_address
+      FROM sessions
+      WHERE user_id = ?
+        AND revoked_at IS NULL
+      ORDER BY last_used_at DESC
+    `).all(userId);
+
+    return rows.map(mapSession);
+  }
+
   revokeSession(
     sessionId: string,
     revokedAt: string,
@@ -344,6 +356,23 @@ export class SqliteIdentityRepository implements IdentityRepository {
     `,
       )
       .run(loginTokenHash, updatedAt, userId);
+  }
+
+  updateUsername(
+    userId: string,
+    username: string,
+    updatedAt: string,
+  ): void {
+    this.connection
+      .prepare(
+        `
+      UPDATE users
+      SET username = ?,
+          updated_at = ?
+      WHERE id = ?
+    `,
+      )
+      .run(username, updatedAt, userId);
   }
 }
 

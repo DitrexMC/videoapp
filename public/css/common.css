@@ -238,7 +238,7 @@ main {
 .card:hover::after { opacity:1; }
 
 /* ── Tables ── */
-.table-wrap { overflow-x:auto; border-radius:10px; border:1px solid var(--border); }
+.table-wrap { overflow-x:auto; overflow-y:clip; border-radius:10px; border:1px solid var(--border); }
 
 .table {
   width:100%;
@@ -727,10 +727,6 @@ main {
 
 .card:hover::after {
   opacity: 1;
-}
-
-.table-wrap {
-  overflow-x: auto;
 }
 
 .table {

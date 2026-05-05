@@ -33,6 +33,7 @@ export interface IdentityRepository {
   findUserByUsername(username: string): User | null;
   findUserByLoginTokenHash(loginTokenHash: string): User | null;
   hasAdminUser(): boolean;
+  listSessions(userId: string): Session[];
   revokeSession(
     sessionId: string,
     revokedAt: string,
@@ -44,19 +45,14 @@ export interface IdentityRepository {
     revokedReason: string,
   ): number;
   touchSession(sessionId: string, lastUsedAt: string): void;
-  updateUser(input: {
-    icon: string | null;
-    loginTokenHash: string;
-    maxFileSizeBytes: number;
-    role: UserRole;
-    status: UserStatus;
-    storageLimitBytes: number;
-    updatedAt: string;
-    userId: string;
-  }): void;
   updateLoginTokenHash(
     userId: string,
     loginTokenHash: string,
+    updatedAt: string,
+  ): void;
+  updateUsername(
+    userId: string,
+    username: string,
     updatedAt: string,
   ): void;
 }

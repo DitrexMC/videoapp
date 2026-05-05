@@ -1,5 +1,5 @@
 import type { Clock } from "../../../shared/domain/clock.js";
-import { AuthenticationError, AuthorizationError } from "../../../shared/domain/errors.js";
+import { AuthenticationError, AuthorizationError, NotFoundError, ValidationError } from "../../../shared/domain/errors.js";
 import { generateId } from "../../../shared/domain/id.js";
 import type { ServicePolicyRepository } from "../../../shared/application/ServicePolicyRepository.js";
 import type { TokenService } from "../../../shared/infrastructure/security/TokenService.js";
@@ -141,5 +141,31 @@ export class AuthApplicationService {
       login_token: newLoginToken,
       user: toPublicUser(user)
     };
+  }
+
+  getSessions(sessionToken: string) {
+    const { user } = this.authenticate(sessionToken);
+    return this.identityRepository.listSessions(user.id);
+  }
+
+  revokeUserSession(sessionToken: string, sessionId: string): void {
+    const { user, session } = this.authenticate(sessionToken);
+    const targetSession = this.identityRepository.listSessions(user.id).find(s => s.id === sessionId);
+    if (!targetSession || targetSession.userId !== user.id) {
+      throw new NotFoundError("セッションが見つかりません。");
+    }
+    if (targetSession.id === session.id) {
+      throw new ValidationError("現在のこのセッション自体は削除できません。ログアウトを使用してください。");
+    }
+    this.identityRepository.revokeSession(sessionId, this.clock.nowIsoString(), "user_revoked");
+  }
+
+  updateUsername(sessionToken: string, username: string) {
+    const { user } = this.authenticate(sessionToken);
+    const normalized = username.trim();
+    if (normalized.length === 0) {
+      throw new ValidationError("ユーザー名は必須です。");
+    }
+    this.identityRepository.updateUsername(user.id, normalized, this.clock.nowIsoString());
   }
 }

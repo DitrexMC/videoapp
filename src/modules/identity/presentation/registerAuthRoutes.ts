@@ -31,19 +31,6 @@ export async function registerAuthRoutes(
     });
   });
 
-  app.post("/auth/admin-bypass", async (request) => {
-    const bootstrapAdminToken = runtime.config.BOOTSTRAP_ADMIN_LOGIN_TOKEN;
-
-    if (!bootstrapAdminToken) {
-      throw new AuthenticationError();
-    }
-
-    return runtime.authService.login(bootstrapAdminToken, {
-      ipAddress: request.ip ?? null,
-      userAgent: request.headers["user-agent"] ?? null,
-    });
-  });
-
   app.get("/auth/me", async (request) => {
     const sessionToken = getBearerToken(request.headers.authorization);
     const user = runtime.authService.getCurrentUser(sessionToken);
@@ -90,6 +77,44 @@ export async function registerAuthRoutes(
     const sessionToken = getBearerToken(request.headers.authorization);
 
     return runtime.authService.rotateLoginToken(sessionToken);
+  });
+
+  app.get("/auth/sessions", async (request) => {
+    const sessionToken = getBearerToken(request.headers.authorization);
+    const sessions = runtime.authService.getSessions(sessionToken);
+
+    return {
+      items: sessions.map((s) => ({
+        created_at: s.createdAt,
+        expires_at: s.expiresAt,
+        id: s.id,
+        ip_address: s.ipAddress,
+        last_used_at: s.lastUsedAt,
+        user_agent: s.userAgent,
+      })),
+    };
+  });
+
+  app.delete("/auth/sessions/:sessionId", async (request, reply) => {
+    const sessionToken = getBearerToken(request.headers.authorization);
+    const params = z.object({ sessionId: z.string().uuid() }).parse(request.params);
+
+    runtime.authService.revokeUserSession(sessionToken, params.sessionId);
+
+    return reply.status(204).send();
+  });
+
+  app.patch("/auth/username", async (request, reply) => {
+    const sessionToken = getBearerToken(request.headers.authorization);
+    const body = z.object({ username: z.string().min(1) }).safeParse(request.body);
+
+    if (!body.success) {
+      throw new ValidationError("ユーザー名が不正です。", body.error.flatten());
+    }
+
+    runtime.authService.updateUsername(sessionToken, body.data.username);
+
+    return reply.status(204).send();
   });
 }
 
