@@ -76,6 +76,33 @@ async function preparePage(html, url) {
     }
   }
 
+  // Preload missing external scripts so they are available when inline scripts execute
+  const currentScriptUrls = new Set(
+    [...document.querySelectorAll('script[src]')].map(s => s.src)
+  );
+  const scriptExclusions = new Set([
+    location.origin + '/js/nav.js',
+    location.origin + '/js/particles.js',
+    location.origin + '/js/nav-theme.js'
+  ]);
+  const scriptsToPreload = [];
+  doc.querySelectorAll('script[src]').forEach(tag => {
+    const src = new URL(tag.getAttribute('src'), baseUrl).href;
+    if (currentScriptUrls.has(src) || scriptExclusions.has(src)) return;
+    currentScriptUrls.add(src);
+    scriptsToPreload.push(src);
+  });
+
+  if (scriptsToPreload.length > 0) {
+    await Promise.all(scriptsToPreload.map(src => new Promise(resolve => {
+      const s = document.createElement('script');
+      s.src = src;
+      s.onload = resolve;
+      s.onerror = resolve;
+      document.head.appendChild(s);
+    })));
+  }
+
   return doc;
 }
 
@@ -106,24 +133,6 @@ function swapPage(doc, url) {
     currentSheets.add(href);
   });
 
-  // Load missing CDN scripts
-  const currentScripts = new Set(
-    [...document.querySelectorAll('script[src]')].map(s => s.src)
-  );
-  doc.querySelectorAll('script[src]').forEach(old => {
-    const src = new URL(old.getAttribute('src'), baseUrl).href;
-    if (!currentScripts.has(src) && src !== location.origin + '/js/nav.js'
-        && src !== location.origin + '/js/particles.js'
-        && src !== location.origin + '/js/nav-theme.js') {
-      const s = document.createElement('script');
-      s.src = src;
-      if (old.defer) s.defer = true;
-      if (old.async) s.async = true;
-      if (old.type) s.type = old.type;
-      document.body.appendChild(s);
-    }
-  });
-
   // Mirror body class + title
   document.body.className = doc.body.className;
   document.title = doc.title;
@@ -140,18 +149,49 @@ function swapPage(doc, url) {
   // Swap main
   oldMain.replaceWith(newMain);
 
-  // Execute inline scripts
-  scriptDefs.forEach(def => {
-    const s = document.createElement('script');
-    if (def.type) s.type = def.type;
-    s.textContent = def.text;
-    document.body.appendChild(s);
+  // Replace page-specific elements outside <main> (e.g. canvas)
+  const pageSpecificSelectors = ['#canvas'];
+  pageSpecificSelectors.forEach(sel => {
+    const oldEl = document.querySelector(sel);
+    const newEl = doc.querySelector(sel);
+    if (oldEl && newEl) {
+      oldEl.replaceWith(newEl);
+    } else if (oldEl && !newEl) {
+      oldEl.remove();
+    } else if (!oldEl && newEl) {
+      document.body.insertBefore(newEl, document.body.firstChild);
+    }
   });
 
+  // Clean up previously injected inline scripts to avoid accumulation
+  document.querySelectorAll('script[data-va-inline]').forEach(s => s.remove());
+
+  // Execute inline scripts (with error isolation so one failure doesn't break others)
+  scriptDefs.forEach((def, idx) => {
+    try {
+      const s = document.createElement('script');
+      if (def.type) s.type = def.type;
+      s.textContent = def.text;
+      s.setAttribute('data-va-inline', String(idx));
+      document.body.appendChild(s);
+    } catch (err) {
+      console.error('[va-nav] inline script failed:', err);
+    }
+  });
+
+  // Re-observe reveal elements with a fresh observer if the old one is stale
   if (window.__revealObserver) {
-    document.querySelectorAll('.reveal:not(.visible)').forEach(el => {
-      window.__revealObserver.observe(el);
-    });
+    try { window.__revealObserver.disconnect(); } catch (_) {}
+  }
+  const revEls = document.querySelectorAll('.reveal');
+  if (revEls.length) {
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); }
+      });
+    }, { threshold: 0.1 });
+    revEls.forEach(el => io.observe(el));
+    window.__revealObserver = io;
   }
 
   return true;
@@ -208,6 +248,9 @@ async function navigate(url, pushState = true) {
 
   document.documentElement.classList.add('vt-navigated');
 
+  // Dispatch cleanup event so current page scripts can tear down
+  document.dispatchEvent(new CustomEvent('va:navigate-away', { detail: { url: href } }));
+
   // Phase 2: atomic DOM swap inside VT
   try {
     const transition = document.startViewTransition(() => {
@@ -224,6 +267,14 @@ async function navigate(url, pushState = true) {
 
   document.documentElement.removeAttribute('data-nav-dir');
   window.scrollTo(0, 0);
+
+  // Re-initialise particles if the new page has a canvas
+  if (typeof window.__initParticles === 'function') {
+    window.__initParticles();
+  }
+
+  // Dispatch arrival event so new page scripts can set up
+  document.dispatchEvent(new CustomEvent('va:navigate', { detail: { url: href } }));
 
   navigating = false;
 }
