@@ -7,6 +7,8 @@ import type { AuthApplicationService } from "../../identity/application/AuthAppl
 import type { User } from "../../identity/domain/User.js";
 import type { Clock } from "../../../shared/domain/clock.js";
 import {
+  AuthenticationError,
+  AuthorizationError,
   NotFoundError,
   ValidationError,
   ConflictError,
@@ -481,7 +483,18 @@ export class FileApplicationService {
       return null;
     }
 
-    return this.authService.authenticate(sessionToken).user;
+    try {
+      return this.authService.authenticate(sessionToken).user;
+    } catch (error) {
+      if (
+        error instanceof AuthenticationError ||
+        error instanceof AuthorizationError
+      ) {
+        return null;
+      }
+
+      throw error;
+    }
   }
 
   private getReadableFile(fileId: string, actor: User | null): FileRecord {

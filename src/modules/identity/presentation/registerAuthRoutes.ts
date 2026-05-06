@@ -7,6 +7,8 @@ import {
   ValidationError,
 } from "../../../shared/domain/errors.js";
 
+const SESSION_COOKIE_NAME = "va_session";
+
 const loginRequestSchema = z.object({
   login_token: z.string().min(1),
 });
@@ -15,7 +17,7 @@ export async function registerAuthRoutes(
   app: FastifyInstance,
   runtime: AppRuntime,
 ): Promise<void> {
-  app.post("/auth/login", async (request) => {
+  app.post("/auth/login", async (request, reply) => {
     const body = loginRequestSchema.safeParse(request.body);
 
     if (!body.success) {
@@ -25,10 +27,17 @@ export async function registerAuthRoutes(
       );
     }
 
-    return runtime.authService.login(body.data.login_token, {
+    const loginResult = runtime.authService.login(body.data.login_token, {
       ipAddress: request.ip ?? null,
       userAgent: request.headers["user-agent"] ?? null,
     });
+
+    reply.header(
+      "Set-Cookie",
+      serializeSessionCookie(loginResult.session_token),
+    );
+
+    return loginResult;
   });
 
   app.get("/auth/me", async (request) => {
@@ -61,6 +70,7 @@ export async function registerAuthRoutes(
     const sessionToken = getBearerToken(request.headers.authorization);
 
     runtime.authService.logout(sessionToken);
+    reply.header("Set-Cookie", clearSessionCookie());
 
     return reply.status(204).send();
   });
@@ -69,6 +79,7 @@ export async function registerAuthRoutes(
     const sessionToken = getBearerToken(request.headers.authorization);
 
     runtime.authService.logoutAll(sessionToken);
+    reply.header("Set-Cookie", clearSessionCookie());
 
     return reply.status(204).send();
   });
@@ -97,7 +108,9 @@ export async function registerAuthRoutes(
 
   app.delete("/auth/sessions/:sessionId", async (request, reply) => {
     const sessionToken = getBearerToken(request.headers.authorization);
-    const params = z.object({ sessionId: z.string().uuid() }).parse(request.params);
+    const params = z
+      .object({ sessionId: z.string().uuid() })
+      .parse(request.params);
 
     runtime.authService.revokeUserSession(sessionToken, params.sessionId);
 
@@ -106,7 +119,9 @@ export async function registerAuthRoutes(
 
   app.patch("/auth/username", async (request, reply) => {
     const sessionToken = getBearerToken(request.headers.authorization);
-    const body = z.object({ username: z.string().min(1) }).safeParse(request.body);
+    const body = z
+      .object({ username: z.string().min(1) })
+      .safeParse(request.body);
 
     if (!body.success) {
       throw new ValidationError("ユーザー名が不正です。", body.error.flatten());
@@ -132,4 +147,12 @@ function getBearerToken(
   }
 
   return token;
+}
+
+function clearSessionCookie(): string {
+  return `${SESSION_COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`;
+}
+
+function serializeSessionCookie(sessionToken: string): string {
+  return `${SESSION_COOKIE_NAME}=${encodeURIComponent(sessionToken)}; Path=/; HttpOnly; SameSite=Lax`;
 }

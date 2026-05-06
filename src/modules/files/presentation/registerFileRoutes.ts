@@ -10,6 +10,8 @@ import {
   ValidationError,
 } from "../../../shared/domain/errors.js";
 
+const SESSION_COOKIE_NAME = "va_session";
+
 const setVisibilitySchema = z.object({
   public: z.boolean(),
 });
@@ -122,7 +124,10 @@ export async function registerFileRoutes(
   });
 
   app.get("/files/:fileId", async (request) => {
-    const sessionToken = getOptionalBearerToken(request.headers.authorization);
+    const sessionToken = getOptionalBearerToken(
+      request.headers.authorization,
+      request.headers.cookie,
+    );
     const params = z
       .object({ fileId: z.string().uuid() })
       .parse(request.params);
@@ -131,7 +136,10 @@ export async function registerFileRoutes(
   });
 
   app.get("/file/:fileId", async (request) => {
-    const sessionToken = getOptionalBearerToken(request.headers.authorization);
+    const sessionToken = getOptionalBearerToken(
+      request.headers.authorization,
+      request.headers.cookie,
+    );
     const params = z
       .object({ fileId: z.string().uuid() })
       .parse(request.params);
@@ -235,7 +243,10 @@ export async function registerFileRoutes(
   });
 
   app.get("/files/:fileId/download", async (request, reply) => {
-    const sessionToken = getOptionalBearerToken(request.headers.authorization);
+    const sessionToken = getOptionalBearerToken(
+      request.headers.authorization,
+      request.headers.cookie,
+    );
     const params = z
       .object({ fileId: z.string().uuid() })
       .parse(request.params);
@@ -254,7 +265,10 @@ export async function registerFileRoutes(
   });
 
   app.get("/files/:fileId/stream", async (request, reply) => {
-    const sessionToken = getOptionalBearerToken(request.headers.authorization);
+    const sessionToken = getOptionalBearerToken(
+      request.headers.authorization,
+      request.headers.cookie,
+    );
     const params = z
       .object({ fileId: z.string().uuid() })
       .parse(request.params);
@@ -318,7 +332,10 @@ export async function registerFileRoutes(
   });
 
   app.get("/files/:fileId/preview", async (request, reply) => {
-    const sessionToken = getOptionalBearerToken(request.headers.authorization);
+    const sessionToken = getOptionalBearerToken(
+      request.headers.authorization,
+      request.headers.cookie,
+    );
     const params = z
       .object({ fileId: z.string().uuid() })
       .parse(request.params);
@@ -336,7 +353,10 @@ export async function registerFileRoutes(
   });
 
   app.get("/files/:fileId/meta", async (request, reply) => {
-    const sessionToken = getOptionalBearerToken(request.headers.authorization);
+    const sessionToken = getOptionalBearerToken(
+      request.headers.authorization,
+      request.headers.cookie,
+    );
     const params = z
       .object({ fileId: z.string().uuid() })
       .parse(request.params);
@@ -390,7 +410,10 @@ export async function registerFileRoutes(
   });
 
   app.post("/files/zip", async (request, reply) => {
-    const sessionToken = getOptionalBearerToken(request.headers.authorization);
+    const sessionToken = getOptionalBearerToken(
+      request.headers.authorization,
+      request.headers.cookie,
+    );
     const body = zipRequestSchema.safeParse(request.body);
 
     if (!body.success) {
@@ -573,7 +596,7 @@ export async function registerFileRoutes(
 function getRequiredBearerToken(
   authorizationHeader: string | string[] | undefined,
 ): string {
-  const token = getOptionalBearerToken(authorizationHeader, true);
+  const token = getOptionalBearerToken(authorizationHeader, undefined, true);
 
   if (!token) {
     throw new AuthenticationError();
@@ -584,17 +607,28 @@ function getRequiredBearerToken(
 
 function getOptionalBearerToken(
   authorizationHeader: string | string[] | undefined,
+  cookieHeader?: string | string[],
   required = false,
 ): string | null {
+  const cookieToken = getSessionTokenFromCookie(cookieHeader);
+
   if (authorizationHeader === undefined) {
     if (required) {
-      throw new AuthenticationError();
+      if (!cookieToken) {
+        throw new AuthenticationError();
+      }
+
+      return cookieToken;
     }
 
-    return null;
+    return cookieToken;
   }
 
   if (typeof authorizationHeader !== "string") {
+    if (cookieToken) {
+      return cookieToken;
+    }
+
     throw new AuthenticationError();
   }
 
@@ -602,17 +636,55 @@ function getOptionalBearerToken(
 
   if (normalizedHeader.length === 0) {
     if (required) {
-      throw new AuthenticationError();
+      if (!cookieToken) {
+        throw new AuthenticationError();
+      }
+
+      return cookieToken;
     }
 
-    return null;
+    return cookieToken;
   }
 
   const [scheme, token] = normalizedHeader.split(/\s+/, 2);
 
   if (scheme?.toLowerCase() !== "bearer" || !token) {
+    if (cookieToken) {
+      return cookieToken;
+    }
+
     throw new AuthenticationError();
   }
 
   return token;
+}
+
+function getSessionTokenFromCookie(
+  cookieHeader: string | string[] | undefined,
+): string | null {
+  if (typeof cookieHeader !== "string") {
+    return null;
+  }
+
+  for (const entry of cookieHeader.split(";")) {
+    const [name, ...valueParts] = entry.trim().split("=");
+
+    if (name !== SESSION_COOKIE_NAME) {
+      continue;
+    }
+
+    const rawValue = valueParts.join("=");
+
+    if (!rawValue) {
+      return null;
+    }
+
+    try {
+      return decodeURIComponent(rawValue);
+    } catch {
+      return rawValue;
+    }
+  }
+
+  return null;
 }
