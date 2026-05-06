@@ -309,7 +309,8 @@
                 btn.addEventListener('click', async () => {
                     const url = location.origin + btn.dataset.url;
                     const orig = btn.innerHTML;
-                    try { await navigator.clipboard.writeText(url); btn.innerHTML = 'コピー完了';
+                    try {
+                        await navigator.clipboard.writeText(url); btn.innerHTML = 'コピー完了';
                         setTimeout(() => { btn.innerHTML = orig; }, 1800);
                     } catch { window.prompt('コピーしてください:', url); }
                 }));
@@ -368,15 +369,15 @@
                 const files = (fRes?.items ?? [])
                     .filter(f => !f.folder_id)
                     .map(f => ({
-                    id: f.id,
-                    safe_name: f.safe_name,
-                    size: f.size,
-                    created_at: f.created_at,
-                    expires_at: f.expires_at,
-                    public: f.public,
-                    status: f.status,
-                    type: 'file'
-                }));
+                        id: f.id,
+                        safe_name: f.safe_name,
+                        size: f.size,
+                        created_at: f.created_at,
+                        expires_at: f.expires_at,
+                        public: f.public,
+                        status: f.status,
+                        type: 'file'
+                    }));
                 const folders = (dRes?.items ?? []).map(d => ({
                     id: d.id,
                     name: d.name,
@@ -454,6 +455,7 @@
             navigator.serviceWorker.register('/sw.js').catch(() => { });
         }
     </script>
+    <script src="/js/dev-reload.js?v=1" defer></script>
 </body>
 
 </html>

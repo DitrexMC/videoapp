@@ -90,6 +90,7 @@ export async function createApp(config: AppConfig): Promise<FastifyInstance> {
   app.get("/config", async () => {
     const p = runtime.policyRepository.findPolicies();
     return {
+      devMode: config.DEV_MODE,
       defaultFileExpiryDays: p.defaultFileExpiryDays,
       maxFileExpiryDays: p.maxFileExpiryDays,
     };

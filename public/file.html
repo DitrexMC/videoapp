@@ -17,8 +17,8 @@
         id="hljs-theme">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css"
         id="hljs-theme-light" disabled>
-    <link rel="stylesheet" href="/css/file-preview.css">
-    <script>(function () { var m = document.cookie.match('(?:^|;)\\s*theme\\s*=\\s*([^;]+)'); document.documentElement.setAttribute('data-theme', m ? m[1] : 'dark'); })();</script>
+    <link rel="stylesheet" href="/css/file-preview.css?v=2">
+    <script src="/js/nav-theme.js"></script>
 </head>
 
 <body class="preview-binary">
@@ -92,7 +92,7 @@
                                 <input class="owner-input" id="owner-expiry-input" type="datetime-local">
                                 <button type="button" class="btn btn-sm" id="owner-expiry-btn">保存</button>
                                 <button type="button" class="btn btn-sm" id="owner-expiry-clear-btn"
-                                    style="color:var(--y);border-color:rgba(245,158,11,.3)">期限なし</button>
+                                    style="color:var(--yellow);border-color:rgba(245,158,11,.3)">期限なし</button>
                             </div>
                         </div>
                         <div class="owner-row">
@@ -107,7 +107,7 @@
                         <div class="owner-row">
                             <label class="owner-label">削除</label>
                             <button type="button" class="btn btn-sm" id="owner-delete-btn"
-                                style="color:var(--r);border-color:rgba(239,68,68,.3)">このファイルを削除</button>
+                                style="color:var(--red);border-color:rgba(239,68,68,.3)">このファイルを削除</button>
                         </div>
                     </div>
                 </div>
@@ -342,34 +342,34 @@
             function showPrivateError() {
                 document.title = '非公開ファイル — VideoApp';
                 document.body.className = 'preview-binary';
-                document.getElementById('viewer').innerHTML = '<div class="binary-wrap" id="preview-area"><div class="binary-glow" style="background:radial-gradient(ellipse,rgba(245,158,11,.14) 0%,transparent 70%)"></div><div class="binary-icon-box" style="background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.24);color:var(--y)"><svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div><div class="binary-label" style="color:var(--y)">このファイルはプライベートです。</div><div class="binary-sub">所有者のみ閲覧できます。</div></div>';
+                document.getElementById('viewer').innerHTML = '<div class="binary-wrap" id="preview-area"><div class="binary-glow" style="background:radial-gradient(ellipse,rgba(245,158,11,.14) 0%,transparent 70%)"></div><div class="binary-icon-box" style="background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.24);color:var(--yellow)"><svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div><div class="binary-label" style="color:var(--yellow)">このファイルはプライベートです。</div><div class="binary-sub">所有者のみ閲覧できます。</div></div>';
             }
 
             function showFileStatusState(f) {
                 var statusMap = {
                     uploading: {
-                        accent: 'var(--a3)',
+                        accent: 'var(--accent3)',
                         chip: 'アップロード中',
                         icon: '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>',
                         title: 'このファイルはアップロード中です',
                         desc: 'アップロード完了後にプレビューと再生が利用できます。'
                     },
                     processing: {
-                        accent: 'var(--a2)',
+                        accent: 'var(--accent2)',
                         chip: '処理中',
                         icon: '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
                         title: 'このファイルはまだ処理中です',
                         desc: '変換や保存処理が完了すると閲覧・再生できるようになります。'
                     },
                     expired: {
-                        accent: 'var(--y)',
+                        accent: 'var(--yellow)',
                         chip: '期限切れ',
                         icon: '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
                         title: 'このファイルは期限切れです',
                         desc: '保存期限が過ぎたため、内容は閲覧できません。'
                     },
                     deleted: {
-                        accent: 'var(--r)',
+                        accent: 'var(--red)',
                         chip: '削除済み',
                         icon: '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>',
                         title: 'このファイルは削除されています',
@@ -377,7 +377,7 @@
                     }
                 };
                 var current = statusMap[f.status] || {
-                    accent: 'var(--ts)',
+                    accent: 'var(--text-sub)',
                     chip: '利用不可',
                     icon: '⚠️',
                     title: 'このファイルは現在利用できません',
@@ -438,7 +438,7 @@
                         + '<button class="img-tb-btn" id="zoom-btn" type="button" title="拡大"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg> 拡大</button>'
                         + '</div>'
                         + '<img id="preview-img" src="' + esc(streamUrl) + '" alt="' + esc(name) + '" onerror="this.style.display=\'none\';document.getElementById(\'img-err\').style.display=\'flex\'">'
-                        + '<div id="img-err" style="display:none;position:relative;z-index:2;text-align:center;padding:4rem 2rem;flex-direction:column;align-items:center;gap:1rem;color:var(--ts)"><div style="font-size:2.5rem">🖼️</div><p style="font-size:.9rem">画像を読み込めませんでした</p><a class="btn btn-primary" href="' + esc(dlUrl) + '">ダウンロード</a></div>'
+                        + '<div id="img-err" style="display:none;position:relative;z-index:2;text-align:center;padding:4rem 2rem;flex-direction:column;align-items:center;gap:1rem;color:var(--text-sub)"><div style="font-size:2.5rem">🖼️</div><p style="font-size:.9rem">画像を読み込めませんでした</p><a class="btn btn-primary" href="' + esc(dlUrl) + '">ダウンロード</a></div>'
                         + '</div>';
                     initImage();
                     return;
@@ -470,7 +470,7 @@
                         + '<span class="audio-vol-icon"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></span>'
                         + '<input class="audio-vol" id="aud-vol" type="range" min="0" max="1" step="0.02" value="1">'
                         + '</div>'
-                        + '<div id="aud-vol-ios" style="display:none;font-size:.72rem;color:var(--ts);text-align:center;padding:.3rem 0">端末の音量ボタンで調節してください</div>'
+                        + '<div id="aud-vol-ios" style="display:none;font-size:.72rem;color:var(--text-sub);text-align:center;padding:.3rem 0">端末の音量ボタンで調節してください</div>'
                         + '</div></div>';
                     initAudio();
                     return;
@@ -493,7 +493,7 @@
                         + '<style>@font-face{font-family:\'PreviewFont\';src:url(\'' + esc(streamUrl) + '\');}</style>'
                         + '<div class="font-sample" id="font-sample" style="font-family:\'PreviewFont\',serif">The quick brown fox jumps over the lazy dog</div>'
                         + '<div class="font-sample-sm" style="font-family:\'PreviewFont\',sans-serif">\u3042\u3044\u3046\u3048\u304a\u3000ABCDEFGHIJKLMNOPQRSTUVWXYZ\u30000123456789</div>'
-                        + '<div class="font-controls"><span style="font-size:.75rem;color:var(--ts)">\u30b5\u30a4\u30ba</span><input class="font-size-slider" id="font-slider" type="range" min="16" max="120" value="48"><span class="font-size-lbl" id="font-size-lbl">48px</span></div>'
+                        + '<div class="font-controls"><span style="font-size:.75rem;color:var(--text-sub)">\u30b5\u30a4\u30ba</span><input class="font-size-slider" id="font-slider" type="range" min="16" max="120" value="48"><span class="font-size-lbl" id="font-size-lbl">48px</span></div>'
                         + '</div>';
                     initFont();
                     return;
@@ -506,7 +506,7 @@
                     area.outerHTML = '<div class="code-outer" id="preview-area">'
                         + '<div class="code-toolbar"><span class="code-lang-badge">' + esc(langLabel) + '</span>'
                         + '<div class="code-actions">'
-                        + (isMarkdown ? '<button class="btn btn-sm" id="md-toggle" type="button" style="color:var(--a3)">\u30ec\u30f3\u30c0\u30ea\u30f3\u30b0\u8868\u793a</button>' : '')
+                        + (isMarkdown ? '<button class="btn btn-sm" id="md-toggle" type="button" style="color:var(--accent3)">\u30ec\u30f3\u30c0\u30ea\u30f3\u30b0\u8868\u793a</button>' : '')
                         + '<button class="btn btn-sm" id="code-copy-btn" type="button">\u30b3\u30fc\u30c9\u30b3\u30d4\u30fc</button>'
                         + '<a class="btn btn-sm" href="' + esc(streamUrl) + '" target="_blank">Raw</a>'
                         + '</div></div>'
@@ -563,9 +563,9 @@
                 document.getElementById('meta-chips').innerHTML =
                     '<span class="chip"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg> ' + esc(fmtBytes(size)) + '</span>'
                     + '<span class="chip"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> ' + esc(fmtDate(f.created_at)) + ' \u30a2\u30c3\u30d7\u30ed\u30fc\u30c9</span>'
-                    + (f.expires_at ? '<span class="chip" style="border-color:rgba(245,158,11,.3);color:var(--y)"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> ' + esc(fmtDate(f.expires_at)) + '\u307e\u3067\u6709\u52b9</span>' : '')
+                    + (f.expires_at ? '<span class="chip" style="border-color:rgba(245,158,11,.3);color:var(--yellow)"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> ' + esc(fmtDate(f.expires_at)) + '\u307e\u3067\u6709\u52b9</span>' : '')
                     + '<span class="chip">' + esc(ext ? ext.toUpperCase() : '—') + '</span>'
-                    + (ownerUsername ? '<span class="chip" style="color:var(--a3);border-color:rgba(59,130,246,.3)"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ' + esc(ownerUsername) + '</span>' : '');
+                    + (ownerUsername ? '<span class="chip" style="color:var(--accent3);border-color:rgba(59,130,246,.3)"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ' + esc(ownerUsername) + '</span>' : '');
 
                 if (canManage) {
                     var uploaderBtn = document.getElementById('btn-toggle-uploader');
@@ -647,7 +647,7 @@
                     var val = document.getElementById('owner-expiry-input').value;
                     if (!val) return;
                     var ts = new Date(val).getTime();
-                    if (isNaN(ts) || ts < Date.now() - 60000) { alert('\u6709\u52b9\u671f\u9650\u306f\u672a\u6765\u306e\u65e5\u6642\u3092\u6307\u5b9a\u3057\u3066\u304f\u3060\u3055\u3044'); return; }
+                    if (isNaN(ts) || ts <= Date.now()) { alert('\u6709\u52b9\u671f\u9650\u306f\u672a\u6765\u306e\u65e5\u6642\u3092\u6307\u5b9a\u3057\u3066\u304f\u3060\u3055\u3044'); return; }
                     this.disabled = true;
                     var self = this;
                     apiFetch('PATCH', '/files/' + fileId + '/expire', { expiresAt: new Date(ts).toISOString() })
@@ -1039,30 +1039,17 @@
                 }
             }
 
-            /* ── Theme toggle ── */
-            var themeBtn = document.getElementById('theme-toggle');
-            function applyTheme(t) {
-                document.documentElement.setAttribute('data-theme', t);
-                var isDark = t === 'dark';
-                if (themeBtn) {
-                    themeBtn.innerHTML = isDark
-                        ? '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>'
-                        : '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
-                    themeBtn.title = isDark ? '\u30e9\u30a4\u30c8\u30e2\u30fc\u30c9\u306b\u5207\u66ff' : '\u30c0\u30fc\u30af\u30e2\u30fc\u30c9\u306b\u5207\u66ff';
-                }
+            /* ── Theme sync ── */
+            function syncPreviewTheme(t) {
+                var isDark = t !== 'light';
                 var hlDark = document.getElementById('hljs-theme');
                 var hlLight = document.getElementById('hljs-theme-light');
                 if (hlDark && hlLight) { hlDark.disabled = !isDark; hlLight.disabled = isDark; }
             }
-            if (themeBtn) {
-                themeBtn.addEventListener('click', function () {
-                    var cur = document.documentElement.getAttribute('data-theme') || 'dark';
-                    var nxt = cur === 'dark' ? 'light' : 'dark';
-                    document.cookie = 'theme=' + nxt + ';path=/;max-age=31536000;SameSite=Lax';
-                    applyTheme(nxt);
-                });
-            }
-            applyTheme(document.documentElement.getAttribute('data-theme') || 'dark');
+            document.addEventListener('va-themechange', function (event) {
+                syncPreviewTheme(event.detail && event.detail.theme ? event.detail.theme : 'dark');
+            });
+            syncPreviewTheme(document.documentElement.getAttribute('data-theme') || 'dark');
 
             /* ── Logout ── */
             document.getElementById('logout-btn').addEventListener('click', function () {
@@ -1081,6 +1068,7 @@
 
         })();
     </script>
+    <script src="/js/dev-reload.js?v=1" defer></script>
 </body>
 
 </html>

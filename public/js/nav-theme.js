@@ -1,7 +1,15 @@
 (function () {
-    var t = localStorage.getItem('va_theme');
-    document.documentElement.setAttribute('data-theme', t === 'light' ? 'light' : 'dark');
+    applyTheme(localStorage.getItem('va_theme'));
 })();
+
+function applyTheme(theme) {
+    var nextTheme = theme === 'light' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', nextTheme);
+    localStorage.setItem('va_theme', nextTheme);
+    document.dispatchEvent(new CustomEvent('va-themechange', {
+        detail: { theme: nextTheme }
+    }));
+}
 
 function initThemeToggle() {
     var btn = document.getElementById('theme-toggle');
@@ -18,8 +26,7 @@ function initThemeToggle() {
     btn.addEventListener('click', function () {
         var cur = document.documentElement.getAttribute('data-theme') || 'dark';
         var nxt = cur === 'dark' ? 'light' : 'dark';
-        document.documentElement.setAttribute('data-theme', nxt);
-        localStorage.setItem('va_theme', nxt);
+        applyTheme(nxt);
         sync();
     });
 

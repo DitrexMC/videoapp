@@ -8,7 +8,9 @@
     <link rel="icon" href="/icons/icon-192.png">
     <link rel="manifest" href="/manifest.json">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+JP:wght@400;500;700&display=swap"
+        rel="stylesheet">
     <script src="/js/nav-theme.js"></script>
     <link rel="stylesheet" href="/css/common.css">
     <link rel="stylesheet" href="/css/app.css">
@@ -120,23 +122,34 @@
                 <div class="card reveal reveal-d2">
                     <div class="section-title">アカウント情報</div>
                     <div style="display:grid;gap:.6rem;margin-top:1rem">
-                        <div style="display:flex;justify-content:space-between;align-items:center;padding:.4rem 0;border-bottom:1px solid var(--border)">
-                            <span style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-sub)">ユーザー名</span>
+                        <div
+                            style="display:flex;justify-content:space-between;align-items:center;padding:.4rem 0;border-bottom:1px solid var(--border)">
+                            <span
+                                style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-sub)">ユーザー名</span>
                             <div style="display:flex;gap:.3rem;align-items:center">
-                                <input class="input" id="edit-username" style="width:auto;min-width:100px;font-size:.82rem;padding:.25rem .5rem" maxlength="32">
-                                <button class="btn btn-ghost btn-sm" id="save-username-btn" style="font-size:.7rem;padding:.18rem .6rem;flex-shrink:0">保存</button>
+                                <input class="input" id="edit-username"
+                                    style="width:auto;min-width:100px;font-size:.82rem;padding:.25rem .5rem"
+                                    maxlength="32">
+                                <button class="btn btn-ghost btn-sm" id="save-username-btn"
+                                    style="font-size:.7rem;padding:.18rem .6rem;flex-shrink:0">保存</button>
                             </div>
                         </div>
-                        <div style="display:flex;justify-content:space-between;align-items:center;padding:.4rem 0;border-bottom:1px solid var(--border)">
-                            <span style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-sub)">ユーザーID</span>
-                            <span id="info-uid" style="font-size:.72rem;font-family:monospace;color:var(--text-sub)">—</span>
+                        <div
+                            style="display:flex;justify-content:space-between;align-items:center;padding:.4rem 0;border-bottom:1px solid var(--border)">
+                            <span
+                                style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-sub)">ユーザーID</span>
+                            <span id="info-uid"
+                                style="font-size:.72rem;font-family:monospace;color:var(--text-sub)">—</span>
                         </div>
-                        <div style="display:flex;justify-content:space-between;align-items:center;padding:.4rem 0;border-bottom:1px solid var(--border)">
-                            <span style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-sub)">権限</span>
+                        <div
+                            style="display:flex;justify-content:space-between;align-items:center;padding:.4rem 0;border-bottom:1px solid var(--border)">
+                            <span
+                                style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-sub)">権限</span>
                             <span id="info-role">—</span>
                         </div>
                         <div style="display:flex;justify-content:space-between;align-items:center;padding:.4rem 0">
-                            <span style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-sub)">ストレージ</span>
+                            <span
+                                style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-sub)">ストレージ</span>
                             <span id="info-storage">—</span>
                         </div>
                     </div>
@@ -144,7 +157,8 @@
 
                 <div class="card reveal reveal-d3">
                     <div class="section-title">ログインセッション</div>
-                    <p style="color:var(--text-sub);font-size:.82rem;margin-top:.3rem;margin-bottom:.8rem">現在ログインしている端末の一覧です。不要なセッションはここから削除できます。</p>
+                    <p style="color:var(--text-sub);font-size:.82rem;margin-top:.3rem;margin-bottom:.8rem">
+                        現在ログインしている端末の一覧です。不要なセッションはここから削除できます。</p>
                     <div id="session-list">
                         <span class="text-sm text-sub">読み込み中…</span>
                     </div>
@@ -152,14 +166,16 @@
 
                 <div class="card reveal reveal-d4">
                     <div class="section-title">セキュリティ</div>
-                    <p style="color:var(--text-sub);font-size:.85rem;margin-top:.4rem;margin-bottom:1rem">ログイントークンを再生成するか、全セッションをログアウトします。</p>
+                    <p style="color:var(--text-sub);font-size:.85rem;margin-top:.4rem;margin-bottom:1rem">
+                        ログイントークンを再生成するか、全セッションをログアウトします。</p>
                     <div style="display:flex;gap:.6rem;flex-wrap:wrap">
                         <button class="btn btn-outline btn-sm" id="rotate-btn">トークンを再生成</button>
                         <button class="btn btn-danger btn-sm" id="logout-all-btn">全ログアウト</button>
                     </div>
                     <div id="msg"></div>
                     <div id="new-token-wrap" style="display:none;margin-top:1rem">
-                        <label style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-sub)">新しいトークン</label>
+                        <label
+                            style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-sub)">新しいトークン</label>
                         <div class="url-row" style="margin-top:.4rem">
                             <input class="input" id="new-token-input" type="text" readonly onclick="this.select()">
                             <button class="copy-btn" id="copy-token-btn">コピー</button>
@@ -321,6 +337,7 @@
 
         if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => { });
     </script>
+    <script src="/js/dev-reload.js?v=1" defer></script>
 </body>
 
 </html>

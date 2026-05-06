@@ -1,6 +1,6 @@
 const CACHE_VERSION = 'fv-v17';
-const STATIC_CACHE  = `${CACHE_VERSION}-static`;
-const API_PREFIX    = '/api/';
+const STATIC_CACHE = `${CACHE_VERSION}-static`;
+const API_PREFIX = '/api/';
 
 const STATIC_ASSETS = [
   '/css/variables.css',
@@ -51,14 +51,15 @@ self.addEventListener('fetch', event => {
   if (isStaticAsset(request.url)) {
     event.respondWith(
       caches.match(request).then(cached => {
-        if (cached) return cached;
-        return fetch(request).then(response => {
+        const fetchPromise = fetch(request).then(response => {
           if (response.ok) {
             const clone = response.clone();
             caches.open(STATIC_CACHE).then(cache => cache.put(request, clone));
           }
           return response;
         });
+
+        return cached || fetchPromise;
       })
     );
     return;
