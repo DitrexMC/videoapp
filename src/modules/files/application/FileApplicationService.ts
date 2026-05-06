@@ -6,9 +6,18 @@ import type { ServicePolicyRepository } from "../../../shared/application/Servic
 import type { AuthApplicationService } from "../../identity/application/AuthApplicationService.js";
 import type { User } from "../../identity/domain/User.js";
 import type { Clock } from "../../../shared/domain/clock.js";
-import { NotFoundError, ValidationError, ConflictError } from "../../../shared/domain/errors.js";
+import {
+  NotFoundError,
+  ValidationError,
+  ConflictError,
+} from "../../../shared/domain/errors.js";
 import type { LocalFileStorage } from "../../../shared/infrastructure/storage/LocalFileStorage.js";
-import { assertCanManageFile, assertCanReadFile, assertFileIsDownloadable, type FileRecord } from "../domain/FileRecord.js";
+import {
+  assertCanManageFile,
+  assertCanReadFile,
+  assertFileIsDownloadable,
+  type FileRecord,
+} from "../domain/FileRecord.js";
 import { resolveSafeName } from "../domain/NameCollisionResolver.js";
 import type { CreateFolderInput, FileRepository } from "./FileRepository.js";
 
@@ -41,7 +50,10 @@ export class FileApplicationService {
     this.storage = dependencies.storage;
   }
 
-  async createZipArchive(sessionToken: string | null, fileIds: string[]): Promise<FileArchiveResult> {
+  async createZipArchive(
+    sessionToken: string | null,
+    fileIds: string[],
+  ): Promise<FileArchiveResult> {
     const policies = this.policyRepository.findPolicies();
 
     if (fileIds.length === 0) {
@@ -49,7 +61,9 @@ export class FileApplicationService {
     }
 
     if (fileIds.length > policies.maxZipFileCount) {
-      throw new ValidationError("ZIPに含められるファイル数の上限を超えています。");
+      throw new ValidationError(
+        "ZIPに含められるファイル数の上限を超えています。",
+      );
     }
 
     this.authenticateOptional(sessionToken);
@@ -81,7 +95,9 @@ export class FileApplicationService {
 
         const zipEntryName = resolveSafeName(file.safeName, reservedNames);
         reservedNames.push(zipEntryName);
-        archive.append(createReadStream(file.storagePath), { name: zipEntryName });
+        archive.append(createReadStream(file.storagePath), {
+          name: zipEntryName,
+        });
         includedFiles.push(file);
       } catch (error) {
         if (error instanceof ValidationError) {
@@ -101,11 +117,15 @@ export class FileApplicationService {
     return {
       archive,
       excluded,
-      included: includedFiles.length
+      included: includedFiles.length,
     };
   }
 
-  createFolder(sessionToken: string, name: string, isPublic: boolean = true): CreateFolderInput {
+  createFolder(
+    sessionToken: string,
+    name: string,
+    isPublic: boolean = true,
+  ): CreateFolderInput {
     const actor = this.authService.authenticate(sessionToken).user;
     const normalizedName = name.trim();
 
@@ -121,11 +141,14 @@ export class FileApplicationService {
       name: normalizedName,
       ownerUserId: actor.id,
       public: isPublic,
-      updatedAt: timestamp
+      updatedAt: timestamp,
     });
   }
 
-  async getDownload(sessionToken: string | null, fileId: string): Promise<{ file: FileRecord; stream: Readable }> {
+  async getDownload(
+    sessionToken: string | null,
+    fileId: string,
+  ): Promise<{ file: FileRecord; stream: Readable }> {
     const actor = this.authenticateOptional(sessionToken);
     const file = this.getReadableFile(fileId, actor);
 
@@ -137,11 +160,14 @@ export class FileApplicationService {
 
     return {
       file,
-      stream: createReadStream(file.storagePath)
+      stream: createReadStream(file.storagePath),
     };
   }
 
-  async getPreview(sessionToken: string | null, fileId: string): Promise<{ file: FileRecord; stream: Readable }> {
+  async getPreview(
+    sessionToken: string | null,
+    fileId: string,
+  ): Promise<{ file: FileRecord; stream: Readable }> {
     const actor = this.authenticateOptional(sessionToken);
     const file = this.getReadableFile(fileId, actor);
 
@@ -153,11 +179,14 @@ export class FileApplicationService {
 
     return {
       file,
-      stream: createReadStream(file.previewPath)
+      stream: createReadStream(file.previewPath),
     };
   }
 
-  async getStream(sessionToken: string | null, fileId: string): Promise<FileRecord> {
+  async getStream(
+    sessionToken: string | null,
+    fileId: string,
+  ): Promise<FileRecord> {
     const actor = this.authenticateOptional(sessionToken);
 
     return this.getReadableFile(fileId, actor);
@@ -176,12 +205,20 @@ export class FileApplicationService {
     return file;
   }
 
-  listFiles(sessionToken: string, filters: { cursor?: string; folderId?: string; limit?: number; status?: FileRecord["status"] }): FileRecord[] {
+  listFiles(
+    sessionToken: string,
+    filters: {
+      cursor?: string;
+      folderId?: string;
+      limit?: number;
+      status?: FileRecord["status"];
+    },
+  ): FileRecord[] {
     const actor = this.authService.authenticate(sessionToken).user;
     const limit = Math.min(Math.max(filters.limit ?? 50, 1), 100);
     const fileListFilters: Parameters<FileRepository["listFiles"]>[0] = {
       limit,
-      ownerUserId: actor.id
+      ownerUserId: actor.id,
     };
 
     if (filters.cursor) {
@@ -228,10 +265,18 @@ export class FileApplicationService {
       throw new ValidationError("グループ名は必須です。");
     }
 
-    this.fileRepository.renameGroup(groupId, normalizedLabel, this.clock.nowIsoString());
+    this.fileRepository.renameGroup(
+      groupId,
+      normalizedLabel,
+      this.clock.nowIsoString(),
+    );
   }
 
-  updateGroupPrivacy(sessionToken: string, groupId: string, isPrivate: boolean): void {
+  updateGroupPrivacy(
+    sessionToken: string,
+    groupId: string,
+    isPrivate: boolean,
+  ): void {
     const actor = this.authService.authenticate(sessionToken).user;
     const group = this.fileRepository.findGroupById(groupId);
 
@@ -243,7 +288,11 @@ export class FileApplicationService {
       throw new NotFoundError("グループが見つかりません。");
     }
 
-    this.fileRepository.updateGroupPrivacy(groupId, isPrivate, this.clock.nowIsoString());
+    this.fileRepository.updateGroupPrivacy(
+      groupId,
+      isPrivate,
+      this.clock.nowIsoString(),
+    );
   }
 
   removeGroup(sessionToken: string, groupId: string): void {
@@ -278,7 +327,11 @@ export class FileApplicationService {
       throw new NotFoundError("フォルダが見つかりません。");
     }
 
-    this.fileRepository.renameFolder(folderId, normalizedName, this.clock.nowIsoString());
+    this.fileRepository.renameFolder(
+      folderId,
+      normalizedName,
+      this.clock.nowIsoString(),
+    );
   }
 
   renameFile(sessionToken: string, fileId: string, name: string): void {
@@ -296,11 +349,21 @@ export class FileApplicationService {
 
     assertCanManageFile(file, actor);
 
-    const ext = file.safeName.includes('.') ? '.' + file.safeName.split('.').pop() : '';
-    const safeBase = normalizedName.replace(/[^a-zA-Z0-9._\-\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]+/g, '_').replace(/_{2,}/g, '_').replace(/^_|_$/g, '');
+    const ext = file.safeName.includes(".")
+      ? "." + file.safeName.split(".").pop()
+      : "";
+    const safeBase = normalizedName
+      .replace(/[^a-zA-Z0-9._\-\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]+/g, "_")
+      .replace(/_{2,}/g, "_")
+      .replace(/^_|_$/g, "");
     const safeName = ext ? safeBase + ext : safeBase;
 
-    this.fileRepository.renameFile(file.id, normalizedName, safeName, this.clock.nowIsoString());
+    this.fileRepository.renameFile(
+      file.id,
+      normalizedName,
+      safeName,
+      this.clock.nowIsoString(),
+    );
   }
 
   removeFile(sessionToken: string, fileId: string): void {
@@ -330,7 +393,11 @@ export class FileApplicationService {
     this.fileRepository.deleteFolder(folderId, this.clock.nowIsoString());
   }
 
-  setFileExpiration(sessionToken: string, fileId: string, expiresAt: string | null): void {
+  setFileExpiration(
+    sessionToken: string,
+    fileId: string,
+    expiresAt: string | null,
+  ): void {
     const actor = this.authService.authenticate(sessionToken).user;
     const file = this.fileRepository.findFileById(fileId);
 
@@ -339,10 +406,18 @@ export class FileApplicationService {
     }
 
     assertCanManageFile(file, actor);
-    this.fileRepository.setFileExpiration(file.id, expiresAt, this.clock.nowIsoString());
+    this.fileRepository.setFileExpiration(
+      file.id,
+      expiresAt,
+      this.clock.nowIsoString(),
+    );
   }
 
-  setFileVisibility(sessionToken: string, fileId: string, isPublic: boolean): void {
+  setFileVisibility(
+    sessionToken: string,
+    fileId: string,
+    isPublic: boolean,
+  ): void {
     const actor = this.authService.authenticate(sessionToken).user;
     const file = this.fileRepository.findFileById(fileId);
 
@@ -351,10 +426,38 @@ export class FileApplicationService {
     }
 
     assertCanManageFile(file, actor);
-    this.fileRepository.updateFileVisibility(file.id, isPublic, this.clock.nowIsoString());
+    this.fileRepository.updateFileVisibility(
+      file.id,
+      isPublic,
+      this.clock.nowIsoString(),
+    );
   }
 
-  setFolderVisibility(sessionToken: string, folderId: string, isPublic: boolean): void {
+  setFileShowUploader(
+    sessionToken: string,
+    fileId: string,
+    showUploader: boolean,
+  ): void {
+    const actor = this.authService.authenticate(sessionToken).user;
+    const file = this.fileRepository.findFileById(fileId);
+
+    if (!file || file.isDeleted) {
+      throw new NotFoundError("ファイルが見つかりません。");
+    }
+
+    assertCanManageFile(file, actor);
+    this.fileRepository.updateFileShowUploader(
+      file.id,
+      showUploader,
+      this.clock.nowIsoString(),
+    );
+  }
+
+  setFolderVisibility(
+    sessionToken: string,
+    folderId: string,
+    isPublic: boolean,
+  ): void {
     const actor = this.authService.authenticate(sessionToken).user;
     const folder = this.fileRepository.findFolderById(folderId);
 
@@ -366,7 +469,11 @@ export class FileApplicationService {
       throw new NotFoundError("フォルダが見つかりません。");
     }
 
-    this.fileRepository.updateFolderVisibility(folder.id, isPublic, this.clock.nowIsoString());
+    this.fileRepository.updateFolderVisibility(
+      folder.id,
+      isPublic,
+      this.clock.nowIsoString(),
+    );
   }
 
   private authenticateOptional(sessionToken: string | null): User | null {

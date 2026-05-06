@@ -14,6 +14,10 @@ const setVisibilitySchema = z.object({
   public: z.boolean(),
 });
 
+const setShowUploaderSchema = z.object({
+  showUploader: z.boolean(),
+});
+
 const zipRequestSchema = z.object({
   file_ids: z.array(z.string().uuid()).min(1),
 });
@@ -36,6 +40,7 @@ export async function registerFileRoutes(
     preview_status: file.previewStatus,
     public: file.public,
     safe_name: file.safeName,
+    show_uploader: file.showUploader,
     size: file.sizeBytes,
     status: file.status,
     updated_at: file.updatedAt,
@@ -67,6 +72,7 @@ export async function registerFileRoutes(
       preview_status: file.previewStatus,
       public: file.public,
       safe_name: file.safeName,
+      show_uploader: file.showUploader,
       size: file.sizeBytes,
       status: file.status,
       updated_at: file.updatedAt,
@@ -154,13 +160,19 @@ export async function registerFileRoutes(
     const params = z
       .object({ fileId: z.string().uuid() })
       .parse(request.params);
-    const body = z.object({ expiresAt: z.string().datetime().nullable() }).safeParse(request.body);
+    const body = z
+      .object({ expiresAt: z.string().datetime().nullable() })
+      .safeParse(request.body);
 
     if (!body.success) {
       throw new ValidationError("expiresAt が不正です。", body.error.flatten());
     }
 
-    runtime.fileService.setFileExpiration(sessionToken, params.fileId, body.data.expiresAt);
+    runtime.fileService.setFileExpiration(
+      sessionToken,
+      params.fileId,
+      body.data.expiresAt,
+    );
 
     return reply.status(204).send();
   });
@@ -173,10 +185,40 @@ export async function registerFileRoutes(
     const body = setVisibilitySchema.safeParse(request.body);
 
     if (!body.success) {
-      throw new ValidationError("公開設定の入力が不正です。", body.error.flatten());
+      throw new ValidationError(
+        "公開設定の入力が不正です。",
+        body.error.flatten(),
+      );
     }
 
-    runtime.fileService.setFileVisibility(sessionToken, params.fileId, body.data.public);
+    runtime.fileService.setFileVisibility(
+      sessionToken,
+      params.fileId,
+      body.data.public,
+    );
+
+    return reply.status(204).send();
+  });
+
+  app.patch("/files/:fileId/show-uploader", async (request, reply) => {
+    const sessionToken = getRequiredBearerToken(request.headers.authorization);
+    const params = z
+      .object({ fileId: z.string().uuid() })
+      .parse(request.params);
+    const body = setShowUploaderSchema.safeParse(request.body);
+
+    if (!body.success) {
+      throw new ValidationError(
+        "投稿者表示設定の入力が不正です。",
+        body.error.flatten(),
+      );
+    }
+
+    runtime.fileService.setFileShowUploader(
+      sessionToken,
+      params.fileId,
+      body.data.showUploader,
+    );
 
     return reply.status(204).send();
   });
@@ -398,13 +440,19 @@ export async function registerFileRoutes(
 
   app.post("/folders", async (request) => {
     const sessionToken = getRequiredBearerToken(request.headers.authorization);
-    const body = z.object({ name: z.string().min(1), public: z.boolean().optional() }).safeParse(request.body);
+    const body = z
+      .object({ name: z.string().min(1), public: z.boolean().optional() })
+      .safeParse(request.body);
 
     if (!body.success) {
       throw new ValidationError("フォルダ名が不正です。", body.error.flatten());
     }
 
-    return runtime.fileService.createFolder(sessionToken, body.data.name, body.data.public ?? true);
+    return runtime.fileService.createFolder(
+      sessionToken,
+      body.data.name,
+      body.data.public ?? true,
+    );
   });
 
   app.patch("/folders/:folderId", async (request, reply) => {
@@ -462,18 +510,16 @@ export async function registerFileRoutes(
     const sessionToken = getRequiredBearerToken(request.headers.authorization);
 
     return {
-      items: runtime.fileService
-        .listGroups(sessionToken)
-        .map((g) => ({
-          created_at: g.createdAt,
-          expires_at: g.expiresAt,
-          file_count: g.fileCount,
-          id: g.id,
-          is_private: g.isPrivate,
-          label: g.label,
-          total_size: g.totalSize,
-          updated_at: g.updatedAt,
-        })),
+      items: runtime.fileService.listGroups(sessionToken).map((g) => ({
+        created_at: g.createdAt,
+        expires_at: g.expiresAt,
+        file_count: g.fileCount,
+        id: g.id,
+        is_private: g.isPrivate,
+        label: g.label,
+        total_size: g.totalSize,
+        updated_at: g.updatedAt,
+      })),
     };
   });
 
@@ -494,11 +540,19 @@ export async function registerFileRoutes(
     }
 
     if (body.data.label !== undefined) {
-      runtime.fileService.renameGroup(sessionToken, params.groupId, body.data.label);
+      runtime.fileService.renameGroup(
+        sessionToken,
+        params.groupId,
+        body.data.label,
+      );
     }
 
     if (body.data.is_private !== undefined) {
-      runtime.fileService.updateGroupPrivacy(sessionToken, params.groupId, body.data.is_private);
+      runtime.fileService.updateGroupPrivacy(
+        sessionToken,
+        params.groupId,
+        body.data.is_private,
+      );
     }
 
     return reply.status(204).send();

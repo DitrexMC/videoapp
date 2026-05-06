@@ -1,7 +1,16 @@
 import type Database from "better-sqlite3";
 
-import type { CreateFolderInput, FileListFilters, FileRepository } from "../application/FileRepository.js";
-import type { FileRecord, FolderRecord, GroupRecord, PreviewStatus } from "../domain/FileRecord.js";
+import type {
+  CreateFolderInput,
+  FileListFilters,
+  FileRepository,
+} from "../application/FileRepository.js";
+import type {
+  FileRecord,
+  FolderRecord,
+  GroupRecord,
+  PreviewStatus,
+} from "../domain/FileRecord.js";
 
 interface FileRow {
   checksum: string | null;
@@ -18,6 +27,7 @@ interface FileRow {
   preview_status: PreviewStatus;
   public: number;
   safe_name: string;
+  show_uploader: number;
   size_bytes: number;
   status: FileRecord["status"];
   storage_path: string | null;
@@ -55,21 +65,36 @@ export class SqliteFileRepository implements FileRepository {
   }
 
   countFilesInFolder(folderId: string): number {
-    const row = this.connection.prepare<{ folderId: string }, { count: number }>(`
+    const row = this.connection
+      .prepare<{ folderId: string }, { count: number }>(
+        `
       SELECT COUNT(*) AS count
       FROM files
       WHERE folder_id = @folderId
         AND is_deleted = 0
-    `).get({ folderId });
+    `,
+      )
+      .get({ folderId });
 
     return row?.count ?? 0;
   }
 
   createFolder(input: CreateFolderInput): FolderRecord {
-    this.connection.prepare(`
+    this.connection
+      .prepare(
+        `
       INSERT INTO folders (id, owner_user_id, name, public, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?)
-    `).run(input.id, input.ownerUserId, input.name, input.public !== false ? 1 : 0, input.createdAt, input.updatedAt);
+    `,
+      )
+      .run(
+        input.id,
+        input.ownerUserId,
+        input.name,
+        input.public !== false ? 1 : 0,
+        input.createdAt,
+        input.updatedAt,
+      );
 
     return {
       createdAt: input.createdAt,
@@ -78,33 +103,47 @@ export class SqliteFileRepository implements FileRepository {
       name: input.name,
       ownerUserId: input.ownerUserId,
       public: input.public !== false,
-      updatedAt: input.updatedAt
+      updatedAt: input.updatedAt,
     };
   }
 
   deleteFolder(folderId: string, deletedAt: string): void {
     this.connection.transaction(() => {
-      this.connection.prepare(`
+      this.connection
+        .prepare(
+          `
         UPDATE files
         SET folder_id = NULL,
             is_deleted = 1,
             status = 'deleted',
             updated_at = ?
         WHERE folder_id = ? AND is_deleted = 0
-      `).run(deletedAt, folderId);
-      this.connection.prepare(`
+      `,
+        )
+        .run(deletedAt, folderId);
+      this.connection
+        .prepare(
+          `
         UPDATE files
         SET folder_id = NULL
         WHERE folder_id = ?
-      `).run(folderId);
-      this.connection.prepare(`
+      `,
+        )
+        .run(folderId);
+      this.connection
+        .prepare(
+          `
         DELETE FROM folders WHERE id = ?
-      `).run(folderId);
+      `,
+        )
+        .run(folderId);
     })();
   }
 
   findFileById(fileId: string): FileRecord | null {
-    const row = this.connection.prepare<unknown[], FileRow>(`
+    const row = this.connection
+      .prepare<unknown[], FileRow>(
+        `
       SELECT
         id,
         upload_id,
@@ -121,6 +160,7 @@ export class SqliteFileRepository implements FileRepository {
         expires_at,
         preview_status,
         preview_path,
+        show_uploader,
         checksum,
         created_at,
         updated_at,
@@ -128,7 +168,9 @@ export class SqliteFileRepository implements FileRepository {
       FROM files
       WHERE id = ?
       LIMIT 1
-    `).get(fileId);
+    `,
+      )
+      .get(fileId);
 
     return row ? mapFile(row) : null;
   }
@@ -139,7 +181,9 @@ export class SqliteFileRepository implements FileRepository {
     }
 
     const placeholders = fileIds.map(() => "?").join(", ");
-    const rows = this.connection.prepare<unknown[], FileRow>(`
+    const rows = this.connection
+      .prepare<unknown[], FileRow>(
+        `
       SELECT
         id,
         upload_id,
@@ -156,36 +200,47 @@ export class SqliteFileRepository implements FileRepository {
         expires_at,
         preview_status,
         preview_path,
+        show_uploader,
         checksum,
         created_at,
         updated_at,
         is_deleted
       FROM files
       WHERE id IN (${placeholders})
-    `).all(...fileIds);
+    `,
+      )
+      .all(...fileIds);
 
     return rows.map(mapFile);
   }
 
   getStorageUsage(ownerUserId: string): number {
-    const row = this.connection.prepare<unknown[], { used_bytes: number | null }>(`
+    const row = this.connection
+      .prepare<unknown[], { used_bytes: number | null }>(
+        `
       SELECT SUM(size_bytes) AS used_bytes
       FROM files
       WHERE owner_user_id = ?
         AND is_deleted = 0
         AND status IN ('uploading', 'processing', 'ready')
-    `).get(ownerUserId);
+    `,
+      )
+      .get(ownerUserId);
 
     return row?.used_bytes ?? 0;
   }
 
   findFolderById(folderId: string): FolderRecord | null {
-    const row = this.connection.prepare<unknown[], FolderRow>(`
+    const row = this.connection
+      .prepare<unknown[], FolderRow>(
+        `
       SELECT id, owner_user_id, name, public, created_at, updated_at, deleted_at
       FROM folders
       WHERE id = ?
       LIMIT 1
-    `).get(folderId);
+    `,
+      )
+      .get(folderId);
 
     return row ? mapFolder(row) : null;
   }
@@ -196,9 +251,11 @@ export class SqliteFileRepository implements FileRepository {
       folderId: filters.folderId ?? null,
       limit: filters.limit,
       ownerUserId: filters.ownerUserId,
-      status: filters.status ?? null
+      status: filters.status ?? null,
     };
-    const rows = this.connection.prepare<Record<string, unknown>, FileRow>(`
+    const rows = this.connection
+      .prepare<Record<string, unknown>, FileRow>(
+        `
       SELECT
         id,
         upload_id,
@@ -215,6 +272,7 @@ export class SqliteFileRepository implements FileRepository {
         expires_at,
         preview_status,
         preview_path,
+        show_uploader,
         checksum,
         created_at,
         updated_at,
@@ -227,154 +285,263 @@ export class SqliteFileRepository implements FileRepository {
         AND (@cursor IS NULL OR created_at < @cursor)
       ORDER BY created_at DESC
       LIMIT @limit
-    `).all(parameters);
+    `,
+      )
+      .all(parameters);
 
     return rows.map(mapFile);
   }
 
   listFolders(ownerUserId: string): FolderRecord[] {
-    const rows = this.connection.prepare<unknown[], FolderRow>(`
+    const rows = this.connection
+      .prepare<unknown[], FolderRow>(
+        `
       SELECT id, owner_user_id, name, public, created_at, updated_at, deleted_at
       FROM folders
       WHERE owner_user_id = ?
         AND deleted_at IS NULL
       ORDER BY created_at DESC
-    `).all(ownerUserId);
+    `,
+      )
+      .all(ownerUserId);
 
     return rows.map(mapFolder);
   }
 
   listSafeNames(ownerUserId: string, folderId: string | null): string[] {
-    const rows = this.connection.prepare<unknown[], { safe_name: string }>(`
+    const rows = this.connection
+      .prepare<unknown[], { safe_name: string }>(
+        `
       SELECT safe_name
       FROM files
       WHERE owner_user_id = ?
         AND IFNULL(folder_id, '') = IFNULL(?, '')
         AND is_deleted = 0
-    `).all(ownerUserId, folderId);
+    `,
+      )
+      .all(ownerUserId, folderId);
 
     return rows.map((row) => row.safe_name);
   }
 
   renameFolder(folderId: string, name: string, updatedAt: string): void {
-    this.connection.prepare(`
+    this.connection
+      .prepare(
+        `
       UPDATE folders
       SET name = ?, updated_at = ?
       WHERE id = ?
-    `).run(name, updatedAt, folderId);
+    `,
+      )
+      .run(name, updatedAt, folderId);
   }
 
   softDeleteFile(fileId: string, deletedAt: string): void {
-    this.connection.prepare(`
+    this.connection
+      .prepare(
+        `
       UPDATE files
       SET is_deleted = 1,
           status = 'deleted',
           updated_at = ?
       WHERE id = ?
-    `).run(deletedAt, fileId);
+    `,
+      )
+      .run(deletedAt, fileId);
   }
 
-  updateFilePreview(fileId: string, previewPath: string | null, previewStatus: PreviewStatus, updatedAt: string): void {
-    this.connection.prepare(`
+  updateFilePreview(
+    fileId: string,
+    previewPath: string | null,
+    previewStatus: PreviewStatus,
+    updatedAt: string,
+  ): void {
+    this.connection
+      .prepare(
+        `
       UPDATE files
       SET preview_path = ?,
           preview_status = ?,
           updated_at = ?
       WHERE id = ?
-    `).run(previewPath, previewStatus, updatedAt, fileId);
+    `,
+      )
+      .run(previewPath, previewStatus, updatedAt, fileId);
   }
 
-  updateFileVisibility(fileId: string, isPublic: boolean, updatedAt: string): void {
-    this.connection.prepare(`
+  updateFileVisibility(
+    fileId: string,
+    isPublic: boolean,
+    updatedAt: string,
+  ): void {
+    this.connection
+      .prepare(
+        `
       UPDATE files
       SET public = ?,
           updated_at = ?
       WHERE id = ?
-    `).run(isPublic ? 1 : 0, updatedAt, fileId);
+    `,
+      )
+      .run(isPublic ? 1 : 0, updatedAt, fileId);
+  }
+
+  updateFileShowUploader(
+    fileId: string,
+    showUploader: boolean,
+    updatedAt: string,
+  ): void {
+    this.connection
+      .prepare(
+        `
+      UPDATE files
+      SET show_uploader = ?,
+          updated_at = ?
+      WHERE id = ?
+    `,
+      )
+      .run(showUploader ? 1 : 0, updatedAt, fileId);
   }
 
   listGroups(ownerUserId: string): GroupRecord[] {
-    const rows = this.connection.prepare<unknown[], GroupRow>(`
+    const rows = this.connection
+      .prepare<unknown[], GroupRow>(
+        `
       SELECT g.*,
         (SELECT COUNT(*) FROM files f WHERE f.group_id = g.id AND f.is_deleted = 0) AS file_count,
         (SELECT COALESCE(SUM(f.size_bytes), 0) FROM files f WHERE f.group_id = g.id AND f.is_deleted = 0) AS total_size
       FROM groups g
       WHERE g.owner_user_id = ?
       ORDER BY g.created_at DESC
-    `).all(ownerUserId);
+    `,
+      )
+      .all(ownerUserId);
 
     return rows.map(mapGroup);
   }
 
   findGroupById(groupId: string): GroupRecord | null {
-    const row = this.connection.prepare<unknown[], GroupRow>(`
+    const row = this.connection
+      .prepare<unknown[], GroupRow>(
+        `
       SELECT g.*,
         (SELECT COUNT(*) FROM files f WHERE f.group_id = g.id AND f.is_deleted = 0) AS file_count,
         (SELECT COALESCE(SUM(f.size_bytes), 0) FROM files f WHERE f.group_id = g.id AND f.is_deleted = 0) AS total_size
       FROM groups g
       WHERE g.id = ?
       LIMIT 1
-    `).get(groupId);
+    `,
+      )
+      .get(groupId);
 
     return row ? mapGroup(row) : null;
   }
 
   deleteGroup(groupId: string, deletedAt: string): void {
     this.connection.transaction(() => {
-      this.connection.prepare(`
+      this.connection
+        .prepare(
+          `
         UPDATE files SET group_id = NULL WHERE group_id = ?
-      `).run(groupId);
-      this.connection.prepare(`
+      `,
+        )
+        .run(groupId);
+      this.connection
+        .prepare(
+          `
         DELETE FROM groups WHERE id = ?
-      `).run(groupId);
+      `,
+        )
+        .run(groupId);
     })();
   }
 
-  renameFile(fileId: string, name: string, safeName: string, updatedAt: string): void {
-    this.connection.prepare(`
+  renameFile(
+    fileId: string,
+    name: string,
+    safeName: string,
+    updatedAt: string,
+  ): void {
+    this.connection
+      .prepare(
+        `
       UPDATE files
       SET name = ?, safe_name = ?, updated_at = ?
       WHERE id = ?
-    `).run(name, safeName, updatedAt, fileId);
+    `,
+      )
+      .run(name, safeName, updatedAt, fileId);
   }
 
-  setFileExpiration(fileId: string, expiresAt: string | null, updatedAt: string): void {
-    this.connection.prepare(`
+  setFileExpiration(
+    fileId: string,
+    expiresAt: string | null,
+    updatedAt: string,
+  ): void {
+    this.connection
+      .prepare(
+        `
       UPDATE files
       SET expires_at = ?, updated_at = ?
       WHERE id = ?
-    `).run(expiresAt, updatedAt, fileId);
+    `,
+      )
+      .run(expiresAt, updatedAt, fileId);
   }
 
   renameGroup(groupId: string, label: string, updatedAt: string): void {
-    this.connection.prepare(`
+    this.connection
+      .prepare(
+        `
       UPDATE groups SET label = ?, updated_at = ? WHERE id = ?
-    `).run(label, updatedAt, groupId);
+    `,
+      )
+      .run(label, updatedAt, groupId);
   }
 
-  updateGroupPrivacy(groupId: string, isPrivate: boolean, updatedAt: string): void {
-    this.connection.prepare(`
+  updateGroupPrivacy(
+    groupId: string,
+    isPrivate: boolean,
+    updatedAt: string,
+  ): void {
+    this.connection
+      .prepare(
+        `
       UPDATE groups SET is_private = ?, updated_at = ? WHERE id = ?
-    `).run(isPrivate ? 1 : 0, updatedAt, groupId);
+    `,
+      )
+      .run(isPrivate ? 1 : 0, updatedAt, groupId);
   }
 
   softDeleteFilesInFolder(folderId: string, deletedAt: string): void {
-    this.connection.prepare(`
+    this.connection
+      .prepare(
+        `
       UPDATE files
       SET is_deleted = 1,
           status = 'deleted',
           updated_at = ?
       WHERE folder_id = ? AND is_deleted = 0
-    `).run(deletedAt, folderId);
+    `,
+      )
+      .run(deletedAt, folderId);
   }
 
-  updateFolderVisibility(folderId: string, isPublic: boolean, updatedAt: string): void {
-    this.connection.prepare(`
+  updateFolderVisibility(
+    folderId: string,
+    isPublic: boolean,
+    updatedAt: string,
+  ): void {
+    this.connection
+      .prepare(
+        `
       UPDATE folders
       SET public = ?,
           updated_at = ?
       WHERE id = ?
-    `).run(isPublic ? 1 : 0, updatedAt, folderId);
+    `,
+      )
+      .run(isPublic ? 1 : 0, updatedAt, folderId);
   }
 }
 
@@ -394,11 +561,12 @@ function mapFile(row: FileRow): FileRecord {
     previewStatus: row.preview_status,
     public: row.public === 1,
     safeName: row.safe_name,
+    showUploader: row.show_uploader !== 0,
     sizeBytes: row.size_bytes,
     status: row.status,
     storagePath: row.storage_path,
     updatedAt: row.updated_at,
-    uploadId: row.upload_id
+    uploadId: row.upload_id,
   };
 }
 
@@ -410,7 +578,7 @@ function mapFolder(row: FolderRow): FolderRecord {
     name: row.name,
     ownerUserId: row.owner_user_id,
     public: row.public === 1,
-    updatedAt: row.updated_at
+    updatedAt: row.updated_at,
   };
 }
 
@@ -424,6 +592,6 @@ function mapGroup(row: GroupRow): GroupRecord {
     ownerUserId: row.owner_user_id,
     updatedAt: row.updated_at,
     fileCount: row.file_count,
-    totalSize: row.total_size
+    totalSize: row.total_size,
   };
 }

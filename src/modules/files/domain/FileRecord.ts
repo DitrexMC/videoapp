@@ -1,7 +1,16 @@
-import { AuthenticationError, AuthorizationError, NotFoundError } from "../../../shared/domain/errors.js";
+import {
+  AuthenticationError,
+  AuthorizationError,
+  NotFoundError,
+} from "../../../shared/domain/errors.js";
 import { isAdmin, type User } from "../../identity/domain/User.js";
 
-export type FileStatus = "deleted" | "expired" | "processing" | "ready" | "uploading";
+export type FileStatus =
+  | "deleted"
+  | "expired"
+  | "processing"
+  | "ready"
+  | "uploading";
 export type PreviewStatus = "failed" | "none" | "ready";
 
 export interface FileRecord {
@@ -19,6 +28,7 @@ export interface FileRecord {
   previewStatus: PreviewStatus;
   public: boolean;
   safeName: string;
+  showUploader: boolean;
   sizeBytes: number;
   status: FileStatus;
   storagePath: string | null;
@@ -79,7 +89,7 @@ export function assertFileIsDownloadable(file: FileRecord): void {
 
   if (file.status !== "ready") {
     throw new AuthorizationError("このファイルはまだ利用できません。", {
-      status: file.status
+      status: file.status,
     });
   }
 

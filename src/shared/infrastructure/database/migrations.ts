@@ -79,6 +79,7 @@ const migrations = [
         storage_path TEXT,
         owner_user_id TEXT NOT NULL REFERENCES users(id),
         public INTEGER NOT NULL CHECK (public IN (0, 1)),
+        show_uploader INTEGER NOT NULL CHECK (show_uploader IN (0, 1)) DEFAULT 1,
         status TEXT NOT NULL CHECK (status IN ('uploading', 'processing', 'ready', 'expired', 'deleted')),
         expires_at TEXT,
         preview_status TEXT NOT NULL CHECK (preview_status IN ('none', 'pending', 'ready', 'failed')),
@@ -156,7 +157,7 @@ const migrations = [
       CREATE UNIQUE INDEX IF NOT EXISTS idx_files_safe_name_owner_folder_active
         ON files(owner_user_id, IFNULL(folder_id, ''), safe_name)
         WHERE is_deleted = 0;
-    `
+    `,
   },
   {
     id: "002_add_groups",
@@ -172,14 +173,20 @@ const migrations = [
       );
 
       ALTER TABLE files ADD COLUMN group_id TEXT REFERENCES groups(id) ON DELETE SET NULL;
-    `
+    `,
   },
   {
     id: "003_add_folder_visibility",
     sql: `
       ALTER TABLE folders ADD COLUMN public INTEGER NOT NULL CHECK (public IN (0, 1)) DEFAULT 1;
-    `
-  }
+    `,
+  },
+  {
+    id: "004_add_file_show_uploader",
+    sql: `
+      ALTER TABLE files ADD COLUMN show_uploader INTEGER NOT NULL CHECK (show_uploader IN (0, 1)) DEFAULT 1;
+    `,
+  },
 ] as const;
 
 export interface DefaultPolicySeed {
@@ -205,8 +212,12 @@ export function runMigrations(connection: Database.Database): void {
     );
   `);
 
-  const hasMigrationStatement = connection.prepare("SELECT 1 FROM _migrations WHERE id = ? LIMIT 1");
-  const recordMigrationStatement = connection.prepare("INSERT INTO _migrations (id, applied_at) VALUES (?, ?)");
+  const hasMigrationStatement = connection.prepare(
+    "SELECT 1 FROM _migrations WHERE id = ? LIMIT 1",
+  );
+  const recordMigrationStatement = connection.prepare(
+    "INSERT INTO _migrations (id, applied_at) VALUES (?, ?)",
+  );
 
   for (const migration of migrations) {
     const alreadyApplied = hasMigrationStatement.get(migration.id);
@@ -224,14 +235,21 @@ export function runMigrations(connection: Database.Database): void {
   }
 }
 
-export function seedDefaultPolicy(connection: Database.Database, policy: DefaultPolicySeed): void {
-  const existingPolicy = connection.prepare("SELECT id FROM service_policies WHERE id = 1").get();
+export function seedDefaultPolicy(
+  connection: Database.Database,
+  policy: DefaultPolicySeed,
+): void {
+  const existingPolicy = connection
+    .prepare("SELECT id FROM service_policies WHERE id = 1")
+    .get();
 
   if (existingPolicy) {
     return;
   }
 
-  connection.prepare(`
+  connection
+    .prepare(
+      `
     INSERT INTO service_policies (
       id,
       default_storage_limit_bytes,
@@ -247,19 +265,21 @@ export function seedDefaultPolicy(connection: Database.Database, policy: Default
       created_at,
       updated_at
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    1,
-    policy.defaultStorageLimitBytes,
-    policy.defaultMaxFileSizeBytes,
-    policy.maxZipTotalBytes,
-    policy.maxZipFileCount,
-    policy.defaultChunkSizeBytes,
-    policy.minChunkSizeBytes,
-    policy.maxChunkSizeBytes,
-    policy.sessionTtlSeconds,
-    policy.defaultFileExpiryDays,
-    policy.maxFileExpiryDays,
-    policy.createdAt ?? policy.updatedAt,
-    policy.updatedAt
-  );
+  `,
+    )
+    .run(
+      1,
+      policy.defaultStorageLimitBytes,
+      policy.defaultMaxFileSizeBytes,
+      policy.maxZipTotalBytes,
+      policy.maxZipFileCount,
+      policy.defaultChunkSizeBytes,
+      policy.minChunkSizeBytes,
+      policy.maxChunkSizeBytes,
+      policy.sessionTtlSeconds,
+      policy.defaultFileExpiryDays,
+      policy.maxFileExpiryDays,
+      policy.createdAt ?? policy.updatedAt,
+      policy.updatedAt,
+    );
 }

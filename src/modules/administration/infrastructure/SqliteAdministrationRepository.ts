@@ -3,7 +3,14 @@ import type Database from "better-sqlite3";
 import type { FileRecord, GroupRecord } from "../../files/domain/FileRecord.js";
 import type { UserRole, UserStatus } from "../../identity/domain/User.js";
 import type { ServicePolicies } from "../../../shared/domain/ServicePolicies.js";
-import type { AdminFileRecord, AdminGroupRecord, AdminSessionRecord, AdministrationRepository, AdminUserRecord, CreateManagedUserInput } from "../application/AdministrationRepository.js";
+import type {
+  AdminFileRecord,
+  AdminGroupRecord,
+  AdminSessionRecord,
+  AdministrationRepository,
+  AdminUserRecord,
+  CreateManagedUserInput,
+} from "../application/AdministrationRepository.js";
 
 interface PolicyRow {
   default_chunk_size_bytes: number;
@@ -61,6 +68,7 @@ interface AdminFileRow {
   preview_status: FileRecord["previewStatus"];
   public: number;
   safe_name: string;
+  show_uploader: number;
   size_bytes: number;
   status: FileRecord["status"];
   storage_path: string | null;
@@ -89,7 +97,9 @@ export class SqliteAdministrationRepository implements AdministrationRepository 
   }
 
   createUser(input: CreateManagedUserInput): AdminUserRecord {
-    this.connection.prepare(`
+    this.connection
+      .prepare(
+        `
       INSERT INTO users (
         id,
         username,
@@ -102,18 +112,20 @@ export class SqliteAdministrationRepository implements AdministrationRepository 
         created_at,
         updated_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      input.id,
-      input.username,
-      input.icon,
-      input.role,
-      input.status,
-      input.loginTokenHash,
-      input.storageLimitBytes,
-      input.maxFileSizeBytes,
-      input.createdAt,
-      input.updatedAt
-    );
+    `,
+      )
+      .run(
+        input.id,
+        input.username,
+        input.icon,
+        input.role,
+        input.status,
+        input.loginTokenHash,
+        input.storageLimitBytes,
+        input.maxFileSizeBytes,
+        input.createdAt,
+        input.updatedAt,
+      );
 
     return {
       createdAt: input.createdAt,
@@ -127,22 +139,28 @@ export class SqliteAdministrationRepository implements AdministrationRepository 
       storageLimitBytes: input.storageLimitBytes,
       storageUsedBytes: 0,
       updatedAt: input.updatedAt,
-      username: input.username
+      username: input.username,
     };
   }
 
   deleteUser(userId: string, updatedAt: string): void {
-    this.connection.prepare(`
+    this.connection
+      .prepare(
+        `
       UPDATE users
       SET deleted_at = ?,
           status = 'disabled',
           updated_at = ?
       WHERE id = ?
-    `).run(updatedAt, updatedAt, userId);
+    `,
+      )
+      .run(updatedAt, updatedAt, userId);
   }
 
   findAdminFileById(fileId: string): AdminFileRecord | null {
-    const row = this.connection.prepare<unknown[], AdminFileRow>(`
+    const row = this.connection
+      .prepare<unknown[], AdminFileRow>(
+        `
       SELECT
         f.id,
         f.upload_id,
@@ -155,6 +173,7 @@ export class SqliteAdministrationRepository implements AdministrationRepository 
         f.owner_user_id,
         u.username AS owner_username,
         f.public,
+        f.show_uploader,
         f.status,
         f.expires_at,
         f.preview_status,
@@ -167,7 +186,9 @@ export class SqliteAdministrationRepository implements AdministrationRepository 
       INNER JOIN users u ON u.id = f.owner_user_id
       WHERE f.id = ?
       LIMIT 1
-    `).get(fileId);
+    `,
+      )
+      .get(fileId);
 
     return row ? mapAdminFile(row) : null;
   }
@@ -186,6 +207,7 @@ export class SqliteAdministrationRepository implements AdministrationRepository 
         f.owner_user_id,
         u.username AS owner_username,
         f.public,
+        f.show_uploader,
         f.status,
         f.expires_at,
         f.preview_status,
@@ -199,20 +221,28 @@ export class SqliteAdministrationRepository implements AdministrationRepository 
     `;
 
     if (search) {
-      const rows = this.connection.prepare<unknown[], AdminFileRow>(`
+      const rows = this.connection
+        .prepare<unknown[], AdminFileRow>(
+          `
         ${baseQuery}
         WHERE f.safe_name LIKE ? AND f.is_deleted = 0
         ORDER BY f.created_at DESC
-      `).all(`%${search}%`);
+      `,
+        )
+        .all(`%${search}%`);
 
       return rows.map(mapAdminFile);
     }
 
-    const rows = this.connection.prepare<unknown[], AdminFileRow>(`
+    const rows = this.connection
+      .prepare<unknown[], AdminFileRow>(
+        `
       ${baseQuery}
       WHERE f.is_deleted = 0
       ORDER BY f.created_at DESC
-    `).all();
+    `,
+      )
+      .all();
 
     return rows.map(mapAdminFile);
   }
@@ -235,36 +265,54 @@ export class SqliteAdministrationRepository implements AdministrationRepository 
     `;
 
     if (search) {
-      const rows = this.connection.prepare<unknown[], AdminGroupRow>(`
+      const rows = this.connection
+        .prepare<unknown[], AdminGroupRow>(
+          `
         ${baseQuery}
         WHERE g.label LIKE ? OR EXISTS (SELECT 1 FROM files f WHERE f.group_id = g.id AND f.safe_name LIKE ?)
         ORDER BY g.created_at DESC
-      `).all(`%${search}%`, `%${search}%`);
+      `,
+        )
+        .all(`%${search}%`, `%${search}%`);
 
       return rows.map(mapAdminGroup);
     }
 
-    const rows = this.connection.prepare<unknown[], AdminGroupRow>(`
+    const rows = this.connection
+      .prepare<unknown[], AdminGroupRow>(
+        `
       ${baseQuery}
       ORDER BY g.created_at DESC
-    `).all();
+    `,
+      )
+      .all();
 
     return rows.map(mapAdminGroup);
   }
 
   deleteAdminGroup(groupId: string): void {
     this.connection.transaction(() => {
-      this.connection.prepare(`
+      this.connection
+        .prepare(
+          `
         UPDATE files SET group_id = NULL WHERE group_id = ?
-      `).run(groupId);
-      this.connection.prepare(`
+      `,
+        )
+        .run(groupId);
+      this.connection
+        .prepare(
+          `
         DELETE FROM groups WHERE id = ?
-      `).run(groupId);
+      `,
+        )
+        .run(groupId);
     })();
   }
 
   findPolicies(): ServicePolicies {
-    const row = this.connection.prepare<unknown[], PolicyRow>(`
+    const row = this.connection
+      .prepare<unknown[], PolicyRow>(
+        `
       SELECT
         default_storage_limit_bytes,
         default_max_file_size_bytes,
@@ -280,7 +328,9 @@ export class SqliteAdministrationRepository implements AdministrationRepository 
       FROM service_policies
       WHERE id = 1
       LIMIT 1
-    `).get();
+    `,
+      )
+      .get();
 
     if (!row) {
       throw new Error("service_policies row is missing");
@@ -297,12 +347,14 @@ export class SqliteAdministrationRepository implements AdministrationRepository 
       maxZipTotalBytes: row.max_zip_total_bytes,
       minChunkSizeBytes: row.min_chunk_size_bytes,
       sessionTtlSeconds: row.session_ttl_seconds,
-      updatedAt: row.updated_at
+      updatedAt: row.updated_at,
     };
   }
 
   findUserById(userId: string): AdminUserRecord | null {
-    const row = this.connection.prepare<unknown[], UserRow>(`
+    const row = this.connection
+      .prepare<unknown[], UserRow>(
+        `
       SELECT
         u.id,
         u.username,
@@ -319,24 +371,32 @@ export class SqliteAdministrationRepository implements AdministrationRepository 
       FROM users u
       WHERE u.id = ? AND u.deleted_at IS NULL
       LIMIT 1
-    `).get(userId);
+    `,
+      )
+      .get(userId);
 
     return row ? mapAdminUser(row) : null;
   }
 
   listUserSessions(userId: string): AdminSessionRecord[] {
-    const rows = this.connection.prepare<unknown[], SessionRow>(`
+    const rows = this.connection
+      .prepare<unknown[], SessionRow>(
+        `
       SELECT id, user_id, created_at, last_used_at, expires_at, revoked_at, revoked_reason, user_agent, ip_address
       FROM sessions
       WHERE user_id = ?
       ORDER BY created_at DESC
-    `).all(userId);
+    `,
+      )
+      .all(userId);
 
     return rows.map(mapSession);
   }
 
   listUsers(): AdminUserRecord[] {
-    const rows = this.connection.prepare<unknown[], UserRow>(`
+    const rows = this.connection
+      .prepare<unknown[], UserRow>(
+        `
       SELECT
         u.id,
         u.username,
@@ -353,77 +413,125 @@ export class SqliteAdministrationRepository implements AdministrationRepository 
       FROM users u
       WHERE u.deleted_at IS NULL
       ORDER BY u.created_at ASC
-    `).all();
+    `,
+      )
+      .all();
 
     return rows.map(mapAdminUser);
   }
 
-  revokeSessionsForUser(userId: string, revokedAt: string, reason: string): void {
-    this.connection.prepare(`
+  revokeSessionsForUser(
+    userId: string,
+    revokedAt: string,
+    reason: string,
+  ): void {
+    this.connection
+      .prepare(
+        `
       UPDATE sessions
       SET revoked_at = COALESCE(revoked_at, ?),
           revoked_reason = COALESCE(revoked_reason, ?)
       WHERE user_id = ?
-    `).run(revokedAt, reason, userId);
+    `,
+      )
+      .run(revokedAt, reason, userId);
   }
 
   resetUserIcon(userId: string, updatedAt: string): void {
-    this.connection.prepare(`
+    this.connection
+      .prepare(
+        `
       UPDATE users
       SET icon = NULL,
           updated_at = ?
       WHERE id = ?
-    `).run(updatedAt, userId);
+    `,
+      )
+      .run(updatedAt, userId);
   }
 
-  rotateLoginToken(userId: string, loginTokenHash: string, updatedAt: string): void {
-    this.connection.prepare(`
+  rotateLoginToken(
+    userId: string,
+    loginTokenHash: string,
+    updatedAt: string,
+  ): void {
+    this.connection
+      .prepare(
+        `
       UPDATE users
       SET login_token_hash = ?,
           updated_at = ?
       WHERE id = ?
-    `).run(loginTokenHash, updatedAt, userId);
+    `,
+      )
+      .run(loginTokenHash, updatedAt, userId);
   }
 
-  setFileExpiration(fileId: string, expiresAt: string | null, updatedAt: string): void {
-    this.connection.prepare(`
+  setFileExpiration(
+    fileId: string,
+    expiresAt: string | null,
+    updatedAt: string,
+  ): void {
+    this.connection
+      .prepare(
+        `
       UPDATE files
       SET expires_at = ?,
           updated_at = ?
       WHERE id = ?
-    `).run(expiresAt, updatedAt, fileId);
+    `,
+      )
+      .run(expiresAt, updatedAt, fileId);
   }
 
-  setFileVisibility(fileId: string, isPublic: boolean, updatedAt: string): void {
-    this.connection.prepare(`
+  setFileVisibility(
+    fileId: string,
+    isPublic: boolean,
+    updatedAt: string,
+  ): void {
+    this.connection
+      .prepare(
+        `
       UPDATE files
       SET public = ?,
           updated_at = ?
       WHERE id = ?
-    `).run(isPublic ? 1 : 0, updatedAt, fileId);
+    `,
+      )
+      .run(isPublic ? 1 : 0, updatedAt, fileId);
   }
 
   setUserStatus(userId: string, status: UserStatus, updatedAt: string): void {
-    this.connection.prepare(`
+    this.connection
+      .prepare(
+        `
       UPDATE users
       SET status = ?,
           updated_at = ?
       WHERE id = ?
-    `).run(status, updatedAt, userId);
+    `,
+      )
+      .run(status, updatedAt, userId);
   }
 
   softDeleteFile(fileId: string, updatedAt: string): void {
-    this.connection.prepare(`
+    this.connection
+      .prepare(
+        `
       UPDATE files
       SET is_deleted = 1,
           status = 'deleted',
           updated_at = ?
       WHERE id = ?
-    `).run(updatedAt, fileId);
+    `,
+      )
+      .run(updatedAt, fileId);
   }
 
   updatePolicies(policies: ServicePolicies): void {
-    this.connection.prepare(`
+    this.connection
+      .prepare(
+        `
       UPDATE service_policies
       SET default_storage_limit_bytes = ?,
           default_max_file_size_bytes = ?,
@@ -437,38 +545,53 @@ export class SqliteAdministrationRepository implements AdministrationRepository 
           max_file_expiry_days = ?,
           updated_at = ?
       WHERE id = 1
-    `).run(
-      policies.defaultStorageLimitBytes,
-      policies.defaultMaxFileSizeBytes,
-      policies.maxZipTotalBytes,
-      policies.maxZipFileCount,
-      policies.defaultChunkSizeBytes,
-      policies.minChunkSizeBytes,
-      policies.maxChunkSizeBytes,
-      policies.sessionTtlSeconds,
-      policies.defaultFileExpiryDays,
-      policies.maxFileExpiryDays,
-      policies.updatedAt
-    );
+    `,
+      )
+      .run(
+        policies.defaultStorageLimitBytes,
+        policies.defaultMaxFileSizeBytes,
+        policies.maxZipTotalBytes,
+        policies.maxZipFileCount,
+        policies.defaultChunkSizeBytes,
+        policies.minChunkSizeBytes,
+        policies.maxChunkSizeBytes,
+        policies.sessionTtlSeconds,
+        policies.defaultFileExpiryDays,
+        policies.maxFileExpiryDays,
+        policies.updatedAt,
+      );
   }
 
-  updateUserLimits(userId: string, maxFileSizeBytes: number | null, storageLimitBytes: number | null, updatedAt: string): void {
-    this.connection.prepare(`
+  updateUserLimits(
+    userId: string,
+    maxFileSizeBytes: number | null,
+    storageLimitBytes: number | null,
+    updatedAt: string,
+  ): void {
+    this.connection
+      .prepare(
+        `
       UPDATE users
       SET storage_limit_bytes = COALESCE(?, storage_limit_bytes),
           max_file_size_bytes = COALESCE(?, max_file_size_bytes),
           updated_at = ?
       WHERE id = ?
-    `).run(storageLimitBytes, maxFileSizeBytes, updatedAt, userId);
+    `,
+      )
+      .run(storageLimitBytes, maxFileSizeBytes, updatedAt, userId);
   }
 
   updateUsername(userId: string, username: string, updatedAt: string): void {
-    this.connection.prepare(`
+    this.connection
+      .prepare(
+        `
       UPDATE users
       SET username = ?,
           updated_at = ?
       WHERE id = ?
-    `).run(username, updatedAt, userId);
+    `,
+      )
+      .run(username, updatedAt, userId);
   }
 }
 
@@ -489,11 +612,12 @@ function mapAdminFile(row: AdminFileRow): AdminFileRecord {
     previewStatus: row.preview_status,
     public: row.public === 1,
     safeName: row.safe_name,
+    showUploader: row.show_uploader !== 0,
     sizeBytes: row.size_bytes,
     status: row.status,
     storagePath: row.storage_path,
     updatedAt: row.updated_at,
-    uploadId: row.upload_id
+    uploadId: row.upload_id,
   };
 }
 
@@ -510,7 +634,7 @@ function mapAdminUser(row: UserRow): AdminUserRecord {
     storageLimitBytes: row.storage_limit_bytes,
     storageUsedBytes: row.storage_used_bytes,
     updatedAt: row.updated_at,
-    username: row.username
+    username: row.username,
   };
 }
 
@@ -524,7 +648,7 @@ function mapSession(row: SessionRow): AdminSessionRecord {
     revokedAt: row.revoked_at,
     revokedReason: row.revoked_reason,
     userAgent: row.user_agent,
-    userId: row.user_id
+    userId: row.user_id,
   };
 }
 
@@ -539,6 +663,6 @@ function mapAdminGroup(row: AdminGroupRow): AdminGroupRecord {
     ownerUserId: row.owner_user_id,
     ownerUsername: row.owner_username,
     totalSize: row.total_size,
-    updatedAt: row.updated_at
+    updatedAt: row.updated_at,
   };
 }

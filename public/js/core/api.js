@@ -173,6 +173,7 @@ export const api = {
     get: (id) => request('GET', `/files/${id}`),
     rename: (id, name) => request('PATCH', `/files/${id}/rename`, { body: { name } }),
     setPublic: (id, pub) => request('PATCH', `/files/${id}/public`, { body: { public: pub } }),
+    setShowUploader: (id, showUploader) => request('PATCH', `/files/${id}/show-uploader`, { body: { showUploader } }),
     setExpire: (id, at) => request('PATCH', `/files/${id}/expire`, { body: { expiresAt: at } }),
     delete: (id) => request('DELETE', `/files/${id}`),
     zip: (fileIds) => request('POST', '/files/zip', { body: { file_ids: fileIds } }),

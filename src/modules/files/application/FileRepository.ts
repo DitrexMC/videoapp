@@ -1,4 +1,9 @@
-import type { FolderRecord, GroupRecord, PreviewStatus, FileRecord } from "../domain/FileRecord.js";
+import type {
+  FolderRecord,
+  GroupRecord,
+  PreviewStatus,
+  FileRecord,
+} from "../domain/FileRecord.js";
 
 export interface CreateFolderInput {
   createdAt: string;
@@ -31,16 +36,56 @@ export interface FileRepository {
   findGroupById(groupId: string): GroupRecord | null;
   deleteGroup(groupId: string, deletedAt: string): void;
   renameGroup(groupId: string, label: string, updatedAt: string): void;
-  updateGroupPrivacy(groupId: string, isPrivate: boolean, updatedAt: string): void;
+  updateGroupPrivacy(
+    groupId: string,
+    isPrivate: boolean,
+    updatedAt: string,
+  ): void;
   listSafeNames(ownerUserId: string, folderId: string | null): string[];
-  renameFile(fileId: string, name: string, safeName: string, updatedAt: string): void;
-  renameFile(fileId: string, name: string, safeName: string, updatedAt: string): void;
+  renameFile(
+    fileId: string,
+    name: string,
+    safeName: string,
+    updatedAt: string,
+  ): void;
+  renameFile(
+    fileId: string,
+    name: string,
+    safeName: string,
+    updatedAt: string,
+  ): void;
   renameFolder(folderId: string, name: string, updatedAt: string): void;
-  setFileExpiration(fileId: string, expiresAt: string | null, updatedAt: string): void;
-  setFileExpiration(fileId: string, expiresAt: string | null, updatedAt: string): void;
+  setFileExpiration(
+    fileId: string,
+    expiresAt: string | null,
+    updatedAt: string,
+  ): void;
+  setFileExpiration(
+    fileId: string,
+    expiresAt: string | null,
+    updatedAt: string,
+  ): void;
   softDeleteFile(fileId: string, deletedAt: string): void;
   softDeleteFilesInFolder(folderId: string, deletedAt: string): void;
-  updateFilePreview(fileId: string, previewPath: string | null, previewStatus: PreviewStatus, updatedAt: string): void;
-  updateFileVisibility(fileId: string, isPublic: boolean, updatedAt: string): void;
-  updateFolderVisibility(folderId: string, isPublic: boolean, updatedAt: string): void;
+  updateFilePreview(
+    fileId: string,
+    previewPath: string | null,
+    previewStatus: PreviewStatus,
+    updatedAt: string,
+  ): void;
+  updateFileShowUploader(
+    fileId: string,
+    showUploader: boolean,
+    updatedAt: string,
+  ): void;
+  updateFileVisibility(
+    fileId: string,
+    isPublic: boolean,
+    updatedAt: string,
+  ): void;
+  updateFolderVisibility(
+    folderId: string,
+    isPublic: boolean,
+    updatedAt: string,
+  ): void;
 }
