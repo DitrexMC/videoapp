@@ -22,6 +22,11 @@ main, .viewer-wrap {
   animation:fadeUp .4s ease both;
 }
 
+html.vt-navigated main,
+html.vt-navigated .viewer-wrap {
+  animation:none !important;
+}
+
 /* ── Hero section (index) ── */
 .hero {
   min-height:calc(100vh - 60px);

@@ -5,7 +5,7 @@
  */
 
 const SESSION_KEY = 'va_session';
-const USER_KEY    = 'va_user';
+const USER_KEY = 'va_user';
 
 function load() {
   const raw = sessionStorage.getItem(SESSION_KEY) ?? localStorage.getItem(SESSION_KEY);
@@ -23,6 +23,7 @@ function save(data, persist) {
   if (data.user) {
     sessionStorage.setItem(USER_KEY, JSON.stringify(data.user));
     if (persist) localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+    if (data.user.username) localStorage.setItem('va_username', data.user.username);
   }
 }
 
@@ -31,6 +32,7 @@ function clear() {
   sessionStorage.removeItem(USER_KEY);
   localStorage.removeItem(SESSION_KEY);
   localStorage.removeItem(USER_KEY);
+  localStorage.removeItem('va_username');
 }
 
 export const auth = {
@@ -69,6 +71,7 @@ export const auth = {
       const inLocal = !!localStorage.getItem(SESSION_KEY);
       save(session, inLocal);
     }
+    if (user?.username) localStorage.setItem('va_username', user.username);
   },
 
   /** Clear all auth state. */

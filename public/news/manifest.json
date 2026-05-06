@@ -1,0 +1,20 @@
+[
+    {
+        "url": "/news/articles/videoapp-launch.html",
+        "title": "videoapp サービス開始のお知らせ",
+        "type": "News",
+        "date": "2026-05-01",
+        "subtitle": "プライベートファイルストレージサービス videoapp の提供を開始しました。",
+        "tags": "新機能, リリース",
+        "image": ""
+    },
+    {
+        "url": "/news/articles/chunk-upload.html",
+        "title": "チャンクアップロード機能を実装しました",
+        "type": "Update",
+        "date": "2026-05-03",
+        "subtitle": "最大5GBまでの大容量ファイルを安定してアップロードできるようになりました。",
+        "tags": "アップロード, 改善",
+        "image": ""
+    }
+]

@@ -1,6 +1,58 @@
 (function () {
     applyTheme(localStorage.getItem('va_theme'));
+
+    // Read navigation direction before first render (set by nav.js on the previous page)
+    var dir = sessionStorage.getItem('va_nav_dir');
+    sessionStorage.removeItem('va_nav_dir');
+    // Fallback: back-direction stored for pages not in PAGE_POS
+    if (!dir) {
+        dir = sessionStorage.getItem('va_back_dir');
+        sessionStorage.removeItem('va_back_dir');
+    } else {
+        sessionStorage.removeItem('va_back_dir');
+    }
+    if (dir) {
+        document.documentElement.setAttribute('data-nav-dir', dir);
+    }
+
+    // PRIMARY: use pagereveal to suppress fadeUp before first paint.
+    // This fires before any CSS animations start, so it reliably prevents
+    // the double-animation (fadeUp + VT slide playing simultaneously).
+    if ('onpagereveal' in window) {
+        window.addEventListener('pagereveal', function (e) {
+            if (e.viewTransition) {
+                document.documentElement.classList.add('vt-navigated');
+                e.viewTransition.finished.then(function () {
+                    document.documentElement.classList.remove('vt-navigated');
+                });
+            }
+        });
+    } else if (sessionStorage.getItem('va_vt_nav')) {
+        // FALLBACK: for browsers that support @view-transition but not pagereveal
+        sessionStorage.removeItem('va_vt_nav');
+        document.documentElement.classList.add('vt-navigated');
+        setTimeout(function () {
+            document.documentElement.classList.remove('vt-navigated');
+        }, 600);
+    }
 })();
+
+// Freeze CSS transitions + lock scroll + scroll-to-top before page snapshot.
+// Scrolling to top prevents the VT group from animating vertically when the
+// user was scrolled down (the element's viewport position would otherwise differ
+// between old and new page, creating unintended vertical movement).
+if ('onpageswap' in window) {
+    window.addEventListener('pageswap', function (e) {
+        document.documentElement.dataset.vtLeaving = '1';
+        sessionStorage.setItem('va_vt_nav', '1');
+        if (e.viewTransition) {
+            // overflow:hidden is already applied by [data-vt-leaving] CSS,
+            // so the scroll reset is invisible to the user.
+            document.documentElement.scrollTop = 0;
+            document.body.scrollTop = 0;
+        }
+    });
+}
 
 function applyTheme(theme) {
     var nextTheme = theme === 'light' ? 'light' : 'dark';
@@ -33,8 +85,21 @@ function initThemeToggle() {
     sync();
 }
 
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initThemeToggle);
-} else {
-    initThemeToggle();
+function initNavUsername() {
+    var username = localStorage.getItem('va_username');
+    if (!username) return;
+    var navEl = document.getElementById('nav-username');
+    if (navEl) navEl.textContent = username;
+    var drawerEl = document.getElementById('drawerUsername');
+    if (drawerEl) drawerEl.textContent = username;
 }
+
+function onReady(fn) {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn);
+    else fn();
+}
+
+onReady(function () {
+    initThemeToggle();
+    initNavUsername();
+});
