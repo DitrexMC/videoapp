@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About — DitrexMC</title>
+    <link rel="icon" href="images/ditrexmc_icon.png" type="image/png">
+    <style>
+        :root {
+            --accent: #1d4ed8;
+            --accent2: #3b82f6;
+            --accent3: #60a5fa;
+            --gold: #f0b429;
+            --gold-glow: rgba(240, 180, 41, .45);
+            --red: #c0392b;
+            --bg: #0f1117;
+            --bg2: #141924;
+            --bg3: #1c2438;
+            --text: #e2e8f0;
+            --text-sub: #94a3b8;
+            --border: rgba(59, 130, 246, .15);
+            --glow: rgba(59, 130, 246, .5);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            overflow-x: hidden;
+        }
+
+        #canvas {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* ===== NAV ===== */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 200;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 5vw;
+            height: 64px;
+            background: rgba(15, 17, 23, .88);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .nav-logo {
+            font-size: 1.4rem;
+            font-weight: 900;
+            letter-spacing: -.5px;
+            color: var(--accent2);
+            text-decoration: none;
+            text-shadow: 0 0 16px rgba(59, 130, 246, .5);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-logo img {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+        }
+
+        .nav-logo>span span {
+            color: var(--text);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--text-sub);
+            font-weight: 600;
+            font-size: .88rem;
+            letter-spacing: .5px;
+            text-transform: uppercase;
+            position: relative;
+            padding-bottom: 2px;
+            transition: color .2s;
+        }
+
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            right: 0;
+            height: 1.5px;
+            background: var(--accent2);
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform .25s;
+        }
+
+        .nav-links a:hover,
+        .nav-links a.active {
+            color: var(--text);
+        }
+
+        .nav-links a:hover::after,
+        .nav-links a.active::after {
+            transform: scaleX(1);
+        }
+
+        /* ===== PAGE BANNER ===== */
+        .page-banner {
+            position: relative;
+            z-index: 1;
+            padding: 130px 5vw 80px;
+            overflow: hidden;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .page-banner::before {
+            content: '';
+            position: absolute;
+            top: -20%;
+            right: -5%;
+            width: 50vw;
+            height: 140%;
+            background: linear-gradient(135deg, var(--bg2) 0%, transparent 100%);
+            clip-path: polygon(18% 0%, 100% 0%, 100% 100%, 0% 100%);
+        }
+
+        .banner-glow {
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            right: 10%;
+            top: 50%;
+            transform: translateY(-50%);
+            background: radial-gradient(circle, rgba(29, 78, 216, .15) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .banner-skin {
+            position: absolute;
+            right: 5%;
+            top: 87%;
+            transform: translateY(-40%);
+            z-index: 1;
+            pointer-events: none;
+            user-select: none;
+            width: 45vw;
+            height: 100%;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+        }
+
+        .banner-skin img {
+            height: 150%;
+            width: auto;
+            opacity: .75;
+            animation: skinFloat 8s ease-in-out infinite;
+        }
+
+        @keyframes skinFloat {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-15px);
+            }
+        }
+
+        .banner-inner {
+            position: relative;
+            z-index: 2;
+            max-width: 1200px;
+            margin-inline: auto;
+        }
+
+        .banner-crumb {
+            font-size: .78rem;
+            color: var(--text-sub);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: .6rem;
+        }
+
+        .banner-crumb a {
+            color: var(--accent2);
+            text-decoration: none;
+        }
+
+        .banner-crumb span {
+            opacity: .4;
+        }
+
+        .page-banner h1 {
+            font-size: clamp(2.8rem, 6vw, 5rem);
+            font-weight: 900;
+            letter-spacing: -2px;
+            line-height: 1.05;
+            animation: fadeUp .5s ease both;
+        }
+
+        .page-banner h1 .hl {
+            background: linear-gradient(90deg, #3b82f6, #60a5fa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            filter: drop-shadow(0 0 16px rgba(59, 130, 246, .4));
+        }
+
+        .page-banner-sub {
+            margin-top: 1rem;
+            font-size: 1.05rem;
+            color: var(--text-sub);
+            max-width: 520px;
+            line-height: 1.8;
+            animation: fadeUp .5s .1s ease both;
+        }
+
+        section {
+            position: relative;
+            z-index: 1;
+            padding: 100px 5vw;
+        }
+
+        .sec-eye {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 3rem;
+        }
+
+        .sec-eye::before {
+            content: '';
+            display: block;
+            width: 4px;
+            height: 36px;
+            background: linear-gradient(180deg, var(--accent2), var(--accent));
+            border-radius: 2px;
+            box-shadow: 0 0 10px var(--glow);
+        }
+
+        .sec-eye .lbl {
+            font-size: .72rem;
+            font-weight: 700;
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+            color: var(--accent2);
+            margin-bottom: 3px;
+        }
+
+        .sec-eye h2 {
+            font-size: clamp(1.6rem, 3.5vw, 2.6rem);
+            font-weight: 800;
+            letter-spacing: -1px;
+        }
+
+        .reveal {
+            opacity: 0;
+            transform: translateY(28px);
+            transition: opacity .7s ease, transform .7s ease;
+        }
+
+        .reveal.visible {
+            opacity: 1;
+            transform: none;
+        }
+
+        .reveal-d1 {
+            transition-delay: .1s;
+        }
+
+        .reveal-d2 {
+            transition-delay: .2s;
+        }
+
+        .story-sec {
+            background: var(--bg2);
+        }
+
+        .story-inner {
+            max-width: 1100px;
+            margin-inline: auto;
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 80px;
+            align-items: start;
+        }
+
+        .story-text h2 {
+            font-family: 'Noto Sans JP', 'Yu Gothic', 'Meiryo', 'Segoe UI', sans-serif;
+            font-size: clamp(2.2rem, 4vw, 3.6rem);
+            font-weight: 700;
+            letter-spacing: -.5px;
+            line-height: 1.15;
+            margin-bottom: 2rem;
+        }
+
+        .story-text h2 em {
+            font-style: normal;
+            color: var(--accent2);
+            font-weight: 900;
+        }
+
+        .story-divider {
+            width: 50px;
+            height: 2px;
+            background: var(--accent2);
+            margin-bottom: 2rem;
+            box-shadow: 0 0 8px var(--glow);
+        }
+
+        .story-text p {
+            font-size: .97rem;
+            line-height: 2;
+            color: var(--text-sub);
+            margin-bottom: 1.3rem;
+        }
+
+        .story-text p strong {
+            color: var(--text);
+        }
+
+        /* design3メタテーブル */
+        .story-meta {
+            padding-top: .5rem;
+        }
+
+        .sm-row {
+            display: flex;
+            flex-direction: column;
+            padding: 1.3rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .sm-row:first-child {
+            border-top: 1px solid var(--border);
+        }
+
+        .sm-k {
+            font-size: .68rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--text-sub);
+            margin-bottom: .4rem;
+        }
+
+        .sm-v {
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        .sm-v.g {
+            color: var(--gold);
+        }
+
+        .sm-v.r {
+            color: var(--red);
+        }
+
+        /* ===== SKILLS ===== */
+
+        .skills-cols {
+            max-width: 1100px;
+            margin-inline: auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+        }
+
+        .skill-col h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 1.8rem;
+            padding-bottom: .8rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .skill-col h3::before {
+            content: '';
+            display: block;
+            width: 3px;
+            height: 18px;
+            background: var(--accent2);
+            border-radius: 2px;
+        }
+
+        .skill-rows {
+            display: flex;
+            flex-direction: column;
+            gap: 1.3rem;
+        }
+
+        .skill-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: .5rem;
+            font-size: .9rem;
+            font-weight: 600;
+        }
+
+        .s-pct {
+            color: var(--accent2);
+        }
+
+        .skill-bar {
+            height: 6px;
+            background: var(--bg3);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .skill-fill {
+            height: 100%;
+            border-radius: 3px;
+            background: linear-gradient(90deg, var(--accent), var(--accent2));
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 1.3s cubic-bezier(.22, 1, .36, 1);
+            box-shadow: 0 0 6px var(--glow);
+        }
+
+        .lang-main {
+            display: inline-block;
+            font-size: .72rem;
+            font-weight: 700;
+            color: var(--accent2);
+            background: rgba(59, 130, 246, .1);
+            border: 1px solid var(--border);
+            padding: 2px 8px;
+            border-radius: 3px;
+            margin-left: 6px;
+            vertical-align: middle;
+        }
+
+        /* ===== TIMELINE (design3 style with dark theme) ===== */
+        .timeline-sec {
+            background: var(--bg2);
+        }
+
+        .timeline-inner {
+            max-width: 900px;
+            margin-inline: auto;
+        }
+
+        /* design3のタイムラインを dark theme に適応 */
+        .tl-header {
+            margin-bottom: 3rem;
+        }
+
+        .tl-header h2 {
+            font-family: 'Noto Sans JP', 'Yu Gothic', 'Meiryo', 'Segoe UI', sans-serif;
+            font-size: clamp(1.8rem, 3vw, 2.8rem);
+            font-weight: 700;
+            letter-spacing: -.3px;
+            margin-bottom: .5rem;
+        }
+
+        .tl-header h2 em {
+            font-style: normal;
+            color: var(--accent2);
+            font-weight: 800;
+        }
+
+        .tl-header-line {
+            width: 40px;
+            height: 1.5px;
+            background: var(--accent2);
+            box-shadow: 0 0 6px var(--glow);
+        }
+
+        .timeline {
+            position: relative;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 1px;
+            background: var(--border);
+        }
+
+        .tl-item {
+            padding: 0 0 3.5rem 2.8rem;
+            position: relative;
+        }
+
+        .tl-item:last-child {
+            padding-bottom: 0;
+        }
+
+        .tl-item::before {
+            content: '';
+            position: absolute;
+            left: -4px;
+            top: 7px;
+            width: 9px;
+            height: 9px;
+            background: var(--accent2);
+            border-radius: 50%;
+            box-shadow: 0 0 0 3px var(--bg2), 0 0 8px var(--glow);
+        }
+
+        .tl-tag {
+            font-size: .7rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--accent2);
+            margin-bottom: .6rem;
+        }
+
+        .tl-item h3 {
+            font-family: 'Georgia', 'Times New Roman', serif;
+            font-size: 1.4rem;
+            font-weight: 400;
+            margin-bottom: .7rem;
+        }
+
+        .tl-item p {
+            font-size: .92rem;
+            line-height: 1.9;
+            color: var(--text-sub);
+        }
+
+        .tl-item .tl-chips {
+            display: flex;
+            gap: .5rem;
+            flex-wrap: wrap;
+            margin-top: .8rem;
+        }
+
+        .tl-chip {
+            font-size: .72rem;
+            font-weight: 700;
+            padding: 2px 9px;
+            border-radius: 4px;
+            background: var(--bg3);
+            color: var(--text-sub);
+            border: 1px solid rgba(148, 163, 184, .1);
+        }
+
+        /* golden tl item */
+        .tl-item-g::before {
+            background: var(--gold);
+            box-shadow: 0 0 0 3px var(--bg2), 0 0 12px rgba(240, 180, 41, .9);
+        }
+
+        .tl-item-g .tl-tag {
+            color: #facc15;
+            text-shadow: 0 0 8px rgba(250, 204, 21, .9), 0 0 16px rgba(250, 204, 21, .6);
+            animation: goldGlow 1.6s ease-in-out infinite;
+        }
+
+        .tl-item-g h3 {
+            color: var(--gold);
+        }
+
+        @keyframes goldGlow {
+
+            0%,
+            100% {
+                text-shadow: 0 0 8px rgba(250, 204, 21, .85), 0 0 16px rgba(250, 204, 21, .5);
+            }
+
+            50% {
+                text-shadow: 0 0 12px rgba(250, 204, 21, 1), 0 0 22px rgba(250, 204, 21, .8);
+            }
+        }
+
+        /* red tl item */
+        .tl-item-r::before {
+            background: var(--red);
+            box-shadow: 0 0 0 3px var(--bg2), 0 0 12px rgba(239, 68, 68, .8);
+        }
+
+        .tl-item-r .tl-tag {
+            color: #f87171;
+            text-shadow: 0 0 8px rgba(239, 68, 68, .9), 0 0 16px rgba(248, 113, 113, .8);
+            animation: redGlow 1.6s ease-in-out infinite;
+        }
+
+        @keyframes redGlow {
+
+            0%,
+            100% {
+                text-shadow: 0 0 8px rgba(239, 68, 68, .8), 0 0 16px rgba(248, 113, 113, .7);
+            }
+
+            50% {
+                text-shadow: 0 0 12px rgba(239, 68, 68, 1), 0 0 22px rgba(248, 113, 113, .9);
+            }
+        }
+
+        /* ===== ACTIVITY GRID ===== */
+
+        .activity-grid {
+            max-width: 1100px;
+            margin-inline: auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 18px;
+        }
+
+        .act-card {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.8rem;
+            transition: transform .3s ease, box-shadow .3s, border-color .3s;
+            will-change: transform;
+        }
+
+        .act-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(59, 130, 246, .38);
+            box-shadow: 0 14px 40px rgba(29, 78, 216, .15);
+        }
+
+        .act-icon {
+            font-size: 2.2rem;
+            margin-bottom: 1rem;
+        }
+
+        .act-card h3 {
+            font-size: 1.05rem;
+            font-weight: 700;
+            margin-bottom: .5rem;
+        }
+
+        .act-card p {
+            font-size: .87rem;
+            color: var(--text-sub);
+            line-height: 1.75;
+        }
+
+        /* ===== FOOTER ===== */
+        footer {
+            position: relative;
+            z-index: 1;
+            background: var(--bg2);
+            border-top: 1px solid var(--border);
+            padding: 4rem 5vw 2rem;
+        }
+
+        .footer-inner {
+            max-width: 1100px;
+            margin-inline: auto;
+            display: grid;
+            grid-template-columns: 1.5fr 1fr 1fr;
+            gap: 3rem;
+            margin-bottom: 3rem;
+        }
+
+        .f-logo {
+            font-size: 1.6rem;
+            font-weight: 900;
+            color: var(--accent2);
+            text-decoration: none;
+            display: block;
+            margin-bottom: .6rem;
+            text-shadow: 0 0 16px rgba(59, 130, 246, .4);
+        }
+
+        .f-logo span {
+            color: var(--text);
+        }
+
+        .footer-brand p {
+            font-size: .85rem;
+            color: var(--text-sub);
+            line-height: 1.7;
+        }
+
+        .footer-col h4 {
+            font-size: .68rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--text-sub);
+            margin-bottom: 1rem;
+        }
+
+        .footer-col ul {
+            list-style: none;
+        }
+
+        .footer-col ul li {
+            margin-bottom: .6rem;
+        }
+
+        .footer-col ul li a {
+            text-decoration: none;
+            color: var(--text-sub);
+            font-size: .88rem;
+            transition: color .2s;
+        }
+
+        .footer-col ul li a:hover {
+            color: var(--text);
+        }
+
+        .footer-btm {
+            max-width: 1100px;
+            margin-inline: auto;
+            border-top: 1px solid var(--border);
+            padding-top: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            font-size: .82rem;
+            color: var(--text-sub);
+        }
+
+        /* ===== ANIMATIONS ===== */
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes blink {
+
+            0%,
+            49% {
+                opacity: 1;
+            }
+
+            50%,
+            100% {
+                opacity: 0;
+            }
+        }
+
+        @media(max-width:768px) {
+            .nav-links {
+                display: none;
+            }
+
+            .story-inner {
+                grid-template-columns: 1fr;
+            }
+
+            .skills-cols {
+                grid-template-columns: 1fr;
+            }
+
+            .footer-inner {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="canvas"></canvas>
+
+    <nav>
+        <a href="index.html" class="nav-logo">
+            <img src="images/ditrexmc_icon.png" alt="Logo">
+            <span>Ditrex<span>MC</span></span>
+        </a>
+        <ul class="nav-links">
+            <li><a href="index.html">Home</a></li>
+            <li><a href="about.html" class="active">About</a></li>
+            <li><a href="projects.html">Projects</a></li>
+            <li><a href="news.html">News</a></li>
+        </ul>
+    </nav>
+
+    <!-- ===== PAGE BANNER ===== -->
+    <div class="page-banner">
+        <div class="banner-glow"></div>
+        <div class="banner-skin">
+            <img src="images/ditrexmc_skin.png" alt="Skin">
+        </div>
+        <div class="banner-inner">
+            <div class="banner-crumb">
+                <a href="index.html">Home</a>
+                <span>/</span>
+                <span style="color:var(--text);">About</span>
+            </div>
+            <h1><span class="hl">DitrexMC</span><br>について</h1>
+            <p class="page-banner-sub">Server Developer / PVP Player / Builder — マイクラに全力を注ぐ個人プレイヤー。</p>
+        </div>
+    </div>
+
+    <!-- ===== Minecraftをメインに活動。PVP・建築を楽しみながら、最大の情熱はBedrock向けPVPサーバーの開発に注いでいます。PocketMine-MPをベースに、非常に高度なアンチチートや各種ゲームモードの開発に熱を注いでいます。
+
+私はMinecraftサーバー開発者として、またプレイヤーとして、一切の妥協のない開発を追求しています。 ===== -->
+    <section class="story-sec" id="story">
+        <div class="story-inner">
+            <div class="story-text reveal">
+                <h2>サーバーを<br><em>開発する</em>プレイヤー。</h2>
+                <div class="story-divider"></div>
+                <p>Minecraftをメインに活動しているプレイヤーです。<strong>PVP</strong>・<strong>建築</strong>を楽しみながら、最大の情熱はPocketMine-MPをベースに、<strong>Bedrock向けPVPサーバーの開発</strong>に注いでいます。
+                </p>
+                <p>メインはPHP。PocketMine-MPをベースにした高度なサーバーシステムの設計・実装を得意とし、<strong>アンチチート</strong>から<strong>Vanillaの機能再現</strong>まで幅広く手がけています。
+                </p>
+                <p>Javaはサバイバルプレイ用。JavaScript はサブとして使用。Minecraftに関わるすべての面でスキルを磨き続けています。</p>
+                <p>私はMinecraft<strong>サーバー開発者</strong>として、また<strong>プレイヤー</strong>として、一切の妥協のない開発を追求しています。</p>
+            </div>
+            <div class="story-meta reveal reveal-d1">
+                <div class="sm-row"><span class="sm-k">GamerTag</span><span class="sm-v">DitrexMC</span></div>
+                <div class="sm-row"><span class="sm-k">Main Game</span><span class="sm-v">Minecraft (Bedrock)</span>
+                </div>
+                <div class="sm-row"><span class="sm-k">Also Plays</span><span class="sm-v">Minecraft Java
+                        (Survival)</span></div>
+                <div class="sm-row"><span class="sm-k">Specialty</span><span class="sm-v">Server Development</span>
+                </div>
+                <div class="sm-row"><span class="sm-k">Main Language</span><span class="sm-v">PHP</span></div>
+                <div class="sm-row"><span class="sm-k">Sub Languages</span><span class="sm-v">Java · JavaScript ·
+                        Python</span>
+                </div>
+                <div class="sm-row"><span class="sm-k">Framework</span><span class="sm-v">PocketMine-MP</span></div>
+                <div class="sm-row"><span class="sm-k">World Rank</span><span class="sm-v g">Zeqa Fireball #2</span>
+                </div>
+                <div class="sm-row"><span class="sm-k">Former Role</span><span class="sm-v r">Feather Network
+                        Owner</span></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== SKILLS ===== -->
+    <section class="skills-sec" id="skills">
+        <div class="sec-eye reveal">
+            <div>
+                <div class="lbl">Skills</div>
+                <h2>使用技術・言語</h2>
+            </div>
+        </div>
+        <div class="skills-cols">
+            <div class="skill-col reveal">
+                <h3>Programming Languages</h3>
+                <div class="skill-rows">
+                    <div class="skill-row">
+                        <div class="skill-info"><span>Japanese<span class="lang-main">Main</span></span><span
+                                class="s-pct">1%</span></div>
+                        <div class="skill-bar">
+                            <div class="skill-fill" data-w=".01"></div>
+                        </div>
+                    </div>
+                    <div class="skill-row">
+                        <div class="skill-info"><span>PHP<span class="lang-main">Main</span></span><span
+                                class="s-pct">90%</span></div>
+                        <div class="skill-bar">
+                            <div class="skill-fill" data-w=".9"></div>
+                        </div>
+                    </div>
+                    <div class="skill-row">
+                        <div class="skill-info"><span>Java</span><span class="s-pct">70%</span></div>
+                        <div class="skill-bar">
+                            <div class="skill-fill" data-w=".7"></div>
+                        </div>
+                    </div>
+                    <div class="skill-row">
+                        <div class="skill-info"><span>JavaScript</span><span class="s-pct">65%</span></div>
+                        <div class="skill-bar">
+                            <div class="skill-fill" data-w=".65"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="skill-col reveal reveal-d1">
+                <h3>Platforms & Expertise</h3>
+                <div class="skill-rows">
+                    <div class="skill-row">
+                        <div class="skill-info"><span>PocketMine-MP</span><span class="s-pct">95%</span></div>
+                        <div class="skill-bar">
+                            <div class="skill-fill" data-w=".95"></div>
+                        </div>
+                    </div>
+                    <div class="skill-row">
+                        <div class="skill-info"><span>Minecraft Bedrock</span><span class="s-pct">90%</span></div>
+                        <div class="skill-bar">
+                            <div class="skill-fill" data-w=".9"></div>
+                        </div>
+                    </div>
+                    <div class="skill-row">
+                        <div class="skill-info"><span>Server Architecture</span><span class="s-pct">85%</span></div>
+                        <div class="skill-bar">
+                            <div class="skill-fill" data-w=".85"></div>
+                        </div>
+                    </div>
+                    <div class="skill-row">
+                        <div class="skill-info"><span>Anticheat Design</span><span class="s-pct">88%</span></div>
+                        <div class="skill-bar">
+                            <div class="skill-fill" data-w=".88"></div>
+                        </div>
+                    </div>
+                    <div class="skill-row">
+                        <div class="skill-info"><span>PVP Mechanics</span><span class="s-pct">90%</span></div>
+                        <div class="skill-bar">
+                            <div class="skill-fill" data-w=".9"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== TIMELINE (design3スタイル / ダークテーマ) ===== -->
+    <section class="timeline-sec" id="timeline">
+        <div class="timeline-inner">
+            <div class="tl-header reveal">
+                <h2>これまでの<em>歩み</em></h2>
+                <div class="tl-header-line"></div>
+            </div>
+            <div class="timeline">
+                <div class="tl-item tl-item-g reveal">
+                    <div class="tl-tag">Ongoing — Flagship</div>
+                    <h3>Regis Network の開発</h3>
+                    <p>統合版史上最高峰のBedrock PVP Serverを目指し、現在も精力的に開発中。PocketMine-MPをベースに、PVPの極限を追い求めるプロジェクト。</p>
+                    <div class="tl-chips"><span class="tl-chip">PHP</span><span class="tl-chip">PMMP</span><span
+                            class="tl-chip">Bedrock PVP</span></div>
+                </div>
+                <div class="tl-item reveal">
+                    <div class="tl-tag">Tool — Completed</div>
+                    <h3>4CID Checker の開発</h3>
+                    <p>Xboxの開いているIDをチェックする自作ツール。<br>独自に設計・開発したユーティリティにより、最高峰の効率を実現。</p>
+                    <div class="tl-chips"><span class="tl-chip">Tool</span><span class="tl-chip">Self-Made</span></div>
+                </div>
+                <div class="tl-item reveal">
+                    <div class="tl-tag">Active — Development</div>
+                    <h3>PMBedrock Plus の開発</h3>
+                    <p>PocketMine-MPでVanillaの機能をほぼすべて再現するプラグイン。バニラとのギャップを埋め、Bedrockサーバーの可能性を無限に広げる。</p>
+                    <div class="tl-chips"><span class="tl-chip">PHP</span><span class="tl-chip">PMMP</span><span
+                            class="tl-chip">Vanilla Parity</span></div>
+                </div>
+                <div class="tl-item reveal">
+                    <div class="tl-tag">Active — Research</div>
+                    <h3>Hentai Anticheat の開発</h3>
+                    <p>Minecraft Bedrockにおける非常に高度な多角的検知力を備えたアンチチートシステム。独自のアルゴリズムで複数の不正検知を実現。</p>
+                    <div class="tl-chips"><span class="tl-chip">PHP</span><span class="tl-chip">PMMP</span><span
+                            class="tl-chip">Anticheat</span></div>
+                </div>
+                <div class="tl-item tl-item-r reveal">
+                    <div class="tl-tag">Former — Retired</div>
+                    <h3>Feather Network の運営・開発</h3>
+                    <p>Feather
+                        NetworkのOwnerとして、開発、運営をメンバーと共に乗り越えてきました。<br>これは私にとって多くの経験とノウハウを積んだ原点となるプロジェクトであり、すべての起源であるFounderのBL41Dさんには感謝しています。
+                    </p>
+                    <div class="tl-chips"><span class="tl-chip">PHP</span><span class="tl-chip">PMMP</span><span
+                            class="tl-chip">Server Management</span></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== ACTIVITY ===== -->
+    <section class="activity-sec" id="activity">
+        <div class="sec-eye reveal">
+            <div>
+                <div class="lbl">Activity</div>
+                <h2>アクティビティ</h2>
+            </div>
+        </div>
+        <div class="activity-grid">
+            <div class="act-card reveal">
+                <div class="act-icon">⚔</div>
+                <h3>PVP</h3>
+                <p>統合版でよくPVPをプレイ、当時力を入れていたZeqaではRanked Fireballで世界2位の実績あり。</p>
+            </div>
+            <div class="act-card reveal reveal-d1">
+                <div class="act-icon">🔧</div>
+                <h3>サーバー開発</h3>
+                <p>PocketMine-MPをベースにした高度なBedrock PVPサーバーの設計・開発が最大の活動。</p>
+            </div>
+            <div class="act-card reveal reveal-d2">
+                <div class="act-icon">🏗</div>
+                <h3>建築</h3>
+                <p>たま~~~に建築もしてます。人工物こそできないが、自然物の再現や景観作りが得意です。</p>
+            </div>
+            <div class="act-card reveal">
+                <div class="act-icon">⛏</div>
+                <h3>Java Survival</h3>
+                <p>Javaエディションでは主にSurvivalモードかCrystalPVPをプレイ。サバイバルって<strong>"序盤は"</strong>楽しいよね</p>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <a href="index.html" class="f-logo">Ditrex<span>MC</span></a>
+                <p>Minecraft Server Developer & PVP Player.<br>PocketMine-MPを中心にBedrock PVPサーバーを開発中。</p>
+            </div>
+            <div class="footer-col">
+                <h4>Navigation</h4>
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="about.html">About</a></li>
+                    <li><a href="projects.html">Projects</a></li>
+                    <li><a href="news.html">News</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>Quick Links</h4>
+                <ul>
+                    <li><a href="#skills">Skills</a></li>
+                    <li><a href="#timeline">Timeline</a></li>
+                    <li><a href="#activity">Activity</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-btm">
+            <span>© 2026 DitrexMC. All rights reserved.</span>
+            <span>Minecraft Server Developer</span>
+        </div>
+    </footer>
+
+    <script>
+        const canvas = document.getElementById('canvas'), ctx = canvas.getContext('2d');
+        let W, H;
+        function sizeCv() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+        sizeCv(); window.addEventListener('resize', sizeCv);
+        class P { constructor() { this.r(); } r() { this.x = Math.random() * W; this.y = Math.random() * H; this.vx = (Math.random() - .5) * .5; this.vy = (Math.random() - .5) * .5; this.s = Math.random() * 1.8 + .7; this.a = Math.random() * .55 + .22; } u() { this.x += this.vx; this.y += this.vy; if (this.x < 0 || this.x > W || this.y < 0 || this.y > H) this.r(); } d() { ctx.beginPath(); ctx.arc(this.x, this.y, this.s, 0, Math.PI * 2); ctx.fillStyle = `rgba(59,130,246,${this.a})`; ctx.fill(); } }
+        const pts = Array.from({ length: 85 }, () => new P());
+        function ln() { for (let i = 0; i < pts.length; i++)for (let j = i + 1; j < pts.length; j++) { const dx = pts[i].x - pts[j].x, dy = pts[i].y - pts[j].y, d = Math.sqrt(dx * dx + dy * dy); if (d < 130) { ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y); ctx.lineTo(pts[j].x, pts[j].y); ctx.strokeStyle = `rgba(59,130,246,${.2 * (1 - d / 130)})`; ctx.lineWidth = 1.1; ctx.stroke(); } } }
+        function anim() { ctx.clearRect(0, 0, W, H); pts.forEach(p => { p.u(); p.d(); }); ln(); requestAnimationFrame(anim); } anim();
+
+        const revEls = document.querySelectorAll('.reveal');
+        const io = new IntersectionObserver(entries => { entries.forEach((e, i) => { if (e.isIntersecting) { setTimeout(() => e.target.classList.add('visible'), i * 80); io.unobserve(e.target); } }); }, { threshold: .12 });
+        revEls.forEach(el => io.observe(el));
+
+        const fills = document.querySelectorAll('.skill-fill');
+        const sio = new IntersectionObserver(entries => { entries.forEach(e => { if (e.isIntersecting) { e.target.style.transform = `scaleX(${e.target.dataset.w})`; sio.unobserve(e.target); } }); }, { threshold: .3 });
+        fills.forEach(f => sio.observe(f));
+
+        document.querySelectorAll('.act-card').forEach(card => {
+            card.addEventListener('mousemove', e => { const r = card.getBoundingClientRect(); const dx = (e.clientX - r.left - r.width / 2) / (r.width / 2); const dy = (e.clientY - r.top - r.height / 2) / (r.height / 2); card.style.transition = 'transform .08s'; card.style.transform = `perspective(700px) rotateY(${dx * 2}deg) rotateX(${-dy * 2}deg) translateY(-4px)`; });
+            card.addEventListener('mouseleave', () => { card.style.transition = 'transform .4s ease'; card.style.transform = ''; });
+        });
+    </script>
+</body>
+
+</html>

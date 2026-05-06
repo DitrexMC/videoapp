@@ -1,0 +1,1429 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DitrexMC</title>
+    <link rel="icon" href="../images/ditrexmc_icon.png" type="image/png">
+    <!-- Google Fonts: 本文・コード用 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700;900&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked@13/marked.min.js"></script>
+    <style>
+        :root {
+            /* === Base Colors === */
+            --accent: #1d4ed8;
+            --accent2: #3b82f6;
+            --accent3: #60a5fa;
+            --gold: #f0b429;
+            --gold-glow: rgba(240, 180, 41, .45);
+            --green: #22c55e;
+            --red: #ef4444;
+            --orange: #f97316;
+            --bg: #0f1117;
+            --bg2: #141924;
+            --bg3: #1c2438;
+            --text: #e2e8f0;
+            --text-sub: #94a3b8;
+            --border: rgba(59, 130, 246, .15);
+
+            /* === Dynamic (JS overwrites per type) === */
+            --type-color: var(--accent2);
+            --type-glow: rgba(59, 130, 246, .3);
+            --type-bg: rgba(59, 130, 246, .07);
+        }
+
+        /* === Type Themes === */
+        body[data-type="Update"] {
+            --type-color: var(--green);
+            --type-glow: rgba(34, 197, 94, .3);
+            --type-bg: rgba(34, 197, 94, .06);
+        }
+
+        body[data-type="Guide"] {
+            --type-color: var(--gold);
+            --type-glow: var(--gold-glow);
+            --type-bg: rgba(240, 180, 41, .07);
+        }
+
+        body[data-type="Note"] {
+            --type-color: #94a3b8;
+            --type-glow: rgba(148, 163, 184, .2);
+            --type-bg: rgba(148, 163, 184, .05);
+        }
+
+        body[data-type="Danger"] {
+            --type-color: var(--red);
+            --type-glow: rgba(239, 68, 68, .3);
+            --type-bg: rgba(239, 68, 68, .06);
+        }
+
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+            scroll-padding-top: 90px;
+        }
+
+        /* スクロールバー */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(59, 130, 246, .3);
+            border-radius: 99px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(59, 130, 246, .6);
+        }
+
+        body {
+            font-family: 'Inter', 'Noto Sans JP', 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            overflow-x: hidden;
+        }
+
+        #canvas {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* === NAV === */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 200;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 5vw;
+            height: 64px;
+            background: rgba(15, 17, 23, .97);
+            border-bottom: 1px solid var(--border);
+            transition: box-shadow .3s;
+        }
+
+        nav.scrolled {
+            box-shadow: 0 4px 24px rgba(0, 0, 0, .4);
+        }
+
+        .nav-logo {
+            font-size: 1.4rem;
+            font-weight: 900;
+            letter-spacing: -.5px;
+            color: var(--accent2);
+            text-decoration: none;
+            text-shadow: 0 0 16px rgba(59, 130, 246, .5);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-logo img {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+        }
+
+        .nav-logo>span span {
+            color: var(--text);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+            align-items: center;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--text-sub);
+            font-weight: 600;
+            font-size: .88rem;
+            letter-spacing: .5px;
+            text-transform: uppercase;
+            position: relative;
+            padding-bottom: 2px;
+            transition: color .2s;
+        }
+
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            right: 0;
+            height: 1.5px;
+            background: var(--accent2);
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform .25s;
+        }
+
+        .nav-links a:hover {
+            color: var(--text);
+        }
+
+        .nav-links a:hover::after {
+            transform: scaleX(1);
+        }
+
+        /* ハンバーガーボタン (モバイル) */
+        .nav-hamburger {
+            display: none;
+            flex-direction: column;
+            gap: 5px;
+            cursor: pointer;
+            padding: 4px;
+        }
+
+        .nav-hamburger span {
+            display: block;
+            width: 22px;
+            height: 2px;
+            background: var(--text-sub);
+            border-radius: 2px;
+            transition: .25s;
+        }
+
+        .nav-hamburger.open span:nth-child(1) {
+            transform: translateY(7px) rotate(45deg);
+        }
+
+        .nav-hamburger.open span:nth-child(2) {
+            opacity: 0;
+        }
+
+        .nav-hamburger.open span:nth-child(3) {
+            transform: translateY(-7px) rotate(-45deg);
+        }
+
+        .nav-mobile-menu {
+            display: none;
+            position: fixed;
+            top: 64px;
+            left: 0;
+            right: 0;
+            background: rgba(15, 17, 23, .97);
+            border-bottom: 1px solid var(--border);
+            z-index: 199;
+            padding: 1.5rem 5vw;
+            flex-direction: column;
+            gap: 1.2rem;
+        }
+
+        .nav-mobile-menu.open {
+            display: flex;
+        }
+
+        .nav-mobile-menu a {
+            color: var(--text-sub);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1rem;
+            text-transform: uppercase;
+        }
+
+        /* === BANNER === */
+        .page-banner {
+            position: relative;
+            z-index: 1;
+            padding: 110px 5vw 64px;
+            overflow: hidden;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg2);
+        }
+
+        /* タイプ別グローライン */
+        .page-banner::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--type-color), transparent);
+            opacity: .6;
+        }
+
+        .page-banner::before {
+            content: '';
+            position: absolute;
+            top: -20%;
+            right: -5%;
+            width: 55vw;
+            height: 160%;
+            background: radial-gradient(ellipse at 80% 50%, var(--type-bg) 0%, transparent 65%),
+                linear-gradient(135deg, var(--bg3) 0%, transparent 60%);
+            clip-path: polygon(18% 0%, 100% 0%, 100% 100%, 0% 100%);
+        }
+
+        .banner-inner {
+            position: relative;
+            z-index: 2;
+            max-width: 820px;
+            margin-inline: auto;
+        }
+
+        .banner-crumb {
+            font-size: .75rem;
+            color: var(--text-sub);
+            margin-bottom: 1.4rem;
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+            flex-wrap: wrap;
+            letter-spacing: .3px;
+        }
+
+        .banner-crumb a {
+            color: var(--accent2);
+            text-decoration: none;
+            transition: color .2s;
+        }
+
+        .banner-crumb a:hover {
+            color: var(--accent3);
+            text-decoration: underline;
+        }
+
+        .banner-crumb .sep {
+            font-size: .85rem;
+            color: var(--type-color);
+            opacity: .5;
+        }
+
+        .banner-crumb .cur {
+            color: var(--type-color);
+            font-weight: 600;
+        }
+
+        .banner-meta {
+            display: flex;
+            align-items: center;
+            gap: .8rem;
+            margin-bottom: 1.1rem;
+            flex-wrap: wrap;
+        }
+
+        .banner-date {
+            font-size: .78rem;
+            color: var(--text-sub);
+            display: flex;
+            align-items: center;
+            gap: .35rem;
+        }
+
+        .banner-date::before {
+            content: '📅';
+            font-size: .7rem;
+        }
+
+        .banner-readtime {
+            font-size: .78rem;
+            color: var(--text-sub);
+            display: flex;
+            align-items: center;
+            gap: .35rem;
+        }
+
+        .banner-readtime::before {
+            content: '⏱';
+            font-size: .7rem;
+        }
+
+        .banner-title {
+            font-size: clamp(1.9rem, 5vw, 3.4rem);
+            font-weight: 900;
+            letter-spacing: -1.5px;
+            line-height: 1.1;
+            margin-bottom: .6rem;
+            animation: fadeUp .45s ease both;
+            font-family: 'Inter', 'Noto Sans JP', sans-serif;
+        }
+
+        /* サブタイトル */
+        .banner-subtitle {
+            font-size: clamp(.93rem, 2vw, 1.12rem);
+            color: var(--text-sub);
+            margin-bottom: 1.2rem;
+            line-height: 1.7;
+            animation: fadeUp .5s .06s ease both;
+            font-weight: 400;
+        }
+
+        .banner-tags {
+            display: flex;
+            gap: .45rem;
+            flex-wrap: wrap;
+            animation: fadeUp .5s .1s ease both;
+        }
+
+        .pc-status {
+            font-size: .62rem;
+            font-weight: 700;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            padding: 3px 10px;
+            border-radius: 4px;
+            box-shadow: 0 0 8px var(--type-glow);
+        }
+
+        .s-active {
+            background: rgba(34, 197, 94, .1);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, .3);
+        }
+
+        .s-soon {
+            background: rgba(59, 130, 246, .1);
+            color: var(--accent2);
+            border: 1px solid var(--border);
+        }
+
+        .s-done {
+            background: rgba(148, 163, 184, .08);
+            color: var(--text-sub);
+            border: 1px solid rgba(148, 163, 184, .18);
+        }
+
+        .s-guide {
+            background: rgba(240, 180, 41, .1);
+            color: var(--gold);
+            border: 1px solid rgba(240, 180, 41, .3);
+        }
+
+        .s-danger {
+            background: rgba(239, 68, 68, .1);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, .3);
+        }
+
+        .ptag {
+            font-size: .68rem;
+            font-weight: 600;
+            padding: 2px 10px;
+            border-radius: 4px;
+            background: var(--bg3);
+            color: var(--text-sub);
+            border: 1px solid rgba(148, 163, 184, .12);
+            cursor: default;
+            transition: color .2s, border-color .2s;
+        }
+
+        .ptag:hover {
+            color: var(--type-color);
+            border-color: var(--type-color);
+        }
+
+        /* === LAYOUT === */
+        main {
+            position: relative;
+            z-index: 1;
+            padding: 60px 5vw 100px;
+        }
+
+        .main-layout {
+            max-width: 1100px;
+            margin-inline: auto;
+            display: grid;
+            grid-template-columns: 1fr 240px;
+            gap: 3.5rem;
+            align-items: start;
+        }
+
+        .content-inner {
+            min-width: 0;
+            /* グリッド内でのテキストはみ出し防止 */
+        }
+
+        /* === TOC (目次) === */
+        .toc-sidebar {
+            position: sticky;
+            top: 90px;
+        }
+
+        .toc-box {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1.2rem 1.4rem;
+            font-size: .82rem;
+        }
+
+        .toc-box h3 {
+            font-size: .7rem;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: var(--text-sub);
+            margin-bottom: .9rem;
+            padding-bottom: .6rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .toc-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: .45rem;
+        }
+
+        .toc-list a {
+            text-decoration: none;
+            color: var(--text-sub);
+            transition: color .2s;
+            line-height: 1.5;
+            display: block;
+            padding-left: 0;
+        }
+
+        .toc-list a:hover,
+        .toc-list a.active {
+            color: var(--type-color);
+        }
+
+        .toc-list li.toc-h3 a {
+            padding-left: .9rem;
+            font-size: .78rem;
+        }
+
+        .toc-list li.toc-h4 a {
+            padding-left: 1.8rem;
+            font-size: .74rem;
+            opacity: .75;
+        }
+
+        /* === MARKDOWN STYLES === */
+        .md {
+            font-size: .97rem;
+            line-height: 1.95;
+        }
+
+        /* h1はバナーに表示済 */
+        .md h1 {
+            display: none;
+        }
+
+        .md h2 {
+            font-family: 'Inter', 'Noto Sans JP', sans-serif;
+            font-size: clamp(1.2rem, 2.8vw, 1.75rem);
+            font-weight: 800;
+            letter-spacing: -.4px;
+            margin-bottom: .9rem;
+            margin-top: 3rem;
+            padding: .6rem 0 .6rem 1rem;
+            border-left: 3px solid var(--type-color);
+            border-bottom: 1px solid var(--border);
+            box-shadow: inset 0 0 20px var(--type-bg);
+            border-radius: 0 6px 0 0;
+            background: linear-gradient(90deg, var(--type-bg) 0%, transparent 50%);
+        }
+
+        /* アンカーリンク */
+        .md h2,
+        .md h3,
+        .md h4 {
+            position: relative;
+            scroll-margin-top: 90px;
+        }
+
+        .md h2 .anchor,
+        .md h3 .anchor,
+        .md h4 .anchor {
+            opacity: 0;
+            margin-left: .5rem;
+            color: var(--type-color);
+            text-decoration: none;
+            font-size: .7em;
+            font-weight: 400;
+            transition: opacity .2s;
+        }
+
+        .md h2:hover .anchor,
+        .md h3:hover .anchor,
+        .md h4:hover .anchor {
+            opacity: .6;
+        }
+
+        .md h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: .65rem;
+            margin-top: 2.2rem;
+            color: var(--accent3);
+        }
+
+        .md h4 {
+            font-size: .97rem;
+            font-weight: 700;
+            margin-bottom: .45rem;
+            margin-top: 1.6rem;
+            color: var(--text-sub);
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            font-size: .82rem;
+        }
+
+        .md p {
+            color: var(--text-sub);
+            margin-bottom: 1.2rem;
+        }
+
+        .md strong {
+            color: var(--text);
+        }
+
+        .md em {
+            color: var(--accent3);
+            font-style: italic;
+        }
+
+        /* ==ハイライト== (mark) */
+        .md mark {
+            background: linear-gradient(90deg, rgba(240, 180, 41, .25), rgba(240, 180, 41, .1));
+            color: var(--gold);
+            padding: 1px 4px;
+            border-radius: 3px;
+            font-weight: 600;
+        }
+
+        .md ul,
+        .md ol {
+            padding-left: 1.5rem;
+            margin-bottom: 1.2rem;
+        }
+
+        .md li {
+            color: var(--text-sub);
+            margin-bottom: .3rem;
+            line-height: 1.85;
+        }
+
+        .md li strong {
+            color: var(--text);
+        }
+
+        /* チェックリスト */
+        .md li.task-item {
+            list-style: none;
+            margin-left: -1.5rem;
+            display: flex;
+            align-items: flex-start;
+            gap: .5rem;
+        }
+
+        .md li.task-item input[type="checkbox"] {
+            margin-top: .35rem;
+            accent-color: var(--type-color);
+            width: 13px;
+            height: 13px;
+        }
+
+        /* インラインコード */
+        .md code {
+            font-family: 'JetBrains Mono', 'Consolas', monospace;
+            font-size: .83em;
+            background: var(--bg3);
+            color: var(--accent3);
+            padding: 2px 7px;
+            border-radius: 5px;
+            border: 1px solid var(--border);
+            letter-spacing: -.2px;
+        }
+
+        /* ++キーボード++ */
+        .md kbd {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: .78em;
+            background: var(--bg3);
+            color: var(--text);
+            padding: 2px 8px;
+            border-radius: 5px;
+            border: 1px solid rgba(148, 163, 184, .3);
+            border-bottom: 2px solid rgba(148, 163, 184, .4);
+            box-shadow: 0 2px 0 rgba(0, 0, 0, .4);
+        }
+
+        /* === コードブロック === */
+        .md pre {
+            position: relative;
+            background: #0d1117;
+            border: 1px solid rgba(59, 130, 246, .2);
+            border-radius: 12px;
+            padding: 1.5rem;
+            overflow-x: auto;
+            margin-bottom: 1.6rem;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, .3);
+        }
+
+        /* 言語バッジ */
+        .md pre[data-lang]::before {
+            content: attr(data-lang);
+            position: absolute;
+            top: 8px;
+            right: 50px;
+            font-size: .62rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: var(--text-sub);
+            opacity: .6;
+        }
+
+        /* コピーボタン */
+        .code-copy {
+            position: absolute;
+            top: 8px;
+            right: 10px;
+            background: rgba(59, 130, 246, .15);
+            border: 1px solid rgba(59, 130, 246, .25);
+            border-radius: 5px;
+            color: var(--text-sub);
+            font-size: .7rem;
+            padding: 2px 8px;
+            cursor: pointer;
+            transition: background .2s, color .2s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .code-copy:hover {
+            background: rgba(59, 130, 246, .3);
+            color: var(--text);
+        }
+
+        .code-copy.copied {
+            color: #22c55e;
+            border-color: rgba(34, 197, 94, .3);
+        }
+
+        .md pre code {
+            background: none;
+            border: none;
+            padding: 0;
+            color: #a8d8ff;
+            font-size: .87rem;
+            line-height: 1.75;
+            font-family: 'JetBrains Mono', 'Consolas', monospace;
+        }
+
+        /* 引用 */
+        .md blockquote {
+            border-left: 3px solid var(--type-color);
+            padding: .9rem 1.3rem;
+            background: var(--type-bg);
+            border-radius: 0 10px 10px 0;
+            margin-bottom: 1.3rem;
+            position: relative;
+        }
+
+        .md blockquote p {
+            margin-bottom: 0;
+        }
+
+        .md a {
+            color: var(--accent2);
+            text-decoration: underline;
+            text-decoration-color: rgba(59, 130, 246, .3);
+            transition: color .2s, text-decoration-color .2s;
+        }
+
+        .md a:hover {
+            color: var(--accent3);
+            text-decoration-color: rgba(96, 165, 250, .6);
+        }
+
+        .md hr {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 2.8rem 0;
+            position: relative;
+        }
+
+        .md hr::after {
+            content: '✦';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--bg);
+            padding: 0 .8rem;
+            color: var(--type-color);
+            font-size: .8rem;
+        }
+
+        /* テーブル */
+        .md .table-wrap {
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+        }
+
+        .md table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: .9rem;
+        }
+
+        .md th {
+            background: var(--bg3);
+            color: var(--text);
+            font-weight: 700;
+            padding: .7rem 1rem;
+            border-bottom: 1px solid rgba(59, 130, 246, .2);
+            text-align: left;
+            font-size: .82rem;
+            letter-spacing: .3px;
+        }
+
+        .md td {
+            padding: .65rem 1rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-sub);
+        }
+
+        .md tr:last-child td {
+            border-bottom: none;
+        }
+
+        .md tr:hover td {
+            background: rgba(59, 130, 246, .04);
+        }
+
+        .md img {
+            max-width: 100%;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, .3);
+        }
+
+        /* === カスタムブロック (:::type) === */
+        .admonition {
+            border-radius: 10px;
+            padding: 1rem 1.3rem;
+            margin-bottom: 1.4rem;
+            border-left: 3px solid;
+        }
+
+        .admonition-title {
+            font-weight: 700;
+            font-size: .8rem;
+            letter-spacing: .8px;
+            text-transform: uppercase;
+            margin-bottom: .5rem;
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+        }
+
+        .admonition p {
+            margin-bottom: 0;
+            color: inherit;
+            opacity: .85;
+        }
+
+        .admonition.info {
+            background: rgba(59, 130, 246, .07);
+            border-color: var(--accent2);
+            color: var(--accent3);
+        }
+
+        .admonition.warning {
+            background: rgba(249, 115, 22, .07);
+            border-color: var(--orange);
+            color: var(--orange);
+        }
+
+        .admonition.success {
+            background: rgba(34, 197, 94, .06);
+            border-color: var(--green);
+            color: var(--green);
+        }
+
+        .admonition.danger {
+            background: rgba(239, 68, 68, .07);
+            border-color: var(--red);
+            color: var(--red);
+        }
+
+        .admonition.note {
+            background: rgba(148, 163, 184, .06);
+            border-color: #94a3b8;
+            color: #94a3b8;
+        }
+
+        /* === フォントクラス (font:mono, font:jp など) === */
+        .f-mono {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: .92em;
+        }
+
+        .f-jp {
+            font-family: 'Noto Sans JP', sans-serif;
+        }
+
+        .f-lg {
+            font-size: 1.1em;
+        }
+
+        .f-sm {
+            font-size: .88em;
+        }
+
+        .f-xs {
+            font-size: .72em;
+        }
+
+        .f-xl {
+            font-size: 1.4em;
+        }
+
+        /* -# small text line */
+        .text-sub-line {
+            font-size: .8rem;
+            color: var(--text-sub);
+            opacity: .8;
+            margin-bottom: .7rem;
+        }
+
+        /* 文字揃え */
+        .align-center,
+        .align-center p {
+            text-align: center;
+        }
+
+        .align-right,
+        .align-right p {
+            text-align: right;
+        }
+
+        /* === グロー文字 (==text== で mark, 専用クラスでテキストグロー) === */
+        .glow-blue {
+            color: var(--accent2);
+            text-shadow: 0 0 14px rgba(59, 130, 246, .7);
+        }
+
+        .glow-green {
+            color: var(--green);
+            text-shadow: 0 0 14px rgba(34, 197, 94, .7);
+        }
+
+        .glow-gold {
+            color: var(--gold);
+            text-shadow: 0 0 14px rgba(240, 180, 41, .7);
+        }
+
+        /* === スポイラー (>! text !<) === */
+        .spoiler {
+            background: var(--bg3);
+            color: transparent;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: color .25s, background .25s;
+            padding: 1px 4px;
+            user-select: none;
+        }
+
+        .spoiler.revealed {
+            color: var(--text);
+            background: rgba(59, 130, 246, .1);
+        }
+
+        /* === バナー画像 (image: で任意表示) === */
+        .banner-img {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 45%;
+            height: 100%;
+            z-index: 1;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .banner-img img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: .3;
+            -webkit-mask-image: linear-gradient(to left, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.9) 50%, rgba(0, 0, 0, 0.9) 50%, rgba(0, 0, 0, 0.9) 50%, transparent 100%);
+            mask-image: linear-gradient(to left, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.9) 50%, rgba(0, 0, 0, 0.9) 50%, rgba(0, 0, 0, 0.9) 50%, transparent 100%);
+        }
+
+        footer {
+            position: relative;
+            z-index: 1;
+            background: var(--bg2);
+            border-top: 1px solid var(--border);
+            padding: 3rem 5vw 1.5rem;
+        }
+
+        .footer-inner {
+            max-width: 1100px;
+            margin-inline: auto;
+            display: grid;
+            grid-template-columns: 1.5fr 1fr 1fr;
+            gap: 3rem;
+            margin-bottom: 2rem;
+        }
+
+        .f-logo {
+            font-size: 1.4rem;
+            font-weight: 900;
+            color: var(--accent2);
+            text-decoration: none;
+            display: block;
+            margin-bottom: .5rem;
+            text-shadow: 0 0 16px rgba(59, 130, 246, .4);
+        }
+
+        .f-logo span {
+            color: var(--text);
+        }
+
+        .footer-brand p {
+            font-size: .82rem;
+            color: var(--text-sub);
+            line-height: 1.7;
+        }
+
+        .footer-col h4 {
+            font-size: .68rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--text-sub);
+            margin-bottom: .8rem;
+        }
+
+        .footer-col ul {
+            list-style: none;
+        }
+
+        .footer-col ul li {
+            margin-bottom: .5rem;
+        }
+
+        .footer-col ul li a {
+            text-decoration: none;
+            color: var(--text-sub);
+            font-size: .85rem;
+            transition: color .2s;
+        }
+
+        .footer-col ul li a:hover {
+            color: var(--text);
+        }
+
+        .footer-btm {
+            max-width: 1100px;
+            margin-inline: auto;
+            border-top: 1px solid var(--border);
+            padding-top: 1.2rem;
+            display: flex;
+            justify-content: space-between;
+            font-size: .78rem;
+            color: var(--text-sub);
+        }
+
+        /* === ANIMATIONS === */
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(18px);
+            }
+
+            to {
+                opacity: 1;
+                transform: none;
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: none;
+            }
+        }
+
+        /* === RESPONSIVE === */
+        @media(max-width: 1024px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .toc-sidebar {
+                display: none;
+            }
+        }
+
+        @media(max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+
+            .nav-hamburger {
+                display: flex;
+            }
+
+            .banner-title {
+                letter-spacing: -.8px;
+            }
+
+            .footer-inner {
+                grid-template-columns: 1fr;
+            }
+
+            .banner-img {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="canvas"></canvas>
+
+    <nav id="mainNav">
+        <a href="../index.html" class="nav-logo">
+            <img src="../images/ditrexmc_icon.png" alt="Logo">
+            <span>Ditrex<span>MC</span></span>
+        </a>
+        <ul class="nav-links">
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="../about.html">About</a></li>
+            <li><a href="../projects.html">Projects</a></li>
+            <li><a href="../news.html">News</a></li>
+        </ul>
+        <div class="nav-hamburger" id="hamburger" onclick="toggleMenu()" aria-label="メニュー">
+            <span></span><span></span><span></span>
+        </div>
+    </nav>
+
+    <div class="nav-mobile-menu" id="mobileMenu">
+        <a href="../index.html" onclick="toggleMenu()">Home</a>
+        <a href="../about.html" onclick="toggleMenu()">About</a>
+        <a href="../projects.html" onclick="toggleMenu()">Projects</a>
+        <a href="../news.html" onclick="toggleMenu()">News</a>
+    </div>
+
+    <div class="page-banner">
+        <div class="banner-img" id="bannerImg" style="display:none"></div>
+        <div class="banner-inner">
+            <div class="banner-crumb">
+                <a href="../index.html">Home</a>
+                <span class="sep">›</span>
+                <a href="../index.html#information">Information</a>
+                <span class="sep">›</span>
+                <span id="crumbType" class="cur">...</span>
+                <span class="sep">›</span>
+                <span id="crumbTitle" class="cur">...</span>
+            </div>
+            <div class="banner-meta">
+                <span class="pc-status s-soon" id="bannerType">...</span>
+                <span class="banner-date" id="bannerDate"></span>
+                <span class="banner-readtime" id="bannerReadtime">Loading...</span>
+            </div>
+            <h1 class="banner-title" id="bannerTitle">Loading...</h1>
+            <p class="banner-subtitle" id="bannerSubtitle" style="display:none"></p>
+            <div class="banner-tags" id="bannerTags"></div>
+        </div>
+    </div>
+
+    <main>
+        <div class="main-layout">
+            <div class="content-inner">
+                <div class="md" id="content"></div>
+            </div>
+            <aside class="toc-sidebar">
+                <div class="toc-box">
+                    <h3>目次</h3>
+                    <ul class="toc-list" id="tocList"></ul>
+                </div>
+            </aside>
+        </div>
+    </main>
+
+    <footer>
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <a href="../index.html" class="f-logo">Ditrex<span>MC</span></a>
+                <p>Minecraft Server Developer & PVP Player.<br>PocketMine-MPを中心にBedrock PVPサーバーを開発中。</p>
+            </div>
+            <div class="footer-col">
+                <h4>Navigation</h4>
+                <ul>
+                    <li><a href="../index.html">Home</a></li>
+                    <li><a href="../about.html">About</a></li>
+                    <li><a href="../projects.html">Projects</a></li>
+                    <li><a href="../news.html">News</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>Information</h4>
+                <ul>
+                    <li><a href="../news.html">記事一覧</a></li>
+                    <li><a href="../index.html#information">最新情報</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-btm">
+            <span>© 2026 DitrexMC. All rights reserved.</span>
+            <span>Minecraft Server Developer</span>
+        </div>
+    </footer>
+
+    <!-- 
+まあ前々から作ろうと思ってたしまあようやく作れてよかったとは思うものの.....
+ほぼほぼAI頼みな上、徹夜で0から作ったってマ？
+普通に考えていまめっちゃ気絶しそうなくらい眠い -->
+    <script id="md-source" type="text/plain">
+---
+title: DitrexMCのwebサイトを作りました！
+image: images/ditrexmc_icon.png
+subtitle: 今後はここでも情報発信していくかもしれません。
+type: News
+date: 2026-04-02
+tags: 新規, webサイト
+---
+
+# DitrexMCのwebサイトを作りました！
+このサイトは、私DitrexMCの情報発信の場として新たに立ち上げたwebサイトです。
+これまではDiscordやGitHubを中心に活動?してきましたが、今後はこちらのサイトでも最新情報やプロジェクトの進捗などを発信していく予定です。
+でも実際継続してできると思う...？ 
+-# (思わないよね)
+
+## このwebサイトでしていきたいこと
+していきたいことって言ってもそんな大層なことじゃなくて
+- 開発中の情報発信
+- プロジェクトの紹介
+
+くらいじゃない？
+
+## さいごに
+短いって？その通り！！（？）
+まあとりませっかく作ったのである程度は運用したいし、やってみたかったので
+
+->今後もこのサイトをよろしくお願いいたします！<-
+    </script>
+
+
+
+    <script>
+        function toggleMenu() {
+            document.getElementById('hamburger').classList.toggle('open');
+            document.getElementById('mobileMenu').classList.toggle('open');
+        }
+        addEventListener('scroll', () => {
+            document.getElementById('mainNav').classList.toggle('scrolled', scrollY > 20);
+        });
+
+        const canvas = document.getElementById('canvas'), ctx = canvas.getContext('2d');
+        let W, H;
+        function sz() { W = canvas.width = innerWidth; H = canvas.height = innerHeight; }
+        sz(); addEventListener('resize', sz);
+        class P {
+            constructor() { this.r(); }
+            r() { this.x = Math.random() * W; this.y = Math.random() * H; this.vx = (Math.random() - .5) * .5; this.vy = (Math.random() - .5) * .5; this.s = Math.random() * 1.8 + .7; this.a = Math.random() * .55 + .22; }
+            u() { this.x += this.vx; this.y += this.vy; if (this.x < 0 || this.x > W || this.y < 0 || this.y > H) this.r(); }
+            d() { ctx.beginPath(); ctx.arc(this.x, this.y, this.s, 0, Math.PI * 2); ctx.fillStyle = `rgba(59,130,246,${this.a})`; ctx.fill(); }
+        }
+        const pts = Array.from({ length: 45 }, () => new P());
+        function ln() {
+            for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) {
+                const dx = pts[i].x - pts[j].x, dy = pts[i].y - pts[j].y, d = Math.sqrt(dx * dx + dy * dy);
+                if (d < 130) { ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y); ctx.lineTo(pts[j].x, pts[j].y); ctx.strokeStyle = `rgba(59,130,246,${.2 * (1 - d / 130)})`; ctx.lineWidth = 1.1; ctx.stroke(); }
+            }
+        }
+        function anim() { ctx.clearRect(0, 0, W, H); pts.forEach(p => { p.u(); p.d(); }); ln(); requestAnimationFrame(anim); } anim();
+
+        function preprocess(src) {
+            src = src.replace(/^:::(\w+)\n([\s\S]*?)^:::/gm, (_, type, inner) => {
+                const t = type.toLowerCase();
+                if (t === 'center') return `<div class="align-center">\n\n${inner.trim()}\n\n</div>\n`;
+                if (t === 'right') return `<div class="align-right">\n\n${inner.trim()}\n\n</div>\n`;
+                if (['sm', 'xs', 'lg', 'xl'].includes(t)) return `<div class="f-${t}">\n\n${inner.trim()}\n\n</div>\n`;
+                const icons = { info: 'ℹ️', warning: '⚠️', success: '✅', danger: '🚨', note: '📝' };
+                const labels = { info: 'Info', warning: 'Warning', success: 'Success', danger: 'Danger', note: 'Note' };
+                return `<div class="admonition ${t}"><div class="admonition-title">${icons[t] || '📌'} ${labels[t] || type}</div>\n\n${inner.trim()}\n\n</div>\n`;
+            });
+            // -# 小さいサブテキスト行
+            src = src.replace(/^-# (.+)$/gm, '<p class="text-sub-line">$1</p>');
+            // インラインフォントサイズ: {xl} {lg} {sm} {xs}
+            src = src.replace(/\{xl\}([\s\S]*?)\{\/xl\}/g, '<span class="f-xl">$1</span>');
+            src = src.replace(/\{lg\}([\s\S]*?)\{\/lg\}/g, '<span class="f-lg">$1</span>');
+            src = src.replace(/\{sm\}([\s\S]*?)\{\/sm\}/g, '<span class="f-sm">$1</span>');
+            src = src.replace(/\{xs\}([\s\S]*?)\{\/xs\}/g, '<span class="f-xs">$1</span>');
+            // インライン揃え: ->text<- = 中央  ->text-> = 右
+            src = src.replace(/^->(.+?)<-$/gm, '<p class="align-center">$1</p>');
+            src = src.replace(/^->(.+?)->$/gm, '<p class="align-right">$1</p>');
+            src = src.replace(/==(.+?)==/g, '<mark>$1</mark>');
+            src = src.replace(/\+\+(.+?)\+\+/g, '<kbd>$1</kbd>');
+            src = src.replace(/>!(.+?)!</g, '<span class="spoiler" onclick="this.classList.toggle(\'revealed\')">$1</span>');
+            return src;
+        }
+
+        function wrapTables(html) {
+            return html.replace(/<table>/g, '<div class="table-wrap"><table>').replace(/<\/table>/g, '</table></div>');
+        }
+
+        marked.use({ breaks: true }); // 単一改行を <br> として認識
+
+        const raw = document.getElementById('md-source').textContent.trim();
+        const fmMatch = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
+
+        let meta = {};
+        let body = raw;
+
+        if (fmMatch) {
+            const fmContent = fmMatch[1];
+            body = fmMatch[2];
+
+            fmContent.split(/\r?\n/).forEach(line => {
+                const colonIndex = line.indexOf(':');
+                if (colonIndex > -1) {
+                    const key = line.slice(0, colonIndex).trim();
+                    const value = line.slice(colonIndex + 1).trim();
+                    meta[key] = value;
+                }
+            });
+        }
+
+        const tc = { Update: 's-active', News: 's-soon', Guide: 's-guide', Note: 's-done', Danger: 's-danger' };
+        const t = meta.type || 'News';
+        document.body.dataset.type = t;
+        const typeEl = document.getElementById('bannerType');
+        typeEl.textContent = t;
+        typeEl.className = 'pc-status ' + (tc[t] || 's-soon');
+        document.getElementById('crumbType').textContent = t;
+
+        document.getElementById('bannerTitle').textContent = meta.title || 'Untitled';
+        document.getElementById('crumbTitle').textContent = meta.title || 'Untitled';
+        document.getElementById('bannerDate').textContent = meta.date || '2026-04-02';
+        document.title = (meta.title || 'Page') + ' — DitrexMC';
+
+        if (meta.subtitle) {
+            const sub = document.getElementById('bannerSubtitle');
+            sub.textContent = meta.subtitle;
+            sub.style.display = '';
+        }
+
+        if (meta.tags) {
+            const tagsContainer = document.getElementById('bannerTags');
+            tagsContainer.innerHTML = '';
+            meta.tags.split(',').forEach(tg => {
+                const s = document.createElement('span');
+                s.className = 'ptag';
+                s.textContent = tg.trim();
+                tagsContainer.appendChild(s);
+            });
+        }
+
+        if (meta.image) {
+            const bannerImg = document.getElementById('bannerImg');
+            const bImg = document.createElement('img');
+            bImg.src = '../' + meta.image;
+            bImg.alt = meta.title || '';
+            bImg.loading = 'lazy';
+            bannerImg.appendChild(bImg);
+            bannerImg.style.display = '';
+        }
+
+        const charCount = body.replace(/\s/g, '').length;
+        const mins = Math.max(1, Math.ceil(charCount / 400));
+        document.getElementById('bannerReadtime').textContent = `約${mins}分`;
+
+        let html = marked.parse(preprocess(body.trim()));
+        html = wrapTables(html);
+        document.getElementById('content').innerHTML = html;
+
+        document.querySelectorAll('.md pre').forEach(pre => {
+            const code = pre.querySelector('code');
+            if (!code) return;
+            const cls = [...code.classList].find(c => c.startsWith('language-'));
+            if (cls) pre.dataset.lang = cls.replace('language-', '');
+            const btn = document.createElement('button');
+            btn.className = 'code-copy';
+            btn.textContent = 'Copy';
+            btn.addEventListener('click', () => {
+                navigator.clipboard.writeText(code.innerText).then(() => {
+                    btn.textContent = 'Copied!';
+                    btn.classList.add('copied');
+                    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+                });
+            });
+            pre.appendChild(btn);
+        });
+
+        const headings = document.querySelectorAll('.md h2, .md h3, .md h4');
+        const tocList = document.getElementById('tocList');
+        headings.forEach((h, i) => {
+            if (!h.id) h.id = 'h-' + i;
+            const hid = h.id;
+            const scrollTo = () => {
+                document.getElementById(hid).scrollIntoView({ behavior: 'smooth', block: 'start' });
+                history.replaceState(null, '', '#' + hid);
+            };
+            const anchor = document.createElement('a');
+            anchor.className = 'anchor';
+            anchor.href = '#' + hid;
+            anchor.textContent = '#';
+            anchor.addEventListener('click', ev => { ev.preventDefault(); scrollTo(); });
+            h.appendChild(anchor);
+            const li = document.createElement('li');
+            li.className = 'toc-' + h.tagName.toLowerCase();
+            const a = document.createElement('a');
+            a.href = '#' + hid;
+            a.textContent = h.textContent.replace(/#$/, '').trim();
+            a.addEventListener('click', ev => { ev.preventDefault(); scrollTo(); });
+            li.appendChild(a);
+            tocList.appendChild(li);
+        });
+
+        if (tocList.children.length > 0) {
+            const obs = new IntersectionObserver(entries => {
+                entries.forEach(e => {
+                    if (e.isIntersecting) {
+                        tocList.querySelectorAll('a').forEach(a => a.classList.remove('active'));
+                        const active = tocList.querySelector(`a[href="#${e.target.id}"]`);
+                        if (active) active.classList.add('active');
+                    }
+                });
+            }, { rootMargin: '-20% 0px -70% 0px' });
+            headings.forEach(h => obs.observe(h));
+        }
+
+
+    </script>
+</body>
+
+</html>
