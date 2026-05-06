@@ -276,7 +276,10 @@
         import { auth } from '/js/core/auth.js';
         import { api } from '/js/core/api.js';
 
-        if (!auth.requireAuth()) throw new Error('redirect');
+        if (!auth.isLoggedIn()) {
+            window.location.replace('/login.html');
+            throw new Error('redirect');
+        }
 
         const me = auth.getUser();
         if (!me) { location.href = '/login.html'; throw new Error('no user'); }

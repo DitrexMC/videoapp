@@ -123,8 +123,8 @@ main {
   position: relative;
 }
 
-.news-search-box::before {
-  content: "🔍";
+.news-search-box {
+  content: "";
   position: absolute;
   left: 0.75rem;
   top: 50%;
@@ -289,30 +289,40 @@ main {
 .news-card.has-bg .news-card-desc,
 .news-card.has-bg .news-card-date,
 .news-card.has-bg .news-card-arrow {
-  text-shadow: 0 2px 14px rgba(0,0,0,.85), 0 1px 4px rgba(0,0,0,.5);
+  text-shadow:
+    0 2px 14px rgba(0, 0, 0, 0.85),
+    0 1px 4px rgba(0, 0, 0, 0.5);
 }
 
-.news-card.has-bg .news-card-title  { color: #fff; }
-.news-card.has-bg .news-card-desc   { color: rgba(255,255,255,.85); }
-.news-card.has-bg .news-card-date   { color: rgba(255,255,255,.65); }
+.news-card.has-bg .news-card-title {
+  color: #fff;
+}
+.news-card.has-bg .news-card-desc {
+  color: rgba(255, 255, 255, 0.85);
+}
+.news-card.has-bg .news-card-date {
+  color: rgba(255, 255, 255, 0.65);
+}
 
 .news-card.has-bg .news-tag {
-  background: rgba(255,255,255,.1);
-  border-color: rgba(255,255,255,.18);
-  color: rgba(255,255,255,.9);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(6px);
   text-shadow: none;
 }
 
 .news-card.has-bg .news-badge {
-  background: rgba(255,255,255,.12) !important;
-  border-color: rgba(255,255,255,.2) !important;
-  color: rgba(255,255,255,.95) !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: rgba(255, 255, 255, 0.95) !important;
   backdrop-filter: blur(8px);
   text-shadow: none;
 }
 
-.news-card.has-bg:hover .news-card-arrow { color: #fff; }
+.news-card.has-bg:hover .news-card-arrow {
+  color: #fff;
+}
 
 /* Card body */
 .news-card-body {

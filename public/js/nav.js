@@ -51,15 +51,6 @@ function updateActiveNav(url) {
   });
 }
 
-function runScripts(container) {
-  container.querySelectorAll('script').forEach(old => {
-    const s = document.createElement('script');
-    for (const attr of old.attributes) s.setAttribute(attr.name, attr.value);
-    s.textContent = old.textContent;
-    old.replaceWith(s);
-  });
-}
-
 function updatePage(html, url) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, 'text/html');
@@ -71,32 +62,32 @@ function updatePage(html, url) {
   const newMain = doc.querySelector('main');
   if (!oldMain || !newMain) return;
 
-  // Extract scripts before moving newMain into live DOM
-  const scripts = newMain.querySelectorAll('script');
+  // Collect page-specific inline scripts from the fetched body.
+  // Only scripts without src (inline) are re-executed — global scripts
+  // (nav.js, particles.js, etc.) are already running and must not re-execute.
+  const scriptDefs = [];
+  doc.body.querySelectorAll('script').forEach(s => {
+    if (!s.src && s.textContent.trim()) {
+      scriptDefs.push({ text: s.textContent, type: s.type || '' });
+    }
+  });
+
+  // Replace main content
   oldMain.replaceWith(newMain);
 
-  // Re-execute inline scripts
-  scripts.forEach(old => {
+  // Re-execute page-specific inline scripts (attach to body so they run)
+  scriptDefs.forEach(def => {
     const s = document.createElement('script');
-    for (const attr of old.attributes) s.setAttribute(attr.name, attr.value);
-    s.textContent = old.textContent;
+    if (def.type) s.type = def.type;
+    s.textContent = def.text;
     document.body.appendChild(s);
   });
 
-  // Re-observe reveal elements
+  // Re-observe reveal elements for new content
   if (window.__revealObserver) {
     document.querySelectorAll('.reveal:not(.visible)').forEach(el => {
       window.__revealObserver.observe(el);
     });
-  }
-
-  // Re-init nav scroll shadow (may have been in old main)
-  const nav = document.getElementById('nav');
-  if (nav && !nav._scrollBound) {
-    nav._scrollBound = true;
-    const update = () => nav.classList.toggle('scrolled', window.scrollY > 10);
-    window.addEventListener('scroll', update, { passive: true });
-    update();
   }
 }
 
@@ -134,6 +125,9 @@ async function navigate(url, pushState = true) {
   }
 
   if (direction) document.documentElement.setAttribute('data-nav-dir', direction);
+
+  // Suppress fadeUp on the new main content during and after transition
+  document.documentElement.classList.add('vt-navigated');
 
   try {
     const transition = document.startViewTransition(() => updatePage(html, href));

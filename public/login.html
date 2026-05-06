@@ -167,7 +167,7 @@
         import { auth } from '/js/core/auth.js';
         import { api } from '/js/core/api.js';
 
-        auth.requireGuest('/files.html');
+        auth.requireGuest('/');
 
         const form = document.getElementById('login-form');
         const tokenEl = document.getElementById('token-input');
@@ -177,7 +177,7 @@
 
         function finishLogin(result) {
             auth.setSession(result.sessionToken ?? result.session_token, result.user, true);
-            window.location.href = '/files.html';
+            window.location.href = '/';
         }
 
         function setLoadingState(isLoading) {

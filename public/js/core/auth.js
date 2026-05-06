@@ -92,9 +92,9 @@ export const auth = {
   },
 
   /**
-   * Guard: redirect to files if already authenticated.
+   * Guard: redirect to home if already authenticated.
    */
-  requireGuest(nextPath = '/files.html') {
+  requireGuest(nextPath = '/') {
     if (this.isLoggedIn()) {
       window.location.href = nextPath;
       return false;
