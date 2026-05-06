@@ -87,6 +87,14 @@ export async function createApp(config: AppConfig): Promise<FastifyInstance> {
     status: "ok",
   }));
 
+  app.get("/config", async () => {
+    const p = runtime.policyRepository.findPolicies();
+    return {
+      defaultFileExpiryDays: p.defaultFileExpiryDays,
+      maxFileExpiryDays: p.maxFileExpiryDays,
+    };
+  });
+
   await app.register(staticPlugin, {
     root: resolve(process.cwd(), "public"),
     prefix: "/",

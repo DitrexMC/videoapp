@@ -358,7 +358,9 @@ export class FileApplicationService {
       .replace(/[^a-zA-Z0-9._\-\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]+/g, "_")
       .replace(/_{2,}/g, "_")
       .replace(/^_|_$/g, "");
-    const safeName = ext ? safeBase + ext : safeBase;
+    const alreadyHasExt =
+      ext.length > 0 && safeBase.toLowerCase().endsWith(ext.toLowerCase());
+    const safeName = ext && !alreadyHasExt ? safeBase + ext : safeBase;
 
     this.fileRepository.renameFile(
       file.id,

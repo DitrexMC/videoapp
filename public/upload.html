@@ -29,6 +29,11 @@
             height: 0;
         }
 
+        /* Override app.css ::before — this page uses ::after */
+        .toggle-track::before {
+            display: none;
+        }
+
         .toggle-track {
             position: absolute;
             inset: 0;
@@ -37,6 +42,11 @@
             border-radius: 99px;
             cursor: pointer;
             transition: background .2s;
+        }
+
+        [data-theme="light"] .toggle-track {
+            background: #d1d5db;
+            border-color: #94a3b8;
         }
 
         .toggle-track::after {
@@ -210,6 +220,22 @@
         expirySelect.addEventListener('change', () => {
             customDaysInput.classList.toggle('hidden', expirySelect.value !== 'custom');
         });
+
+        // Load service default expiry and pre-select it
+        fetch('/config').then(r => r.ok ? r.json() : null).then(cfg => {
+            if (!cfg || !cfg.defaultFileExpiryDays) return;
+            const days = cfg.defaultFileExpiryDays;
+            const knownValues = ['1', '7', '30', '90'];
+            if (knownValues.includes(String(days))) {
+                expirySelect.value = String(days);
+            } else {
+                const opt = document.createElement('option');
+                opt.value = String(days);
+                opt.textContent = `${days}日 (デフォルト)`;
+                expirySelect.insertBefore(opt, expirySelect.querySelector('option[value="custom"]'));
+                expirySelect.value = String(days);
+            }
+        }).catch(() => { });
 
         function getExpiryDays() {
             if (expirySelect.value === 'custom') {
@@ -416,15 +442,12 @@
                         : { mode: 'batch', itemCount: totalCount })
                     : undefined;
 
-                // Always set expiry (default 30 days) so BackgroundWorker cleans orphans
-                const resolvedExpiresAt = expiresAt || new Date(Date.now() + 30 * 86400000).toISOString();
-
                 const initPayload = {
                     name: file.name,
                     size: file.size,
                     mime_type: file.type || 'application/octet-stream',
                     public: isPublic,
-                    expiresAt: resolvedExpiresAt,
+                    expiresAt: expiresAt,
                 };
                 if (folderContext) initPayload.folderContext = folderContext;
 

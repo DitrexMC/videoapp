@@ -62,6 +62,7 @@ export async function registerFileRoutes(
 
   const sendFileDetail = (sessionToken: string | null, fileId: string) => {
     const file = runtime.fileService.getFileDetail(sessionToken, fileId);
+    const ownerUser = runtime.identityRepository.findUserById(file.ownerUserId);
 
     return {
       created_at: file.createdAt,
@@ -71,6 +72,7 @@ export async function registerFileRoutes(
       mime_type: file.mimeType,
       name: file.name,
       owner_user_id: file.ownerUserId,
+      owner_username: file.showUploader ? (ownerUser?.username ?? null) : null,
       preview_status: file.previewStatus,
       public: file.public,
       safe_name: file.safeName,

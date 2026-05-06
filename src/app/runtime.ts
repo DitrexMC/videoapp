@@ -23,6 +23,7 @@ export interface AppRuntime {
   database: SqliteDatabase;
   fileService: FileApplicationService;
   identityRepository: SqliteIdentityRepository;
+  policyRepository: SqliteServicePolicyRepository;
   tokenService: TokenService;
   uploadService: UploadApplicationService;
   worker: BackgroundWorker;
@@ -152,6 +153,7 @@ export async function createRuntime(config: AppConfig): Promise<AppRuntime> {
     database,
     fileService,
     identityRepository,
+    policyRepository: servicePolicyRepository,
     tokenService,
     uploadService,
     worker,

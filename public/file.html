@@ -581,7 +581,9 @@
                         try {
                             var ed = new Date(f.expires_at);
                             if (!isNaN(ed.getTime())) {
-                                document.getElementById('owner-expiry-input').value = ed.toISOString().slice(0, 16);
+                                var tzOffset = ed.getTimezoneOffset() * 60000;
+                                var localIso = new Date(ed.getTime() - tzOffset).toISOString().slice(0, 16);
+                                document.getElementById('owner-expiry-input').value = localIso;
                             }
                         } catch (e) { }
                     }
@@ -645,7 +647,7 @@
                     var val = document.getElementById('owner-expiry-input').value;
                     if (!val) return;
                     var ts = new Date(val).getTime();
-                    if (isNaN(ts) || ts <= Date.now()) { alert('\u6709\u52b9\u671f\u9650\u306f\u672a\u6765\u306e\u65e5\u6642\u3092\u6307\u5b9a\u3057\u3066\u304f\u3060\u3055\u3044'); return; }
+                    if (isNaN(ts) || ts < Date.now() - 60000) { alert('\u6709\u52b9\u671f\u9650\u306f\u672a\u6765\u306e\u65e5\u6642\u3092\u6307\u5b9a\u3057\u3066\u304f\u3060\u3055\u3044'); return; }
                     this.disabled = true;
                     var self = this;
                     apiFetch('PATCH', '/files/' + fileId + '/expire', { expiresAt: new Date(ts).toISOString() })
