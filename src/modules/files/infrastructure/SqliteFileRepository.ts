@@ -330,6 +330,22 @@ export class SqliteFileRepository implements FileRepository {
     })();
   }
 
+  renameFile(fileId: string, name: string, safeName: string, updatedAt: string): void {
+    this.connection.prepare(`
+      UPDATE files
+      SET name = ?, safe_name = ?, updated_at = ?
+      WHERE id = ?
+    `).run(name, safeName, updatedAt, fileId);
+  }
+
+  setFileExpiration(fileId: string, expiresAt: string | null, updatedAt: string): void {
+    this.connection.prepare(`
+      UPDATE files
+      SET expires_at = ?, updated_at = ?
+      WHERE id = ?
+    `).run(expiresAt, updatedAt, fileId);
+  }
+
   renameGroup(groupId: string, label: string, updatedAt: string): void {
     this.connection.prepare(`
       UPDATE groups SET label = ?, updated_at = ? WHERE id = ?

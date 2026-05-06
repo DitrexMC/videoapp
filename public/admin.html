@@ -103,10 +103,28 @@
             align-items: center;
             gap: .4rem;
             white-space: nowrap;
+            min-width: 0;
+        }
+
+        .admin-usage-inline .quota-text {
+            font-size: .78rem;
+            color: var(--text-sub);
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .admin-usage-inline .file-count-text {
+            font-size: .72rem;
+            color: var(--text-sub);
+            white-space: nowrap;
+            flex-shrink: 0;
         }
 
         .quota-bar-wrap {
             height: 4px;
+            flex: 1 1 60px;
+            min-width: 40px;
+            max-width: 120px;
             background: var(--bg3);
             border-radius: 2px;
         }
@@ -115,6 +133,35 @@
             height: 100%;
             background: var(--accent3);
             border-radius: 2px;
+        }
+
+        .admin-table {
+            table-layout: fixed;
+        }
+
+        .ellipsis-cell {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .ellipsis-cell strong {
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .fr-user-cell {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        #user-list tr> :first-child {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         .search-row {
@@ -247,12 +294,19 @@
                 </div>
 
                 <div class="table-wrap">
-                    <table class="table">
+                    <table class="table admin-table">
+                        <colgroup>
+                            <col style="width:auto">
+                            <col style="width:6rem">
+                            <col style="width:28rem">
+                            <col style="width:5rem">
+                            <col style="width:10rem">
+                        </colgroup>
                         <thead>
                             <tr>
-                                <th>ユーザー名</th>
+                                <th class="ellipsis-cell">ユーザー名</th>
                                 <th>権限</th>
-                                <th style="min-width:180px">クォータ / 使用量</th>
+                                <th>クォータ / 使用量</th>
                                 <th>状態</th>
                                 <th>操作</th>
                             </tr>
@@ -273,22 +327,31 @@
                     <button class="btn btn-primary" id="file-search-btn">検索</button>
                 </div>
                 <div class="table-wrap">
-                    <table class="table">
+                    <table class="table admin-table">
+                        <colgroup>
+                            <col style="width:2rem">
+                            <col style="width:auto">
+                            <col style="width:8rem">
+                            <col style="width:6rem">
+                            <col style="width:8rem">
+                            <col style="width:8rem">
+                            <col style="width:6rem">
+                        </colgroup>
                         <thead>
                             <tr>
-                                <th class="fr-cb-head">
+                                <th>
                                     <label class="custom-cb"
                                         style="display:inline-flex;align-items:center;justify-content:center;padding:0;margin:0">
                                         <input type="checkbox" id="admin-select-all">
                                         <span class="custom-cb-box"></span>
                                     </label>
                                 </th>
-                                <th class="fr-name-head">ファイル名</th>
-                                <th class="fr-user-head">ユーザー</th>
-                                <th class="fr-size-head">サイズ</th>
-                                <th class="fr-date-head">作成日</th>
-                                <th class="fr-date-head">期限</th>
-                                <th class="fr-action-head">操作</th>
+                                <th class="ellipsis-cell">ファイル名</th>
+                                <th>ユーザー</th>
+                                <th>サイズ</th>
+                                <th>作成日</th>
+                                <th>期限</th>
+                                <th>操作</th>
                             </tr>
                         </thead>
                         <tbody id="admin-file-list">
@@ -439,13 +502,13 @@
                 const usedPct = quota > 0 ? Math.min(100, (used / quota) * 100) : 0;
                 return `
                     <tr>
-                        <td><strong>${esc(u.username)}</strong></td>
+                        <td class="ellipsis-cell" title="${esc(u.username)}"><strong>${esc(u.username)}</strong></td>
                         <td>${u.role === 'admin' ? '<span class="badge badge-gold">admin</span>' : '<span class="badge badge-gray">user</span>'}</td>
                         <td>
                             <div class="admin-usage-inline">
-                                <span style="font-size:.78rem;color:var(--text-sub)">${fmtBytes(used)} / ${fmtBytes(quota)}</span>
-                                <div class="quota-bar-wrap" style="width:96px;min-width:96px"><div class="quota-bar" style="width:${usedPct.toFixed(1)}%"></div></div>
-                                <span style="font-size:.72rem;color:var(--text-sub)">${u.fileCount ?? 0}件</span>
+                                <span class="quota-text">${fmtBytes(used)} / ${fmtBytes(quota)}</span>
+                                <div class="quota-bar-wrap"><div class="quota-bar" style="width:${usedPct.toFixed(1)}%"></div></div>
+                                <span class="file-count-text">${u.fileCount ?? 0}件</span>
                             </div>
                         </td>
                         <td>${u.status === 'active' ? '<span class="badge badge-green">有効</span>' : '<span class="badge badge-red">無効</span>'}</td>
@@ -453,8 +516,8 @@
                             <select class="input admin-action-select" data-id="${esc(u.id)}" data-username="${esc(u.username)}" data-quota="${quota}" data-limit="${u.maxFileSizeBytes ?? 0}" data-status="${u.status}" style="width:auto;min-width:110px;font-size:.75rem;padding:.3rem .5rem">
                                 <option value="">操作...</option>
                                 ${u.status === 'active'
-                                    ? '<option value="deactivate">無効化</option>'
-                                    : '<option value="activate">有効化</option>'}
+                        ? '<option value="deactivate">無効化</option>'
+                        : '<option value="activate">有効化</option>'}
                                 <option value="quota">クォータ変更</option>
                                 <option value="filelimit">ファイル上限変更</option>
                                 <option value="rename">名前変更</option>

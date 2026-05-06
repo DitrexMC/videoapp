@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
-import { createReadStream } from "node:fs";
+import { createReadStream, existsSync } from "node:fs";
 import { stat } from "node:fs/promises";
+import { parseFile } from "music-metadata";
 import { z } from "zod";
 
 import type { AppRuntime } from "../../../app/runtime.js";
@@ -132,6 +133,38 @@ export async function registerFileRoutes(
     return sendFileDetail(sessionToken, params.fileId);
   });
 
+  app.patch("/files/:fileId/rename", async (request, reply) => {
+    const sessionToken = getRequiredBearerToken(request.headers.authorization);
+    const params = z
+      .object({ fileId: z.string().uuid() })
+      .parse(request.params);
+    const body = z.object({ name: z.string().min(1) }).safeParse(request.body);
+
+    if (!body.success) {
+      throw new ValidationError("ファイル名が不正です。", body.error.flatten());
+    }
+
+    runtime.fileService.renameFile(sessionToken, params.fileId, body.data.name);
+
+    return reply.status(204).send();
+  });
+
+  app.patch("/files/:fileId/expire", async (request, reply) => {
+    const sessionToken = getRequiredBearerToken(request.headers.authorization);
+    const params = z
+      .object({ fileId: z.string().uuid() })
+      .parse(request.params);
+    const body = z.object({ expiresAt: z.string().datetime().nullable() }).safeParse(request.body);
+
+    if (!body.success) {
+      throw new ValidationError("expiresAt が不正です。", body.error.flatten());
+    }
+
+    runtime.fileService.setFileExpiration(sessionToken, params.fileId, body.data.expiresAt);
+
+    return reply.status(204).send();
+  });
+
   app.patch("/files/:fileId/public", async (request, reply) => {
     const sessionToken = getRequiredBearerToken(request.headers.authorization);
     const params = z
@@ -140,17 +173,10 @@ export async function registerFileRoutes(
     const body = setVisibilitySchema.safeParse(request.body);
 
     if (!body.success) {
-      throw new ValidationError(
-        "公開設定の入力が不正です。",
-        body.error.flatten(),
-      );
+      throw new ValidationError("公開設定の入力が不正です。", body.error.flatten());
     }
 
-    runtime.fileService.setFileVisibility(
-      sessionToken,
-      params.fileId,
-      body.data.public,
-    );
+    runtime.fileService.setFileVisibility(sessionToken, params.fileId, body.data.public);
 
     return reply.status(204).send();
   });
@@ -265,6 +291,60 @@ export async function registerFileRoutes(
     );
 
     return reply.send(stream);
+  });
+
+  app.get("/files/:fileId/meta", async (request, reply) => {
+    const sessionToken = getOptionalBearerToken(request.headers.authorization);
+    const params = z
+      .object({ fileId: z.string().uuid() })
+      .parse(request.params);
+
+    let file;
+    try {
+      file = runtime.fileService.getFileDetail(sessionToken, params.fileId);
+    } catch {
+      return reply.send({});
+    }
+
+    if (!file || !file.mimeType.startsWith("audio/")) {
+      return reply.send({});
+    }
+
+    if (!file.storagePath || !existsSync(file.storagePath)) {
+      return reply.send({});
+    }
+
+    try {
+      const metadata = await parseFile(file.storagePath, {
+        skipCovers: false,
+        duration: false,
+      });
+      const c = metadata.common;
+      const result: Record<string, unknown> = {
+        title: c.title || null,
+        artist: c.artist || (c.artists ? c.artists.join(", ") : null),
+        album: c.album || null,
+        year: c.year || null,
+        genre: c.genre ? c.genre.join(", ") : null,
+        track:
+          c.track && c.track.no
+            ? String(c.track.no) + (c.track.of ? "/" + c.track.of : "")
+            : null,
+      };
+      if (c.picture && c.picture.length > 0) {
+        const pic = c.picture[0];
+        if (pic) {
+          result.coverArt =
+            "data:" +
+            pic.format +
+            ";base64," +
+            Buffer.from(pic.data).toString("base64");
+        }
+      }
+      return reply.send(result);
+    } catch {
+      return reply.send({});
+    }
   });
 
   app.post("/files/zip", async (request, reply) => {

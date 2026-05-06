@@ -281,6 +281,28 @@ export class FileApplicationService {
     this.fileRepository.renameFolder(folderId, normalizedName, this.clock.nowIsoString());
   }
 
+  renameFile(sessionToken: string, fileId: string, name: string): void {
+    const actor = this.authService.authenticate(sessionToken).user;
+    const file = this.fileRepository.findFileById(fileId);
+    const normalizedName = name.trim();
+
+    if (!file || file.isDeleted) {
+      throw new NotFoundError("ファイルが見つかりません。");
+    }
+
+    if (normalizedName.length === 0) {
+      throw new ValidationError("ファイル名は必須です。");
+    }
+
+    assertCanManageFile(file, actor);
+
+    const ext = file.safeName.includes('.') ? '.' + file.safeName.split('.').pop() : '';
+    const safeBase = normalizedName.replace(/[^a-zA-Z0-9._\-\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]+/g, '_').replace(/_{2,}/g, '_').replace(/^_|_$/g, '');
+    const safeName = ext ? safeBase + ext : safeBase;
+
+    this.fileRepository.renameFile(file.id, normalizedName, safeName, this.clock.nowIsoString());
+  }
+
   removeFile(sessionToken: string, fileId: string): void {
     const actor = this.authService.authenticate(sessionToken).user;
     const file = this.fileRepository.findFileById(fileId);
@@ -306,6 +328,18 @@ export class FileApplicationService {
     }
 
     this.fileRepository.deleteFolder(folderId, this.clock.nowIsoString());
+  }
+
+  setFileExpiration(sessionToken: string, fileId: string, expiresAt: string | null): void {
+    const actor = this.authService.authenticate(sessionToken).user;
+    const file = this.fileRepository.findFileById(fileId);
+
+    if (!file || file.isDeleted) {
+      throw new NotFoundError("ファイルが見つかりません。");
+    }
+
+    assertCanManageFile(file, actor);
+    this.fileRepository.setFileExpiration(file.id, expiresAt, this.clock.nowIsoString());
   }
 
   setFileVisibility(sessionToken: string, fileId: string, isPublic: boolean): void {
