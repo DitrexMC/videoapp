@@ -15,6 +15,7 @@ function onReady(fn) {
 
 // ── SPA Client-side navigation ─────────────────────────────────────────────────
 const pageCache = new Map();
+const cssCache = new Map();
 let navigating = false;
 
 function getDirection(fromPath, toPath) {
@@ -51,33 +52,63 @@ function updateActiveNav(url) {
   });
 }
 
-function updatePage(html, url) {
+// ── Phase 1: fetch + cache CSS (no DOM changes — old page unaffected) ──
+async function preparePage(html, url) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, 'text/html');
+  const baseUrl = new URL(url, location.origin);
 
-  // ── Dynamically load missing stylesheets & scripts from the fetched page ──
   const currentSheets = new Set(
     [...document.querySelectorAll('link[rel="stylesheet"]')].map(l => l.href)
   );
+  document.querySelectorAll('[data-va-sheet]').forEach(el => currentSheets.add(el.getAttribute('data-va-sheet')));
+
+  // Fetch missing CSS, cache it, but do NOT inject yet
+  for (const link of doc.querySelectorAll('link[rel="stylesheet"]')) {
+    const href = new URL(link.getAttribute('href'), baseUrl).href;
+    if (currentSheets.has(href)) continue;
+    if (!cssCache.has(href)) {
+      try {
+        const res = await fetch(href);
+        cssCache.set(href, await res.text());
+      } catch { /* skip on failure */ }
+    }
+  }
+
+  return doc;
+}
+
+// ── Phase 2: all DOM mutations inside VT callback (atomic visual change) ──
+function swapPage(doc, url) {
+  const oldMain = document.querySelector('main');
+  const newMain = doc.querySelector('main');
+  if (!oldMain || !newMain) return false;
+
+  const baseUrl = new URL(url, location.origin);
+
+  // Inject cached CSS as <style> (immediate, no network delay)
+  const currentSheets = new Set(
+    [...document.querySelectorAll('link[rel="stylesheet"]')].map(l => l.href)
+  );
+  document.querySelectorAll('[data-va-sheet]').forEach(el => currentSheets.add(el.getAttribute('data-va-sheet')));
+
+  doc.querySelectorAll('link[rel="stylesheet"]').forEach(link => {
+    const href = new URL(link.getAttribute('href'), baseUrl).href;
+    if (currentSheets.has(href)) return;
+    const cssText = cssCache.get(href);
+    if (!cssText) return;
+    const s = document.createElement('style');
+    s.textContent = cssText;
+    if (link.id) s.id = link.id;
+    s.setAttribute('data-va-sheet', href);
+    document.head.appendChild(s);
+    currentSheets.add(href);
+  });
+
+  // Load missing CDN scripts
   const currentScripts = new Set(
     [...document.querySelectorAll('script[src]')].map(s => s.src)
   );
-  const baseUrl = new URL(url, location.origin);
-
-  // Add missing stylesheets
-  doc.querySelectorAll('link[rel="stylesheet"]').forEach(link => {
-    const href = new URL(link.getAttribute('href'), baseUrl).href;
-    if (!currentSheets.has(href)) {
-      const l = document.createElement('link');
-      l.rel = 'stylesheet';
-      l.href = href;
-      if (link.id) l.id = link.id;
-      if (link.hasAttribute('disabled')) l.disabled = true;
-      document.head.appendChild(l);
-    }
-  });
-
-  // Add missing deferred/async scripts (CDN libs, etc.)
   doc.querySelectorAll('script[src]').forEach(old => {
     const src = new URL(old.getAttribute('src'), baseUrl).href;
     if (!currentScripts.has(src) && src !== location.origin + '/js/nav.js'
@@ -92,19 +123,12 @@ function updatePage(html, url) {
     }
   });
 
-  // ── Replace main content ──
-  document.title = doc.title;
-  // Mirror body classes from the fetched page (e.g. file.html uses preview-binary)
+  // Mirror body class + title
   document.body.className = doc.body.className;
+  document.title = doc.title;
   updateActiveNav(url);
 
-  const oldMain = document.querySelector('main');
-  const newMain = doc.querySelector('main');
-  if (!oldMain || !newMain) return false;
-
-  // Collect page-specific inline scripts from the fetched body.
-  // Only scripts without src (inline) are re-executed — global scripts
-  // (nav.js, particles.js, etc.) are already running and must not re-execute.
+  // Collect inline scripts
   const scriptDefs = [];
   doc.body.querySelectorAll('script').forEach(s => {
     if (!s.src && s.textContent.trim()) {
@@ -112,9 +136,10 @@ function updatePage(html, url) {
     }
   });
 
+  // Swap main
   oldMain.replaceWith(newMain);
 
-  // Re-execute page-specific inline scripts (attach to body so they run)
+  // Execute inline scripts
   scriptDefs.forEach(def => {
     const s = document.createElement('script');
     if (def.type) s.type = def.type;
@@ -122,7 +147,6 @@ function updatePage(html, url) {
     document.body.appendChild(s);
   });
 
-  // Re-observe reveal elements for new content
   if (window.__revealObserver) {
     document.querySelectorAll('.reveal:not(.visible)').forEach(el => {
       window.__revealObserver.observe(el);
@@ -157,7 +181,6 @@ async function navigate(url, pushState = true) {
   }
 
   if (!document.startViewTransition) {
-    // No VT support — fallback to full-page navigation
     if (direction) {
       sessionStorage.setItem('va_nav_dir', direction);
       sessionStorage.setItem('va_vt_nav', '1');
@@ -166,32 +189,34 @@ async function navigate(url, pushState = true) {
     return;
   }
 
+  // Phase 1: pre-fetch CSS (no DOM changes)
+  let doc;
+  try {
+    doc = await preparePage(html, href);
+  } catch {
+    location.href = href;
+    return;
+  }
+
   if (direction) document.documentElement.setAttribute('data-nav-dir', direction);
 
-  // Update URL BEFORE the transition so that inline scripts re-executing
-  // inside startViewTransition see the correct location.* values
-  // (e.g. file.html scripts need location.search for the file ID).
   const oldUrl = location.href;
   if (pushState) {
     history.pushState({ path: u.pathname + u.search, scrollY: 0 }, '', href);
   }
 
-  // Suppress fadeUp on the new main content during and after transition
   document.documentElement.classList.add('vt-navigated');
 
+  // Phase 2: atomic DOM swap inside VT
   try {
     const transition = document.startViewTransition(() => {
-      if (!updatePage(html, href)) {
+      if (!swapPage(doc, href)) {
         throw new Error('no main element');
       }
     });
     await transition.finished;
   } catch {
-    // VT skipped, failed, or updatePage couldn't find <main>.
-    // Revert the URL change, then fallback to full-page navigation.
-    if (pushState) {
-      history.replaceState(null, '', oldUrl);
-    }
+    if (pushState) history.replaceState(null, '', oldUrl);
     location.href = href;
     return;
   }
@@ -203,39 +228,38 @@ async function navigate(url, pushState = true) {
 }
 
 function initSpaNav() {
-  // Intercept same-origin link clicks
   document.addEventListener('click', e => {
-    if (navigating) { e.preventDefault(); return; }
     const link = e.target.closest('a[href]');
     if (!link) return;
     if (link.hasAttribute('download') || link.target === '_blank') return;
     if (e.ctrlKey || e.metaKey || e.shiftKey) return;
 
+    let url;
     try {
-      const url = new URL(link.href, location.origin);
+      url = new URL(link.href, location.origin);
       if (url.origin !== location.origin) return;
-      if (url.pathname === '/login.html') return; // full navigation for login
+      if (url.pathname === '/login.html') return;
       if (url.pathname === location.pathname && url.search === location.search && !url.hash) return;
+    } catch { return; }
 
-      e.preventDefault();
-      navigate(url);
-    } catch {}
+    if (navigating) return;
+
+    e.preventDefault();
+    navigate(url).catch(() => { location.href = url.href; });
   }, true);
 
-  // Preload on hover/pointer
   document.addEventListener('pointerover', e => {
     const link = e.target.closest('a[href]');
     if (link) preload(link.href);
   }, { passive: true });
 
-  // Browser back/forward
   window.addEventListener('popstate', e => {
     if (e.state?.path) {
-      navigate(new URL(e.state.path, location.origin), false);
+      navigate(new URL(e.state.path, location.origin), false)
+        .catch(() => { location.href = e.state.path; });
     }
   });
 
-  // Store initial state for back navigation
   if (!history.state?.path) {
     history.replaceState({ path: location.pathname + location.search, scrollY: 0 }, '', location.href);
   }
