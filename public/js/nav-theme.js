@@ -15,24 +15,24 @@
         document.documentElement.setAttribute('data-nav-dir', dir);
     }
 
-    // PRIMARY: use pagereveal to suppress fadeUp before first paint.
-    // This fires before any CSS animations start, so it reliably prevents
-    // the double-animation (fadeUp + VT slide playing simultaneously).
+    // Arrived via view-transition: suppress fadeUp PERMANENTLY (vt-navigated),
+    // lock scroll temporarily (vt-locked).  vt-navigated is never removed so
+    // that fadeUp cannot re-trigger after viewTransition.finished.
     if ('onpagereveal' in window) {
         window.addEventListener('pagereveal', function (e) {
             if (e.viewTransition) {
-                document.documentElement.classList.add('vt-navigated');
+                document.documentElement.classList.add('vt-navigated', 'vt-locked');
                 e.viewTransition.finished.then(function () {
-                    document.documentElement.classList.remove('vt-navigated');
+                    document.documentElement.classList.remove('vt-locked');
                 });
             }
         });
     } else if (sessionStorage.getItem('va_vt_nav')) {
-        // FALLBACK: for browsers that support @view-transition but not pagereveal
+        // FALLBACK: browsers with @view-transition but no pagereveal
         sessionStorage.removeItem('va_vt_nav');
-        document.documentElement.classList.add('vt-navigated');
+        document.documentElement.classList.add('vt-navigated', 'vt-locked');
         setTimeout(function () {
-            document.documentElement.classList.remove('vt-navigated');
+            document.documentElement.classList.remove('vt-locked');
         }, 600);
     }
 })();

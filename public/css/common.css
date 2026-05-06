@@ -37,6 +37,7 @@
 html {
   scroll-behavior: smooth;
   scroll-padding-top: 80px;
+  scrollbar-gutter: stable;
 }
 
 body {
@@ -1078,6 +1079,21 @@ select.input {
 ::view-transition-new(main-content) {
   animation: 0.22s cubic-bezier(0.22, 1, 0.36, 1) both vt-in;
 }
+/* Clip the top 60px (main's padding-top) from both snapshots.
+   Without this, the opaque snapshot covers the header area (y = 0–60)
+   and hides the fixed nav bar during the transition. */
+::view-transition-old(main-content),
+::view-transition-new(main-content) {
+  clip-path: inset(60px 0 0 0);
+}
+
+/* Prevent the group from interpolating position/size between old and new
+   geometry.  Without this the browser animates width/height/top/left,
+   which adds unintended vertical movement when pages have different
+   main heights.  Only our explicit translateX on old/new is active. */
+::view-transition-group(main-content) {
+  animation: none !important;
+}
 
 html[data-nav-dir="back"] ::view-transition-old(main-content) {
   animation: 0.22s cubic-bezier(0.22, 1, 0.36, 1) both vt-back-out;
@@ -1097,13 +1113,15 @@ html[data-vt-leaving] *::after {
   transition-duration: 0s !important;
 }
 
-/* Lock scroll on incoming page during transition (prevents scrollbar flash) */
-html.vt-navigated,
-html.vt-navigated body {
+/* Lock scroll on incoming page during VT animation (removed when VT finishes) */
+html.vt-locked,
+html.vt-locked body {
   overflow: hidden;
+  scroll-behavior: auto;
 }
 
-/* Suppress page-enter animations during view-transition navigation */
+/* Suppress page-enter animations — stays for the page lifetime.
+   Never removed, so fadeUp cannot re-trigger after VT finishes. */
 html.vt-navigated main,
 html.vt-navigated .viewer-wrap,
 html.vt-navigated .viewer {

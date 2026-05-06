@@ -23,7 +23,8 @@ main, .viewer-wrap {
 }
 
 html.vt-navigated main,
-html.vt-navigated .viewer-wrap {
+html.vt-navigated .viewer-wrap,
+html.vt-navigated .viewer {
   animation:none !important;
 }
 
