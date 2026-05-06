@@ -35,9 +35,9 @@ function preload(url) {
   try {
     const u = new URL(url, location.origin);
     if (u.origin !== location.origin) return;
-    const path = u.pathname;
-    if (pageCache.has(path)) return;
-    fetch(url).then(r => r.text()).then(html => pageCache.set(path, html)).catch(() => {});
+    const cacheKey = u.pathname + u.search;
+    if (pageCache.has(cacheKey)) return;
+    fetch(url).then(r => r.text()).then(html => pageCache.set(cacheKey, html)).catch(() => {});
   } catch {}
 }
 
@@ -55,12 +55,52 @@ function updatePage(html, url) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, 'text/html');
 
+  // ── Dynamically load missing stylesheets & scripts from the fetched page ──
+  const currentSheets = new Set(
+    [...document.querySelectorAll('link[rel="stylesheet"]')].map(l => l.href)
+  );
+  const currentScripts = new Set(
+    [...document.querySelectorAll('script[src]')].map(s => s.src)
+  );
+  const baseUrl = new URL(url, location.origin);
+
+  // Add missing stylesheets
+  doc.querySelectorAll('link[rel="stylesheet"]').forEach(link => {
+    const href = new URL(link.getAttribute('href'), baseUrl).href;
+    if (!currentSheets.has(href)) {
+      const l = document.createElement('link');
+      l.rel = 'stylesheet';
+      l.href = href;
+      if (link.id) l.id = link.id;
+      if (link.hasAttribute('disabled')) l.disabled = true;
+      document.head.appendChild(l);
+    }
+  });
+
+  // Add missing deferred/async scripts (CDN libs, etc.)
+  doc.querySelectorAll('script[src]').forEach(old => {
+    const src = new URL(old.getAttribute('src'), baseUrl).href;
+    if (!currentScripts.has(src) && src !== location.origin + '/js/nav.js'
+        && src !== location.origin + '/js/particles.js'
+        && src !== location.origin + '/js/nav-theme.js') {
+      const s = document.createElement('script');
+      s.src = src;
+      if (old.defer) s.defer = true;
+      if (old.async) s.async = true;
+      if (old.type) s.type = old.type;
+      document.body.appendChild(s);
+    }
+  });
+
+  // ── Replace main content ──
   document.title = doc.title;
+  // Mirror body classes from the fetched page (e.g. file.html uses preview-binary)
+  document.body.className = doc.body.className;
   updateActiveNav(url);
 
   const oldMain = document.querySelector('main');
   const newMain = doc.querySelector('main');
-  if (!oldMain || !newMain) return;
+  if (!oldMain || !newMain) return false;
 
   // Collect page-specific inline scripts from the fetched body.
   // Only scripts without src (inline) are re-executed — global scripts
@@ -72,7 +112,6 @@ function updatePage(html, url) {
     }
   });
 
-  // Replace main content
   oldMain.replaceWith(newMain);
 
   // Re-execute page-specific inline scripts (attach to body so they run)
@@ -89,6 +128,8 @@ function updatePage(html, url) {
       window.__revealObserver.observe(el);
     });
   }
+
+  return true;
 }
 
 async function navigate(url, pushState = true) {
@@ -101,13 +142,14 @@ async function navigate(url, pushState = true) {
   if (u.pathname === location.pathname && u.search === location.search) { navigating = false; return; }
 
   const direction = getDirection(location.pathname, u.pathname);
-  let html = pageCache.get(u.pathname);
+  const cacheKey = u.pathname + u.search;
+  let html = pageCache.get(cacheKey);
   if (!html) {
     try {
       const res = await fetch(href);
       if (!res.ok) throw new Error('fetch failed');
       html = await res.text();
-      pageCache.set(u.pathname, html);
+      pageCache.set(cacheKey, html);
     } catch {
       location.href = href;
       return;
@@ -126,20 +168,36 @@ async function navigate(url, pushState = true) {
 
   if (direction) document.documentElement.setAttribute('data-nav-dir', direction);
 
+  // Update URL BEFORE the transition so that inline scripts re-executing
+  // inside startViewTransition see the correct location.* values
+  // (e.g. file.html scripts need location.search for the file ID).
+  const oldUrl = location.href;
+  if (pushState) {
+    history.pushState({ path: u.pathname + u.search, scrollY: 0 }, '', href);
+  }
+
   // Suppress fadeUp on the new main content during and after transition
   document.documentElement.classList.add('vt-navigated');
 
   try {
-    const transition = document.startViewTransition(() => updatePage(html, href));
+    const transition = document.startViewTransition(() => {
+      if (!updatePage(html, href)) {
+        throw new Error('no main element');
+      }
+    });
     await transition.finished;
-  } catch { /* transition skipped */ }
+  } catch {
+    // VT skipped, failed, or updatePage couldn't find <main>.
+    // Revert the URL change, then fallback to full-page navigation.
+    if (pushState) {
+      history.replaceState(null, '', oldUrl);
+    }
+    location.href = href;
+    return;
+  }
 
   document.documentElement.removeAttribute('data-nav-dir');
   window.scrollTo(0, 0);
-
-  if (pushState) {
-    history.pushState({ path: u.pathname + u.search, scrollY: 0 }, '', href);
-  }
 
   navigating = false;
 }
