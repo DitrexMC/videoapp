@@ -6,6 +6,7 @@ const PAGE_POS = {
   '/upload.html': 1,
   '/files.html': 2,
   '/news.html': 3,
+  '/file.html': 4,
 };
 
 function onReady(fn) {
