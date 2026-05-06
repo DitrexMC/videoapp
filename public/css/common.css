@@ -73,7 +73,7 @@ body {
 }
 
 [data-theme="light"] #canvas {
-  opacity: 0.55;
+  opacity: 0.85;
 }
 
 /* ── Nav (grid: left | center | right) ── */
@@ -1038,12 +1038,25 @@ select.input {
   overflow: hidden;
 }
 
-/* Root snapshots are frozen — no animation, no event capture */
-::view-transition-old(root),
-::view-transition-new(root) {
-  animation: none;
+/* Root snapshots cross-fade for smooth background particles + header transition.
+   Old root fades out, new root fades in — no instant jump/cut. */
+::view-transition-old(root) {
+  animation: 0.25s ease both vt-root-fade-out;
   mix-blend-mode: normal;
   pointer-events: none;
+}
+::view-transition-new(root) {
+  animation: 0.25s ease both vt-root-fade-in;
+  mix-blend-mode: normal;
+  pointer-events: none;
+}
+
+/* Root cross-fade keyframes */
+@keyframes vt-root-fade-out {
+  to { opacity: 0; }
+}
+@keyframes vt-root-fade-in {
+  from { opacity: 0; }
 }
 
 /* Forward: content slides right (old → right, new ← left) */
@@ -1102,15 +1115,11 @@ html[data-nav-dir="back"] ::view-transition-new(main-content) {
   animation: 0.22s cubic-bezier(0.22, 1, 0.36, 1) both vt-back-in;
 }
 
-/* Freeze CSS transitions during snapshot + lock scroll (outgoing page) */
+/* Lock scroll on outgoing page during navigation gap (snapshot already captured).
+   Does NOT freeze CSS transitions — the page stays visually alive. */
 html[data-vt-leaving],
 html[data-vt-leaving] body {
   overflow: hidden !important;
-}
-html[data-vt-leaving] *,
-html[data-vt-leaving] *::before,
-html[data-vt-leaving] *::after {
-  transition-duration: 0s !important;
 }
 
 /* Lock scroll on incoming page during VT animation (removed when VT finishes) */
@@ -1129,14 +1138,8 @@ html.vt-navigated .viewer {
 }
 
 @keyframes fadeUp {
-  from {
-    opacity: 0;
-    transform: translateY(18px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 @keyframes fadeIn {

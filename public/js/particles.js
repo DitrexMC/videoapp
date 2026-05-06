@@ -12,11 +12,12 @@
         return document.documentElement.getAttribute('data-theme') === 'light';
     }
 
+    // Particles use fraction-based positions (0-1) so they scale with viewport
     class P {
         constructor() { this.r(); }
         r() {
-            this.x = Math.random() * W;
-            this.y = Math.random() * H;
+            this.fx = Math.random();
+            this.fy = Math.random();
             this.vx = (Math.random() - .5) * .5;
             this.vy = (Math.random() - .5) * .5;
             this.s = Math.random() * 1.8 + .6;
@@ -24,15 +25,17 @@
             this.pulse = Math.random() * Math.PI * 2;
         }
         u() {
-            this.x += this.vx + Math.sin(time * .002 + this.pulse) * .15;
-            this.y += this.vy + Math.cos(time * .002 + this.pulse) * .15;
-            if (this.x < -20 || this.x > W + 20 || this.y < -20 || this.y > H + 20) this.r();
+            this.fx += (this.vx + Math.sin(time * .002 + this.pulse) * .15) / W;
+            this.fy += (this.vy + Math.cos(time * .002 + this.pulse) * .15) / H;
+            if (this.fx < -.02 || this.fx > 1.02 || this.fy < -.02 || this.fy > 1.02) this.r();
         }
         d() {
-            const alpha = isLight() ? this.a * .45 : this.a;
+            const x = this.fx * W, y = this.fy * H;
+            const alphaMul = isLight() ? .75 : 1;
+            const alpha = this.a * alphaMul;
             const size = this.s + Math.sin(time * .008 + this.pulse) * .3;
             ctx.beginPath();
-            ctx.arc(this.x, this.y, Math.max(.4, size), 0, Math.PI * 2);
+            ctx.arc(x, y, Math.max(.4, size), 0, Math.PI * 2);
             ctx.fillStyle = `rgba(59,130,246,${alpha})`;
             ctx.fill();
         }
@@ -41,19 +44,19 @@
     const pts = Array.from({ length: 200 }, () => new P());
 
     function lines() {
-        const lineAlphaMul = isLight() ? .78 : 1;
+        const lineAlphaMul = isLight() ? .9 : 1;
         const maxDist = 200;
         for (let i = 0; i < pts.length; i++) {
             for (let j = i + 1; j < pts.length; j++) {
-                const dx = pts[i].x - pts[j].x, dy = pts[i].y - pts[j].y;
+                const x1 = pts[i].fx * W, y1 = pts[i].fy * H;
+                const x2 = pts[j].fx * W, y2 = pts[j].fy * H;
+                const dx = x1 - x2, dy = y1 - y2;
                 const d = Math.sqrt(dx * dx + dy * dy);
                 if (d < maxDist) {
-                    const midX = (pts[i].x + pts[j].x) / 2;
-                    const midY = (pts[i].y + pts[j].y) / 2;
                     const scrollFactor = 1 + Math.max(0, 1 - scrollY / 600) * .4;
                     ctx.beginPath();
-                    ctx.moveTo(pts[i].x, pts[i].y);
-                    ctx.lineTo(pts[j].x, pts[j].y);
+                    ctx.moveTo(x1, y1);
+                    ctx.lineTo(x2, y2);
                     ctx.strokeStyle = `rgba(59,130,246,${.15 * lineAlphaMul * scrollFactor * (1 - d / maxDist)})`;
                     ctx.lineWidth = 1;
                     ctx.stroke();

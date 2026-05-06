@@ -77,9 +77,6 @@
             actions.push('<button class="btn btn-ghost btn-sm fr-discord-btn" data-url="/files/' + frEsc(item.id) + '/stream" style="padding:.22rem .55rem;font-size:.74rem;color:#7289da" title="Discord\u5411\u3051\u751fURL\u3092\u30b3\u30d4\u30fc">' + DISCORD_ICON + '<span class="fr-action-label">Discord</span></button>');
             actions.push('<button class="btn btn-ghost btn-sm fr-urlcopy-btn" data-url="/file.html?id=' + frEsc(item.id) + '" style="padding:.22rem .55rem;font-size:.74rem" title="\u30d7\u30ec\u30d3\u30e5\u30fc\u30da\u30fc\u30b8URL\u3092\u30b3\u30d4\u30fc">' + LINK_ICON + '<span class="fr-action-label">URL</span></button>');
         }
-        if (isFolder) {
-            actions.push('<button class="btn btn-ghost btn-sm fr-urlcopy-btn" data-url="/folder.html?id=' + frEsc(item.id) + '" style="padding:.22rem .55rem;font-size:.74rem" title="\u30d5\u30a9\u30eb\u30c0URL\u3092\u30b3\u30d4\u30fc">' + LINK_ICON + '<span class="fr-action-label">URL</span></button>');
-        }
         var delCls = isFolder ? 'fr-del-folder-btn' : 'fr-del-btn';
         actions.push('<button class="btn btn-danger btn-sm ' + delCls + '" data-id="' + frEsc(item.id) + '" style="padding:.22rem .55rem;font-size:.74rem">\u524a\u9664</button>');
 
