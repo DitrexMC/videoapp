@@ -18,6 +18,7 @@ function onReady(fn) {
 const pageCache = new Map();
 const cssCache = new Map();
 let navigating = false;
+let currentSpaPath = location.pathname + location.search;
 const PERSISTENT_HEAD_SCRIPTS = new Set([
   location.origin + '/js/nav-theme.js'
 ]);
@@ -333,14 +334,15 @@ async function navigate(url, pushState = true) {
   const href = typeof url === 'string' ? url : url.href;
   const u = new URL(href, location.origin);
   if (u.origin !== location.origin) { location.href = href; return; }
-  if (u.pathname === location.pathname && u.search === location.search) { navigating = false; return; }
+  if (pushState && u.pathname === location.pathname && u.search === location.search) { navigating = false; return; }
 
   // Mark news article as read on navigation
   if (u.pathname.startsWith('/news/articles/')) {
     api.news.markRead(u.pathname + u.search).catch(() => {});
   }
 
-  const direction = getDirection(location.pathname, u.pathname);
+  const fromPath = pushState ? location.pathname : currentSpaPath;
+  const direction = getDirection(fromPath, u.pathname);
   const cacheKey = u.pathname + u.search;
   let html = pageCache.get(cacheKey);
   if (!html) {
@@ -408,6 +410,7 @@ async function navigate(url, pushState = true) {
   // Dispatch arrival event so new page scripts can set up
   document.dispatchEvent(new CustomEvent('va:navigate', { detail: { url: href } }));
 
+  currentSpaPath = u.pathname + u.search;
   navigating = false;
 }
 

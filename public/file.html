@@ -1049,6 +1049,19 @@
                     } else { aud.pause(); }
                 };
                 document.addEventListener('keydown', spaceHandler);
+
+                function teardownAudio() {
+                    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+                    if (gainNode) { try { gainNode.disconnect(); } catch (e) { } gainNode = null; }
+                    if (srcNode) { try { srcNode.disconnect(); } catch (e) { } srcNode = null; }
+                    if (audioCtx && audioCtx.state !== 'closed') { try { audioCtx.close(); } catch (e) { } }
+                    audioCtx = null; analyser = null; freqData = null; sqrtPrev = null;
+                    document.removeEventListener('keydown', spaceHandler);
+                }
+                document.addEventListener('va:navigate-away', function navAway() {
+                    teardownAudio();
+                    document.removeEventListener('va:navigate-away', navAway);
+                });
             }
 
             /* ── Text / Code ── */
