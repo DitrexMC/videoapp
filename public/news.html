@@ -8,6 +8,7 @@
     <link rel="icon" href="/icons/icon-192.png">
     <link rel="manifest" href="/manifest.json">
     <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+JP:wght@400;500;700&display=swap"
         rel="stylesheet">
@@ -137,6 +138,7 @@
             <!-- Search & Filter -->
             <div class="news-toolbar reveal">
                 <div class="news-search-box">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                     <input id="searchInput" type="text" placeholder="記事を検索..." autocomplete="off">
                 </div>
                 <div class="news-filter-bar" id="filterBar">
@@ -227,6 +229,8 @@
             return a;
         }
 
+        let cardObserver;
+
         function render() {
             const grid = document.getElementById('newsGrid');
             const empty = document.getElementById('newsEmpty');
@@ -252,18 +256,23 @@
                 filtered.forEach(art => grid.appendChild(buildCard(art)));
             }
 
-            const io = new IntersectionObserver(entries => {
-                entries.forEach((e, i) => {
-                    if (e.isIntersecting) {
-                        setTimeout(() => e.target.classList.add('visible'), i * 55);
-                        io.unobserve(e.target);
-                    }
+            if (cardObserver) cardObserver.disconnect();
+            const cards = grid.querySelectorAll('.news-card');
+            if (cards.length) {
+                cardObserver = new IntersectionObserver(entries => {
+                    entries.forEach(e => {
+                        if (e.isIntersecting) {
+                            e.target.classList.add('visible');
+                            cardObserver.unobserve(e.target);
+                        }
+                    });
+                }, { threshold: .08 });
+                cards.forEach((el, i) => {
+                    el.classList.add('reveal');
+                    el.style.transitionDelay = `${i * 0.04}s`;
+                    cardObserver.observe(el);
                 });
-            }, { threshold: .08 });
-            grid.querySelectorAll('.news-card').forEach(el => {
-                el.classList.add('reveal');
-                io.observe(el);
-            });
+            }
         }
 
         document.getElementById('filterBar').addEventListener('click', e => {

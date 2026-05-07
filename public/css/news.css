@@ -123,13 +123,14 @@ main {
   position: relative;
 }
 
-.news-search-box {
-  content: "";
+.news-search-box svg {
   position: absolute;
   left: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 0.78rem;
+  width: 14px;
+  height: 14px;
+  color: var(--text-sub);
   pointer-events: none;
 }
 
