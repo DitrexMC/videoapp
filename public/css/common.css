@@ -122,7 +122,7 @@ body {
 }
 
 .nav-logo:hover {
-  filter: drop-shadow(0 0 12px rgba(59, 130, 246, 0.75));
+  filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.4));
 }
 
 .logo-icon {
@@ -140,15 +140,29 @@ body {
   font-weight: 900;
   letter-spacing: -0.4px;
   color: var(--accent2);
-  text-shadow: 0 0 18px rgba(59, 130, 246, 0.35);
+  text-shadow: 0 0 10px rgba(59, 130, 246, 0.2);
   transition: text-shadow 0.3s;
   line-height: 1;
 }
 
 .nav-logo:hover .logo-text {
   text-shadow:
-    0 0 30px rgba(59, 130, 246, 0.9),
-    0 0 60px rgba(96, 165, 250, 0.45);
+    0 0 16px rgba(59, 130, 246, 0.35),
+    0 0 30px rgba(96, 165, 250, 0.18);
+}
+
+[data-theme="light"] .nav-logo:hover {
+  filter: drop-shadow(0 0 4px rgba(59, 130, 246, 0.15));
+}
+
+[data-theme="light"] .logo-text {
+  text-shadow: 0 0 6px rgba(59, 130, 246, 0.08);
+}
+
+[data-theme="light"] .nav-logo:hover .logo-text {
+  text-shadow:
+    0 0 8px rgba(59, 130, 246, 0.12),
+    0 0 16px rgba(96, 165, 250, 0.06);
 }
 
 .logo-text em {
