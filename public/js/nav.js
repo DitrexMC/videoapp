@@ -113,11 +113,6 @@ function cloneHeadNode(node, baseUrl) {
     return clone;
   }
 
-  if (clone.tagName === 'LINK') {
-    const href = clone.getAttribute('href');
-    if (href) clone.setAttribute('href', new URL(href, baseUrl).href);
-  }
-
   if (clone.tagName === 'SCRIPT') {
     const src = clone.getAttribute('src');
     if (src) clone.setAttribute('src', new URL(src, baseUrl).href);
