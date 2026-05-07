@@ -21,7 +21,7 @@ let navigating = false;
 
 function getDirection(fromPath, toPath) {
   const fromArticle = fromPath.startsWith('/news/articles/');
-  const toArticle   = toPath.startsWith('/news/articles/');
+  const toArticle = toPath.startsWith('/news/articles/');
   const oldPos = PAGE_POS[fromPath] ?? null;
   const newPos = PAGE_POS[toPath] ?? null;
 
@@ -39,8 +39,8 @@ function preload(url) {
     if (u.origin !== location.origin) return;
     const cacheKey = u.pathname + u.search;
     if (pageCache.has(cacheKey)) return;
-    fetch(url).then(r => r.text()).then(html => pageCache.set(cacheKey, html)).catch(() => {});
-  } catch {}
+    fetch(url).then(r => r.text()).then(html => pageCache.set(cacheKey, html)).catch(() => { });
+  } catch { }
 }
 
 function updateActiveNav(url) {
@@ -49,7 +49,7 @@ function updateActiveNav(url) {
     try {
       const lp = new URL(a.href, location.origin).pathname;
       a.classList.toggle('active', lp === path);
-    } catch {}
+    } catch { }
   });
 }
 
@@ -149,20 +149,6 @@ function swapPage(doc, url) {
   // Swap main
   oldMain.replaceWith(newMain);
 
-  // Replace page-specific elements outside <main> (e.g. canvas)
-  const pageSpecificSelectors = ['#canvas'];
-  pageSpecificSelectors.forEach(sel => {
-    const oldEl = document.querySelector(sel);
-    const newEl = doc.querySelector(sel);
-    if (oldEl && newEl) {
-      oldEl.replaceWith(newEl);
-    } else if (oldEl && !newEl) {
-      oldEl.remove();
-    } else if (!oldEl && newEl) {
-      document.body.insertBefore(newEl, document.body.firstChild);
-    }
-  });
-
   // Clean up previously injected inline scripts to avoid accumulation
   document.querySelectorAll('script[data-va-inline]').forEach(s => s.remove());
 
@@ -181,7 +167,7 @@ function swapPage(doc, url) {
 
   // Re-observe reveal elements with a fresh observer if the old one is stale
   if (window.__revealObserver) {
-    try { window.__revealObserver.disconnect(); } catch (_) {}
+    try { window.__revealObserver.disconnect(); } catch (_) { }
   }
   const revEls = document.querySelectorAll('.reveal');
   if (revEls.length) {
@@ -267,11 +253,6 @@ async function navigate(url, pushState = true) {
 
   document.documentElement.removeAttribute('data-nav-dir');
   window.scrollTo(0, 0);
-
-  // Re-initialise particles if the new page has a canvas
-  if (typeof window.__initParticles === 'function') {
-    window.__initParticles();
-  }
 
   // Dispatch arrival event so new page scripts can set up
   document.dispatchEvent(new CustomEvent('va:navigate', { detail: { url: href } }));
