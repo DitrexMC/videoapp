@@ -256,23 +256,24 @@
                 filtered.forEach(art => grid.appendChild(buildCard(art)));
             }
 
-            if (cardObserver) cardObserver.disconnect();
-            const cards = grid.querySelectorAll('.news-card');
-            if (cards.length) {
-                cardObserver = new IntersectionObserver(entries => {
-                    entries.forEach(e => {
-                        if (e.isIntersecting) {
-                            e.target.classList.add('visible');
-                            cardObserver.unobserve(e.target);
-                        }
+                if (cardObserver) cardObserver.disconnect();
+                const cards = grid.querySelectorAll('.news-card');
+                if (cards.length) {
+                    cardObserver = new IntersectionObserver(entries => {
+                        entries.forEach(e => {
+                            if (e.isIntersecting) {
+                                e.target.classList.add('visible');
+                                cardObserver.unobserve(e.target);
+                            }
+                        });
+                    }, { threshold: 0.1 });
+                    cards.forEach((el, i) => {
+                        el.classList.add('reveal');
+                        const d = (i % 5) + 1;
+                        if (d <= 4) el.classList.add(`reveal-d${d}`);
+                        cardObserver.observe(el);
                     });
-                }, { threshold: .08 });
-                cards.forEach((el, i) => {
-                    el.classList.add('reveal');
-                    el.style.transitionDelay = `${i * 0.04}s`;
-                    cardObserver.observe(el);
-                });
-            }
+                }
         }
 
         document.getElementById('filterBar').addEventListener('click', e => {
