@@ -97,9 +97,9 @@ export class UploadApplicationService {
     }
 
     const timestamp = this.clock.nowIsoString();
+    const jobId = generateId();
 
-    this.uploadRepository.markUploadProcessing(upload.id, timestamp);
-    this.uploadRepository.queueFinalizeUpload(generateId(), upload.id, timestamp);
+    this.uploadRepository.markUploadProcessingAndQueueJob(jobId, upload.id, timestamp);
 
     return {
       fileId: upload.fileId,

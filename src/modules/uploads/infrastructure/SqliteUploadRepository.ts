@@ -177,7 +177,7 @@ export class SqliteUploadRepository implements UploadRepository {
     })();
   }
 
-  findFinalizeJob(): FinalizeJob | null {
+  findFinalizeJob(nowIso: string): FinalizeJob | null {
     const row = this.connection
       .prepare<unknown[], JobRow>(
         `
@@ -185,11 +185,12 @@ export class SqliteUploadRepository implements UploadRepository {
       FROM processing_jobs
       WHERE status = 'pending'
         AND type = 'finalize_upload'
+        AND run_after <= ?
       ORDER BY created_at ASC
       LIMIT 1
     `,
       )
-      .get();
+      .get(nowIso);
 
     if (!row) {
       return null;
@@ -335,6 +336,7 @@ export class SqliteUploadRepository implements UploadRepository {
     jobId: string,
     updatedAt: string,
     errorMessage: string,
+    retryAfter: string,
   ): void {
     this.connection
       .prepare(
@@ -347,7 +349,7 @@ export class SqliteUploadRepository implements UploadRepository {
       WHERE id = ?
     `,
       )
-      .run(errorMessage, updatedAt, updatedAt, jobId);
+      .run(errorMessage, retryAfter, updatedAt, jobId);
   }
 
   markFinalizeJobRunning(jobId: string, updatedAt: string): void {
@@ -468,6 +470,80 @@ export class SqliteUploadRepository implements UploadRepository {
           data.sizeBytes,
           data.updatedAt,
           uploadId,
+        );
+    })();
+  }
+
+  markUploadFailed(
+    uploadId: string,
+    updatedAt: string,
+    errorMessage: string,
+  ): void {
+    this.connection.transaction(() => {
+      this.connection
+        .prepare(
+          `
+        UPDATE upload_sessions
+        SET status = 'failed', updated_at = ?
+        WHERE id = ?
+      `,
+        )
+        .run(updatedAt, uploadId);
+
+      this.connection
+        .prepare(
+          `
+        UPDATE files
+        SET status = 'failed', is_deleted = 1, updated_at = ?
+        WHERE upload_id = ?
+          AND is_deleted = 0
+          AND status = 'processing'
+      `,
+        )
+        .run(updatedAt, uploadId);
+    })();
+  }
+
+  markUploadProcessingAndQueueJob(
+    jobId: string,
+    uploadId: string,
+    createdAt: string,
+  ): void {
+    this.connection.transaction(() => {
+      this.connection
+        .prepare(
+          `
+        UPDATE upload_sessions
+        SET status = 'processing', updated_at = ?, completed_at = ?
+        WHERE id = ?
+      `,
+        )
+        .run(createdAt, createdAt, uploadId);
+
+      this.connection
+        .prepare(
+          `
+        UPDATE files
+        SET status = 'processing', updated_at = ?
+        WHERE upload_id = ?
+      `,
+        )
+        .run(createdAt, uploadId);
+
+      this.connection
+        .prepare(
+          `
+        INSERT INTO processing_jobs (id, type, subject_id, payload, status, attempts, max_attempts, run_after, claimed_at, lease_expires_at, last_error, created_at, updated_at)
+        VALUES (?, 'finalize_upload', ?, ?, 'pending', 0, 3, ?, NULL, NULL, NULL, ?, ?)
+      `,
+        )
+        .run(
+          jobId,
+          uploadId,
+          JSON.stringify({ uploadId }),
+          createdAt,
+          createdAt,
+          createdAt,
         );
     })();
   }

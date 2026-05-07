@@ -69,9 +69,10 @@ export class BackgroundWorker {
   }
 
   private async runInternal(): Promise<void> {
-    this.uploadRepository.expireDueResources(this.clock.nowIsoString());
+    const now = this.clock.nowIsoString();
+    this.uploadRepository.expireDueResources(now);
 
-    const job = this.uploadRepository.findFinalizeJob();
+    const job = this.uploadRepository.findFinalizeJob(now);
 
     if (!job) {
       return;
@@ -82,47 +83,78 @@ export class BackgroundWorker {
     this.uploadRepository.markFinalizeJobRunning(job.id, timestamp);
 
     try {
-      const upload = this.uploadRepository.findUploadById(job.subjectId);
-
-      if (!upload) {
-        throw new NotFoundError("アップロードが見つかりません。");
-      }
-
-      if (upload.status !== "processing") {
-        this.uploadRepository.markFinalizeJobCompleted(job.id, this.clock.nowIsoString());
-        await this.storage.removeUploadDirectory(upload.id);
-        return;
-      }
-
-      const file = this.fileRepository.findFileById(upload.fileId);
-
-      if (!file || file.isDeleted || file.status === "deleted") {
-        this.uploadRepository.markFinalizeJobCompleted(job.id, this.clock.nowIsoString());
-        await this.storage.removeUploadDirectory(upload.id);
-        throw new NotFoundError("ファイルが見つかりません。");
-      }
-
-      const finalizedUpload = await this.storage.finalizeUpload(upload.id, upload.totalChunks);
-      const preview = await this.storage.generatePreview(file.id, file.mimeType, finalizedUpload.storagePath);
-      const updatedAt = this.clock.nowIsoString();
-
-      this.uploadRepository.markUploadReadyFile(upload.id, {
-        checksum: finalizedUpload.checksum,
-        previewPath: preview.previewPath,
-        previewStatus: preview.previewStatus,
-        sizeBytes: finalizedUpload.sizeBytes,
-        storagePath: finalizedUpload.storagePath,
-        updatedAt
-      });
-      this.uploadRepository.markFinalizeJobCompleted(job.id, updatedAt);
-      await this.storage.removeUploadDirectory(upload.id);
+      await this.processJobWithTimeout(job);
     } catch (error) {
       const message = error instanceof Error ? error.message : "unknown error";
-      this.uploadRepository.markFinalizeJobFailed(job.id, this.clock.nowIsoString(), message);
+      const nowIso = this.clock.nowIsoString();
+      const retryAfter = new Date(Date.now() + 30_000).toISOString();
+
+      this.uploadRepository.markFinalizeJobFailed(job.id, nowIso, message, retryAfter);
 
       if (job.attempts + 1 >= job.maxAttempts) {
+        this.uploadRepository.markUploadFailed(job.subjectId, nowIso, message);
         await this.storage.removeUploadDirectory(job.subjectId);
       }
     }
+  }
+
+  private async processJobWithTimeout(job: { id: string; subjectId: string; maxAttempts: number; attempts: number }): Promise<void> {
+    const JOB_TIMEOUT_MS = 120_000;
+    const cancelled = { value: false };
+
+    try {
+      await Promise.race<void>([
+        this.processJob(job, cancelled),
+        new Promise<void>((_, reject) =>
+          setTimeout(() => {
+            cancelled.value = true;
+            reject(new Error("Job timed out after 120 seconds"));
+          }, JOB_TIMEOUT_MS)
+        ),
+      ]);
+    } catch (err) {
+      cancelled.value = true;
+      throw err;
+    }
+  }
+
+  private async processJob(job: { id: string; subjectId: string }, cancelled: { value: boolean }): Promise<void> {
+    const upload = this.uploadRepository.findUploadById(job.subjectId);
+
+    if (!upload) {
+      throw new NotFoundError("アップロードが見つかりません。");
+    }
+
+    if (upload.status !== "processing") {
+      this.uploadRepository.markFinalizeJobCompleted(job.id, this.clock.nowIsoString());
+      await this.storage.removeUploadDirectory(upload.id);
+      return;
+    }
+
+    const file = this.fileRepository.findFileById(upload.fileId);
+
+    if (!file || file.isDeleted || file.status === "deleted") {
+      this.uploadRepository.markFinalizeJobCompleted(job.id, this.clock.nowIsoString());
+      await this.storage.removeUploadDirectory(upload.id);
+      throw new NotFoundError("ファイルが見つかりません。");
+    }
+
+    const finalizedUpload = await this.storage.finalizeUpload(upload.id, upload.totalChunks);
+    if (cancelled.value) return;
+
+    const preview = await this.storage.generatePreview(file.id, file.mimeType, finalizedUpload.storagePath);
+    if (cancelled.value) return;
+    const updatedAt = this.clock.nowIsoString();
+
+    this.uploadRepository.markUploadReadyFile(upload.id, {
+      checksum: finalizedUpload.checksum,
+      previewPath: preview.previewPath,
+      previewStatus: preview.previewStatus,
+      sizeBytes: finalizedUpload.sizeBytes,
+      storagePath: finalizedUpload.storagePath,
+      updatedAt
+    });
+    this.uploadRepository.markFinalizeJobCompleted(job.id, updatedAt);
+    await this.storage.removeUploadDirectory(upload.id);
   }
 }

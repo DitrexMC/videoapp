@@ -480,17 +480,23 @@
             let active = 0;
             let completed = 0;
             const hasFolder = totalCount >= 2;
-            let sharedFolderId = folderId;
+            const folderRef = { id: folderId, emitted: !!folderId };
+
+            function onFolderCreated(folderId) {
+                if (folderRef.emitted) return;
+                folderRef.id = folderId;
+                folderRef.emitted = true;
+                next();
+            }
 
             function next() {
-                while (active < (sharedFolderId ? 5 : 1) && idx < items.length) {
+                while (active < (folderRef.id ? 5 : 1) && idx < items.length) {
                     active++;
                     const item = items[idx++];
-                    uploadOne(item, isPublic, expiresAt, totalCount, sharedFolderId, (newFolderId) => {
-                        if (newFolderId) sharedFolderId = newFolderId;
+                    uploadOne(item, isPublic, expiresAt, totalCount, folderRef, onFolderCreated, () => {
                         active--;
                         completed++;
-                        if (completed === items.length && hasFolder && sharedFolderId) {
+                        if (completed === items.length && hasFolder && folderRef.id) {
                             const groupEl = document.createElement('div');
                             groupEl.className = 'qi';
                             groupEl.style.borderColor = 'var(--accent2)';
@@ -509,8 +515,8 @@
             next();
         }
 
-        // ── Single file upload (chunked) ───────────────────────
-        async function uploadOne(item, isPublic, expiresAt, totalCount, sharedFolderId, onDone) {
+        // ── Single file upload (parallel chunked) ───────────────
+        async function uploadOne(item, isPublic, expiresAt, totalCount, folderRef, onFolderCreated, onDone) {
             item.statusEl.textContent = 'アップロード中';
             item.statusEl.className = 'qi-status qi-status--uploading';
             item.progressEl.hidden = false;
@@ -519,10 +525,9 @@
             let uploadId = null;
 
             try {
-                // Build folder context for multi-file
                 const folderContext = totalCount >= 2
-                    ? (sharedFolderId
-                        ? { mode: 'existing', folderId: sharedFolderId, itemCount: totalCount }
+                    ? (folderRef.id
+                        ? { mode: 'existing', folderId: folderRef.id, itemCount: totalCount }
                         : { mode: 'batch', itemCount: totalCount })
                     : undefined;
 
@@ -535,20 +540,27 @@
                 };
                 if (folderContext) initPayload.folderContext = folderContext;
 
-                const initRes = await api.upload.init(initPayload);
+                const initRes = await api.upload.init(initPayload, {
+                    retry: { maxRetries: 3, retryDelay: 2000 },
+                });
                 uploadId = initRes.uploadId;
                 const fileId = initRes.fileId;
                 const chunkSize = initRes.chunkSize;
                 const maxChunks = initRes.maxChunks;
 
-                if (initRes.folderId && !sharedFolderId) {
-                    onDone(initRes.folderId);
+                if (initRes.folderId && !folderRef.emitted && onFolderCreated) {
+                    onFolderCreated(initRes.folderId);
                 }
 
                 const startTime = Date.now();
                 let uploadedBytes = 0;
+                let completedChunks = 0;
+                const CHUNK_CONCURRENCY = 6;
 
-                for (let i = 0; i < maxChunks; i++) {
+                let nextIndex = 0;
+                const workers = [];
+
+                async function sendChunk(i) {
                     const start = i * chunkSize;
                     const end = Math.min(start + chunkSize, file.size);
                     const chunk = file.slice(start, end);
@@ -557,7 +569,9 @@
                     await api.upload.chunk(uploadId, i, buf, { 'X-File-Id': fileId });
 
                     uploadedBytes += buf.byteLength;
-                    const pct = Math.round(((i + 1) / maxChunks) * 100);
+                    completedChunks++;
+
+                    const pct = Math.round((completedChunks / maxChunks) * 100);
                     const elapsed = (Date.now() - startTime) / 1000 || 0.001;
                     const speedMB = (uploadedBytes / elapsed) / 1048576;
                     const remaining = speedMB > 0 ? (file.size - uploadedBytes) / (speedMB * 1048576) : 0;
@@ -572,6 +586,18 @@
                     item.barEl.style.width = pct + '%';
                     item.pctEl.textContent = `${pct}% — ${speedMB.toFixed(1)} MB/s${etaStr}`;
                 }
+
+                async function worker() {
+                    while (nextIndex < maxChunks) {
+                        const i = nextIndex++;
+                        await sendChunk(i);
+                    }
+                }
+
+                for (let w = 0; w < Math.min(CHUNK_CONCURRENCY, maxChunks); w++) {
+                    workers.push(worker());
+                }
+                await Promise.all(workers);
 
                 const compRes = await api.upload.complete({
                     fileId,
@@ -626,7 +652,7 @@
                     });
                 });
 
-                if (totalCount < 2) onDone(null);
+                onDone();
             } catch (err) {
                 item.progressEl.hidden = true;
                 item.statusEl.textContent = 'エラー';
@@ -634,11 +660,10 @@
                 item.resultEl.hidden = false;
                 item.resultEl.innerHTML = `<span class="qi-error-msg">${esc(err?.message ?? 'アップロードに失敗しました')}</span>`;
 
-                // Clean up server-side: cancel the upload to delete file record + temp data
                 if (uploadId) {
                     api.upload.cancel(uploadId).catch(() => { });
                 }
-                onDone(null);
+                onDone();
                 setTimeout(() => { item.el.style.opacity = '0'; item.el.style.transition = 'opacity .3s'; setTimeout(() => item.el.remove(), 300); }, 4000);
             }
         }

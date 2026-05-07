@@ -144,7 +144,8 @@ export class LocalFileStorage {
 
     try {
       await new Promise<void>((resolve, reject) => {
-        const process = spawn(
+        let settled = false;
+        const childProcess = spawn(
           "ffmpeg",
           [
             "-y",
@@ -160,15 +161,31 @@ export class LocalFileStorage {
             stdio: "ignore",
           },
         );
-
-        process.once("error", reject);
-        process.once("exit", (code) => {
-          if (code === 0) {
-            resolve();
-            return;
+        const ffmpegTimeout = setTimeout(() => {
+          if (!settled) {
+            settled = true;
+            childProcess.kill("SIGKILL");
+            reject(new Error("ffmpeg timed out after 30 seconds"));
           }
+        }, 30_000);
 
-          reject(new Error(`ffmpeg exited with code ${code ?? -1}`));
+        childProcess.once("error", (err) => {
+          if (!settled) {
+            settled = true;
+            clearTimeout(ffmpegTimeout);
+            reject(err);
+          }
+        });
+        childProcess.once("exit", (code) => {
+          if (!settled) {
+            settled = true;
+            clearTimeout(ffmpegTimeout);
+            if (code === 0) {
+              resolve();
+              return;
+            }
+            reject(new Error(`ffmpeg exited with code ${code ?? -1}`));
+          }
         });
       });
 
