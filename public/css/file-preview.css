@@ -495,6 +495,8 @@ video {
   display: flex;
   align-items: center;
   gap: 0.6rem;
+  max-width: 140px;
+  margin: 0 auto;
 }
 .audio-vol-icon {
   color: var(--text-sub);
@@ -515,40 +517,40 @@ video {
   flex: 1;
   -webkit-appearance: none;
   appearance: none;
-  height: 3px;
+  height: 4px;
   border-radius: 99px;
   outline: none;
   cursor: pointer;
 }
 .audio-vol::-webkit-slider-runnable-track {
-  height: 3px;
+  height: 4px;
   background: transparent;
   border: none;
 }
 .audio-vol::-moz-range-track {
-  height: 3px;
+  height: 4px;
   background: var(--bg3);
   border: none;
   border-radius: 99px;
 }
 .audio-vol::-moz-range-progress {
-  height: 3px;
+  height: 4px;
   background: linear-gradient(90deg, var(--accent2), var(--purple));
   border: none;
   border-radius: 99px;
 }
 .audio-vol::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   background: var(--accent2);
   border-radius: 50%;
   cursor: pointer;
-  margin-top: -4.5px;
+  margin-top: -5px;
 }
 .audio-vol::-moz-range-thumb {
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   background: var(--accent2);
   border: none;
   border-radius: 50%;
@@ -1146,7 +1148,7 @@ pre.hljs-pre code.hljs {
     height: 46px;
   }
   .audio-vol-row {
-    max-width: 100%;
+    max-width: 160px;
   }
   .audio-prog-wrap {
     height: 6px;

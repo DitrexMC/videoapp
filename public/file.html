@@ -532,8 +532,6 @@
                         + '<div class="audio-vol-row" id="aud-vol-row">'
                         + '<span class="audio-vol-icon"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></span>'
                         + '<input class="audio-vol" id="aud-vol" type="range" min="0" max="1" step="0.02" value="1">'
-                        + '</div>'
-                        + '<div id="aud-vol-ios" style="display:none;font-size:.72rem;color:var(--text-sub);text-align:center;padding:.3rem 0">端末の音量ボタンで調節してください</div>'
                         + '</div></div>';
                     initAudio();
                     return;
@@ -879,19 +877,31 @@
                 }
                 if (rewBtn) rewBtn.addEventListener('click', function () { aud.currentTime = Math.max(0, aud.currentTime - 10); });
                 if (fwdBtn) fwdBtn.addEventListener('click', function () { if (aud.duration) aud.currentTime = Math.min(aud.duration, aud.currentTime + 10); });
-                if (restartBtn) restartBtn.addEventListener('click', function () { aud.currentTime = 0; if (aud.paused) aud.play(); });
+                if (restartBtn) restartBtn.addEventListener('click', function () {
+                    aud.currentTime = 0;
+                    if (aud.paused) {
+                        if (!audioCtx) {
+                            var ok = initSpectrum();
+                            if (!ok) { aud.play().catch(function () { }); return; }
+                        }
+                        if (audioCtx && audioCtx.state === 'suspended') {
+                            audioCtx.resume().then(function () { aud.play().catch(function () { }); });
+                        } else {
+                            aud.play().catch(function () { });
+                        }
+                    }
+                });
                 if (vol) {
                     setRangeFill(vol, parseFloat(vol.value), 1);
-                    vol.addEventListener('input', function () { aud.volume = parseFloat(vol.value); setRangeFill(vol, parseFloat(vol.value), 1); });
+                    vol.addEventListener('input', function () {
+                        var v = parseFloat(vol.value);
+                        if (gainNode) gainNode.gain.value = v;
+                        else aud.volume = v;
+                        setRangeFill(vol, v, 1);
+                    });
                 }
                 if (loopBtn) {
                     loopBtn.addEventListener('click', function () { aud.loop = !aud.loop; loopBtn.classList.toggle('active', aud.loop); });
-                }
-                if (/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-                    var volRow = document.getElementById('aud-vol-row');
-                    var volIos = document.getElementById('aud-vol-ios');
-                    if (volRow) volRow.style.display = 'flex';
-                    if (volIos) volIos.style.display = '';
                 }
 
                 /* Metadata */
@@ -915,10 +925,12 @@
                     }).catch(function () { });
 
                 /* Spectrum */
-                var audioCtx = null, analyser = null, srcNode = null, rafId = null, freqData = null, sqrtPrev = null;
+                var audioCtx = null, analyser = null, srcNode = null, gainNode = null, rafId = null, freqData = null, sqrtPrev = null;
 
                 function cleanupSpectrum() {
                     if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+                    document.removeEventListener('keydown', spaceHandler);
+                    if (gainNode) { try { gainNode.disconnect(); } catch (e) { } gainNode = null; }
                     if (srcNode) { try { srcNode.disconnect(); } catch (e) { } srcNode = null; }
                     if (audioCtx && audioCtx.state !== 'closed') { try { audioCtx.close(); } catch (e) { } }
                     audioCtx = null; analyser = null; freqData = null; sqrtPrev = null;
@@ -933,7 +945,9 @@
                         anl.smoothingTimeConstant = 0.5;
                         audioCtx = ctx; analyser = anl;
                         var s = ctx.createMediaElementSource(aud);
-                        s.connect(anl); anl.connect(ctx.destination); srcNode = s;
+                        var gn = ctx.createGain();
+                        gn.gain.value = 1;
+                        s.connect(gn); gn.connect(anl); anl.connect(ctx.destination); srcNode = s; gainNode = gn;
                         var binCount = anl.frequencyBinCount;
                         freqData = new Uint8Array(binCount);
                         sqrtPrev = new Float32Array(256);
@@ -963,7 +977,7 @@
                                 sqrtPrev[i] = smooth;
                                 var bh = Math.max(1, (smooth / 255) * ch * 0.88);
                                 var x = cx + i * (barW + gap);
-                                var y = ch - bh;
+                                var y = ch - bh + 1;
                                 var isDark = document.documentElement.getAttribute('data-theme') !== 'light';
                                 var grad = cctx.createLinearGradient(0, y, 0, ch);
                                 if (isDark) {
@@ -1014,6 +1028,27 @@
                         audioCtx.resume().then(doToggle).catch(doToggle);
                     } else { doToggle(); }
                 });
+
+                var spaceHandler = function (e) {
+                    if (e.code !== 'Space' || /input|textarea/i.test(document.activeElement.tagName)) return;
+                    if (!document.body.contains(aud)) return;
+                    e.preventDefault();
+                    if (!audioCtx) {
+                        var ok = initSpectrum();
+                        if (!ok) {
+                            if (aud.paused) aud.play().catch(function () { });
+                            return;
+                        }
+                    }
+                    if (aud.paused) {
+                        if (audioCtx && audioCtx.state === 'suspended') {
+                            audioCtx.resume().then(function () { aud.play().catch(function () { }); });
+                        } else {
+                            aud.play().catch(function () { });
+                        }
+                    } else { aud.pause(); }
+                };
+                document.addEventListener('keydown', spaceHandler);
             }
 
             /* ── Text / Code ── */
