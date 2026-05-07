@@ -620,7 +620,7 @@ body {
 /* ── File row reveal animation ── */
 .row-reveal {
   opacity: 0;
-  transform: translateX(-10px);
+  transform: translateY(14px);
   transition:
     opacity 0.28s ease,
     transform 0.28s ease;

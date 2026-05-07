@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>videoapp — プライバシーポリシー</title>
+    <link rel="icon" href="/icons/icon-192.png">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+JP:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <script src="/js/nav-theme.js"></script>
+    <link rel="stylesheet" href="/css/common.css">
+    <link rel="stylesheet" href="/css/app.css">
+    <style>
+        .legal-content {
+            font-size: .88rem;
+            line-height: 1.9;
+            color: var(--text-sub);
+        }
+
+        .legal-content h2 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--text);
+            margin-top: 2rem;
+            margin-bottom: .6rem;
+            letter-spacing: -.3px;
+        }
+
+        .legal-content p {
+            margin-bottom: .8rem;
+        }
+
+        .legal-content ul {
+            list-style: disc;
+            padding-left: 1.4rem;
+            margin-bottom: .8rem;
+        }
+
+        .legal-content li {
+            margin-bottom: .35rem;
+        }
+
+        .legal-content strong {
+            color: var(--text);
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="canvas"></canvas>
+    <div class="page-glow page-glow-1"></div>
+    <div class="page-glow page-glow-2"></div>
+
+    <nav id="nav">
+        <div class="nav-left">
+            <a class="nav-logo" href="/">
+                <span class="logo-text">video<em>app</em></span>
+            </a>
+        </div>
+        <ul class="nav-links">
+            <li><a href="/">ホーム</a></li>
+            <li><a href="/upload.html">アップロード</a></li>
+            <li><a href="/files.html">マイファイル</a></li>
+        </ul>
+        <div class="nav-right">
+            <span id="nav-username" class="nav-username"></span>
+            <button class="theme-toggle" id="theme-toggle"></button>
+            <button class="nav-hamburger" id="hamburger" aria-label="メニューを開く">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+    </nav>
+
+    <div class="drawer-overlay" id="drawerOverlay"></div>
+    <aside class="nav-drawer" id="navDrawer">
+        <div class="drawer-header">
+            <span class="drawer-username" id="drawerUsername"></span>
+            <button class="drawer-close" id="drawerClose" aria-label="閉じる">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+            </button>
+        </div>
+        <nav class="drawer-nav">
+            <a href="/settings.html" class="drawer-link">
+                <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3" />
+                    <path
+                        d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                </svg>
+                設定
+            </a>
+            <a href="/news.html" class="drawer-link">
+                <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                </svg>
+                お知らせ
+            </a>
+            <a href="/admin.html" class="drawer-link hidden" id="drawer-admin">
+                <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+                管理
+            </a>
+            <a href="/files.html" class="drawer-link">
+                <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                </svg>
+                マイファイル
+            </a>
+            <a href="/upload.html" class="drawer-link">
+                <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+                    <polyline points="16 6 12 2 8 6" />
+                    <line x1="12" y1="2" x2="12" y2="15" />
+                </svg>
+                アップロード
+            </a>
+        </nav>
+        <div class="drawer-divider"></div>
+        <button class="drawer-logout" id="drawer-logout">
+            <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            ログアウト
+        </button>
+        <div class="drawer-footer">
+            <div class="drawer-footer-brand">
+                <span class="drawer-footer-logo">video<em>app</em></span>
+                <span class="drawer-footer-ver">v1.0</span>
+            </div>
+            <p class="drawer-footer-desc">プライベートファイルストレージ</p>
+            <div class="drawer-footer-credits">
+                <span>© 2026 Videoapp</span><span class="dot">·</span>
+                <span>DitrexMC</span>
+            </div>
+            <div class="drawer-footer-links">
+                <a href="/terms.html">利用規約</a><span>·</span><a href="/privacy.html">プライバシー</a>
+            </div>
+        </div>
+    </aside>
+
+    <main>
+        <div class="container">
+            <div class="stat-tag reveal"><span class="stat-tag-dot"></span>Legal</div>
+            <div class="sec-eye reveal reveal-d1">
+                <div class="sec-eye-text">
+                    <div class="sec-lbl">Privacy</div>
+                    <h1>プライバシーポリシー</h1>
+                </div>
+            </div>
+
+            <div class="card reveal reveal-d2">
+                <div class="legal-content">
+                    <p>本サービス（videoapp）は、ユーザーの個人情報の保護を重要視し、以下のプライバシーポリシーに基づき個人情報を取り扱います。</p>
+
+                    <h2>第1条（収集する情報）</h2>
+                    <p>本サービスは、以下の情報を収集する場合があります。</p>
+                    <ul>
+                        <li><strong>アカウント情報:</strong> ユーザー名、ログインID、メールアドレス（設定されている場合）</li>
+                        <li><strong>利用情報:</strong> IPアドレス、ブラウザのUser-Agent、アクセス日時、リクエスト内容</li>
+                        <li><strong>アップロードファイル:</strong> ユーザーが本サービスにアップロードしたファイルおよびそのメタデータ</li>
+                    </ul>
+
+                    <h2>第2条（利用目的）</h2>
+                    <p>収集した情報は以下の目的で利用します。</p>
+                    <ul>
+                        <li>本サービスの提供・運営のため</li>
+                        <li>ユーザー認証およびセッション管理のため</li>
+                        <li>不正利用の防止およびセキュリティ確保のため</li>
+                        <li>サービス改善のための統計分析のため</li>
+                        <li>ユーザーからのお問い合わせ対応のため</li>
+                    </ul>
+
+                    <h2>第3条（第三者提供）</h2>
+                    <p>本サービスは、以下の場合を除き、ユーザーの個人情報を第三者に提供しません。</p>
+                    <ul>
+                        <li>ユーザー本人の同意がある場合</li>
+                        <li>法令に基づく開示請求があった場合</li>
+                        <li>人の生命・身体・財産の保護のために必要な場合で、本人の同意を得ることが困難な場合</li>
+                    </ul>
+
+                    <h2>第4条（Cookieの利用）</h2>
+                    <p>
+                        本サービスでは、ログインセッションの維持のためにCookie（認証トークン）を使用します。
+                        このCookieはログアウト時に削除されます。
+                        本サービスでは、トラッキングや広告配信を目的としたCookieは使用していません。
+                    </p>
+
+                    <h2>第5条（データの保管と保護）</h2>
+                    <p>
+                        ユーザーの個人情報およびアップロードファイルは、管理者によって検閲が可能な状態で保管されます。
+                        アクセスは認証されたユーザー及び管理者に制限されます。
+                    </p>
+
+                    <p>
+                        本サービスは、インターネット通信および電子的保存方法の性質上、
+                        アップロードされたファイルの完全な安全性を保証するものではありません。
+                    </p>
+
+                    <h2>第6条（外部サービスの利用）</h2>
+                    <p>
+                        本サービスは、サービス提供・安定運用・セキュリティ向上のため、
+                        CDN、クラウドストレージ、アクセス解析等の外部サービスを利用する場合があります。
+                    </p>
+
+                    <h2>第7条（データの保持期間）</h2>
+                    <ul>
+                        <li>
+                            <strong>アカウント情報:</strong>
+                            アカウントが有効である限り保持されます。
+                            アカウント削除後、合理的な期間内に削除されます。
+                        </li>
+
+                        <li>
+                            <strong>アップロードファイル:</strong>
+                            ユーザーが設定した保存期間に従います。
+                            期間満了後は自動的に定期削除されます。
+                        </li>
+                    </ul>
+
+                    <h2>第8条（ユーザーの権利）</h2>
+                    <p>ユーザーは以下の権利を有します。</p>
+                    <ul>
+                        <li>自己の個人情報の開示請求</li>
+                        <li>自己の個人情報の訂正・削除の請求</li>
+                        <li>アカウントの削除（設定ページから全データ削除）</li>
+                    </ul>
+
+                    <h2>第9条（ポリシーの変更）</h2>
+                    <p>
+                        本ポリシーは、必要に応じて変更されることがあります。
+                        重要な変更がある場合は、本サービス上で告知します。
+                    </p>
+
+                    <h2>第10条（お問い合わせ）</h2>
+                    <p>
+                        本ポリシーに関するお問い合わせは、
+                        本サービスの管理者までご連絡ください。
+                    </p>
+
+                    <p style="margin-top:2rem;color:var(--text-sub);font-size:.78rem">
+                        制定日: 2026年5月9日
+                    </p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="/js/particles.js"></script>
+    <script type="module" src="/js/nav.js"></script>
+    <script type="module">
+        import { auth } from '/js/core/auth.js';
+
+        const user = auth.getUser();
+        if (user) {
+            document.getElementById('nav-username').textContent = user.username ?? '';
+            document.getElementById('drawerUsername').textContent = user.username ?? '';
+            if (auth.isAdmin()) document.getElementById('drawer-admin').classList.remove('hidden');
+        }
+
+        if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => { });
+    </script>
+    <script src="/js/dev-reload.js?v=1" defer></script>
+</body>
+
+</html>

@@ -332,7 +332,9 @@
                 }).join('');
                 tbody.querySelectorAll('tr').forEach((tr, i) => {
                     tr.classList.add('row-reveal');
-                    setTimeout(() => tr.classList.add('visible'), i * 30);
+                    requestAnimationFrame(() => {
+                        setTimeout(() => tr.classList.add('visible'), i * 30);
+                    });
                 });
             }
 
