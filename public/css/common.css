@@ -1118,9 +1118,6 @@ select.input {
 }
 
 /* ── Animations ── */
-@view-transition {
-  navigation: auto;
-}
 
 /* VT overlay: pass all clicks through to the real DOM (fixes nav buttons),
    clip overflow to prevent scrollbar from translateX motion */

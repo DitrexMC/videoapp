@@ -290,6 +290,10 @@ function swapPage(doc, url) {
     }
   });
 
+  // Scroll to top so the new-page snapshot is captured at top.
+  // (old-page snapshot was already captured at current scroll position.)
+  window.scrollTo(0, 0);
+
   // Swap main
   oldMain.replaceWith(newMain);
 
@@ -405,7 +409,6 @@ async function navigate(url, pushState = true) {
   }
 
   document.documentElement.removeAttribute('data-nav-dir');
-  window.scrollTo(0, 0);
 
   // Dispatch arrival event so new page scripts can set up
   document.dispatchEvent(new CustomEvent('va:navigate', { detail: { url: href } }));
