@@ -91,9 +91,9 @@
   --text-sub:          #475569;
   --text-muted:        #94a3b8;
   --text-inverse:      #f8fafc;
-  --border:            rgba(0, 0, 0, 0.07);
-  --border-hover:      rgba(0, 0, 0, 0.13);
-  --border-accent:     rgba(59, 130, 246, 0.2);
+  --border:            rgba(0, 0, 0, 0.32);
+  --border-hover:      rgba(0, 0, 0, 0.45);
+  --border-accent:     rgba(59, 130, 246, 0.48);
   --accent-dim:        rgba(59, 130, 246, 0.08);
   --shadow-sm:         0 1px 4px rgba(0, 0, 0, 0.1);
   --shadow:            0 4px 24px rgba(0, 0, 0, 0.1);
