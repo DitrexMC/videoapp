@@ -16,6 +16,7 @@ function onReady(fn) {
 
 // ── SPA Client-side navigation ─────────────────────────────────────────────────
 const pageCache = new Map();
+const cssCache = new Map();
 let navigating = false;
 const PERSISTENT_HEAD_SCRIPTS = new Set([
   location.origin + '/js/nav-theme.js'
@@ -67,13 +68,18 @@ async function preparePage(html, url) {
   );
   document.querySelectorAll('[data-va-sheet]').forEach(el => currentSheets.add(el.getAttribute('data-va-sheet')));
 
-  // Fetch missing CSS, cache it, but do NOT inject yet
+  // Fetch missing CSS text and store it.  In swapPage we inject it as
+  // <style> so it applies synchronously — the VT snapshot always sees the
+  // correct styles even for page-specific CSS (e.g. news.css).
   for (const link of doc.querySelectorAll('link[rel="stylesheet"]')) {
     const href = new URL(link.getAttribute('href'), baseUrl).href;
     if (currentSheets.has(href)) continue;
-    try {
-      await fetch(href, { credentials: 'same-origin' });
-    } catch { /* skip on failure */ }
+    if (!cssCache.has(href)) {
+      try {
+        const res = await fetch(href);
+        cssCache.set(href, await res.text());
+      } catch { /* skip on failure */ }
+    }
   }
 
   // Preload missing external scripts so they are available when inline scripts execute
@@ -244,6 +250,29 @@ function swapPage(doc, url) {
   const oldMain = document.querySelector('main');
   const newMain = doc.querySelector('main');
   if (!oldMain || !newMain) return false;
+
+  const baseUrl = new URL(url, location.origin);
+
+  // ── Inject page-specific CSS as inline <style> ──
+  // syncHead would add them as <link> but those load asynchronously.
+  // Injecting as <style> with cached text applies synchronously, so the
+  // VT snapshot always sees the correct styles (fixes news.css height).
+  const currentSheets = new Set(
+    [...document.querySelectorAll('link[rel="stylesheet"]')].map(l => l.href)
+  );
+  document.querySelectorAll('[data-va-sheet]').forEach(el => currentSheets.add(el.getAttribute('data-va-sheet')));
+
+  doc.querySelectorAll('link[rel="stylesheet"]').forEach(link => {
+    const href = new URL(link.getAttribute('href'), baseUrl).href;
+    if (currentSheets.has(href)) return;
+    const cssText = cssCache.get(href);
+    if (!cssText) return;
+    const s = document.createElement('style');
+    s.textContent = cssText;
+    s.setAttribute('data-va-sheet', href);
+    document.head.appendChild(s);
+    currentSheets.add(href);
+  });
 
   pendingHeadCleanup = syncHead(doc, url);
 
