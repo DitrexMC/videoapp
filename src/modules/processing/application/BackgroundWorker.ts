@@ -13,22 +13,26 @@ export interface BackgroundWorkerDependencies {
 }
 
 export class BackgroundWorker {
+  private static readonly MAX_CONCURRENT_JOBS = 3;
+
   private readonly clock: Clock;
   private readonly fileRepository: FileRepository;
-  private inFlightRun: Promise<void> | null;
+  private inFlightCount: number;
   private readonly pollIntervalMilliseconds: number;
   private readonly storage: LocalFileStorage;
   private readonly uploadRepository: UploadRepository;
   private intervalHandle: NodeJS.Timeout | null;
+  private pendingRuns: Set<Promise<void>>;
 
   constructor(dependencies: BackgroundWorkerDependencies) {
     this.clock = dependencies.clock;
     this.fileRepository = dependencies.fileRepository;
-    this.inFlightRun = null;
+    this.inFlightCount = 0;
     this.pollIntervalMilliseconds = dependencies.pollIntervalMilliseconds;
     this.storage = dependencies.storage;
     this.uploadRepository = dependencies.uploadRepository;
     this.intervalHandle = null;
+    this.pendingRuns = new Set();
   }
 
   start(): void {
@@ -37,11 +41,7 @@ export class BackgroundWorker {
     }
 
     this.intervalHandle = setInterval(() => {
-      if (!this.inFlightRun) {
-        this.inFlightRun = this.runInternal().finally(() => {
-          this.inFlightRun = null;
-        });
-      }
+      this.tick();
     }, this.pollIntervalMilliseconds);
   }
 
@@ -53,48 +53,44 @@ export class BackgroundWorker {
     clearInterval(this.intervalHandle);
     this.intervalHandle = null;
 
-    if (this.inFlightRun) {
-      await this.inFlightRun;
+    const pending = Array.from(this.pendingRuns);
+    if (pending.length > 0) {
+      await Promise.all(pending);
     }
   }
 
   async runOnce(): Promise<void> {
-    if (!this.inFlightRun) {
-      this.inFlightRun = this.runInternal().finally(() => {
-        this.inFlightRun = null;
-      });
-    }
+    await this.tick();
 
-    await this.inFlightRun;
+    const pending = Array.from(this.pendingRuns);
+    if (pending.length > 0) {
+      await Promise.all(pending);
+    }
   }
 
-  private async runInternal(): Promise<void> {
-    const now = this.clock.nowIsoString();
-    this.uploadRepository.expireDueResources(now);
+  private tick(): void {
+    this.uploadRepository.expireDueResources(this.clock.nowIsoString());
 
-    const job = this.uploadRepository.findFinalizeJob(now);
-
-    if (!job) {
-      return;
-    }
-
-    const timestamp = this.clock.nowIsoString();
-
-    this.uploadRepository.markFinalizeJobRunning(job.id, timestamp);
-
-    try {
-      await this.processJobWithTimeout(job);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "unknown error";
-      const nowIso = this.clock.nowIsoString();
-      const retryAfter = new Date(Date.now() + 30_000).toISOString();
-
-      this.uploadRepository.markFinalizeJobFailed(job.id, nowIso, message, retryAfter);
-
-      if (job.attempts + 1 >= job.maxAttempts) {
-        this.uploadRepository.markUploadFailed(job.subjectId, nowIso, message);
-        await this.storage.removeUploadDirectory(job.subjectId);
+    for (;;) {
+      if (this.inFlightCount >= BackgroundWorker.MAX_CONCURRENT_JOBS) {
+        break;
       }
+
+      const now = this.clock.nowIsoString();
+      const job = this.uploadRepository.findFinalizeJob(now);
+
+      if (!job) {
+        break;
+      }
+
+      this.uploadRepository.markFinalizeJobRunning(job.id, now);
+
+      this.inFlightCount++;
+      const promise = this.processJobWithTimeout(job).finally(() => {
+        this.inFlightCount--;
+        this.pendingRuns.delete(promise);
+      });
+      this.pendingRuns.add(promise);
     }
   }
 
@@ -112,9 +108,18 @@ export class BackgroundWorker {
           }, JOB_TIMEOUT_MS)
         ),
       ]);
-    } catch (err) {
+    } catch (error) {
       cancelled.value = true;
-      throw err;
+      const message = error instanceof Error ? error.message : "unknown error";
+      const nowIso = this.clock.nowIsoString();
+      const retryAfter = new Date(Date.now() + 30_000).toISOString();
+
+      this.uploadRepository.markFinalizeJobFailed(job.id, nowIso, message, retryAfter);
+
+      if (job.attempts + 1 >= job.maxAttempts) {
+        this.uploadRepository.markUploadFailed(job.subjectId, nowIso, message);
+        await this.storage.removeUploadDirectory(job.subjectId);
+      }
     }
   }
 
