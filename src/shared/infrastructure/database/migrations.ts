@@ -187,6 +187,17 @@ const migrations = [
       ALTER TABLE files ADD COLUMN show_uploader INTEGER NOT NULL CHECK (show_uploader IN (0, 1)) DEFAULT 1;
     `,
   },
+  {
+    id: "005_announcement_reads",
+    sql: `
+      CREATE TABLE IF NOT EXISTS announcement_reads (
+        user_id TEXT NOT NULL REFERENCES users(id),
+        article_url TEXT NOT NULL,
+        read_at TEXT NOT NULL,
+        PRIMARY KEY (user_id, article_url)
+      );
+    `,
+  },
 ] as const;
 
 export interface DefaultPolicySeed {

@@ -335,6 +335,11 @@ async function navigate(url, pushState = true) {
   if (u.origin !== location.origin) { location.href = href; return; }
   if (u.pathname === location.pathname && u.search === location.search) { navigating = false; return; }
 
+  // Mark news article as read on navigation
+  if (u.pathname.startsWith('/news/articles/')) {
+    api.news.markRead(u.pathname + u.search).catch(() => {});
+  }
+
   const direction = getDirection(location.pathname, u.pathname);
   const cacheKey = u.pathname + u.search;
   let html = pageCache.get(cacheKey);
@@ -524,4 +529,67 @@ onReady(() => {
   initLogout();
   initScrollShadow();
   initSpaNav();
+  initNotifyBell();
+  updateNotifyBadge();
+
+  // Mark news article as read on direct page load
+  if (location.pathname.startsWith('/news/articles/')) {
+    api.news.markRead(location.pathname + location.search).catch(() => {});
+  }
 });
+
+// ── Update badge after SPA navigation ─────────────────────────────────────────
+document.addEventListener('va:navigate', () => {
+  updateNotifyBadge();
+});
+
+// ── Notification bell ─────────────────────────────────────────────────────────
+function initNotifyBell() {
+  const navRight = document.querySelector('#nav .nav-right');
+  if (!navRight || document.getElementById('nav-notify')) return;
+
+  const bell = document.createElement('a');
+  bell.id = 'nav-notify';
+  bell.className = 'nav-notify';
+  bell.href = '/news.html';
+  bell.setAttribute('aria-label', 'お知らせ');
+  bell.innerHTML = `
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M16 7A6 6 0 0 0 4 7c0 7-3 9-3 9h18s-3-2-3-9"/>
+      <path d="M11.73 18a2 2 0 0 1-3.46 0"/>
+    </svg>
+    <span class="nav-notify-badge" id="nav-notify-badge"></span>
+  `;
+
+  const usernameEl = document.getElementById('nav-username');
+  if (usernameEl && usernameEl.nextSibling) {
+    navRight.insertBefore(bell, usernameEl.nextSibling);
+  } else {
+    navRight.appendChild(bell);
+  }
+}
+
+async function updateNotifyBadge() {
+  const badge = document.getElementById('nav-notify-badge');
+  const btn = document.getElementById('nav-notify');
+  if (!badge || !btn) return;
+
+  try {
+    const { read_urls } = await api.news.readUrls();
+    const manifestRes = await fetch('/news/manifest.json');
+    if (!manifestRes.ok) return;
+    const manifest = await manifestRes.json();
+
+    const unread = manifest.length - read_urls.length;
+    if (unread > 0) {
+      badge.textContent = unread > 99 ? '99+' : String(unread);
+      badge.classList.add('visible');
+      btn.classList.add('has-unread');
+    } else {
+      badge.classList.remove('visible');
+      btn.classList.remove('has-unread');
+    }
+  } catch {
+    // Silently ignore
+  }
+}

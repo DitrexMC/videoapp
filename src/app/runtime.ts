@@ -5,6 +5,8 @@ import { FileApplicationService } from "../modules/files/application/FileApplica
 import { SqliteFileRepository } from "../modules/files/infrastructure/SqliteFileRepository.js";
 import { AuthApplicationService } from "../modules/identity/application/AuthApplicationService.js";
 import { SqliteIdentityRepository } from "../modules/identity/infrastructure/SqliteIdentityRepository.js";
+import { NewsApplicationService } from "../modules/news/application/NewsApplicationService.js";
+import { SqliteNewsRepository } from "../modules/news/infrastructure/SqliteNewsRepository.js";
 import { BackgroundWorker } from "../modules/processing/application/BackgroundWorker.js";
 import { UploadApplicationService } from "../modules/uploads/application/UploadApplicationService.js";
 import { SqliteUploadRepository } from "../modules/uploads/infrastructure/SqliteUploadRepository.js";
@@ -23,6 +25,7 @@ export interface AppRuntime {
   database: SqliteDatabase;
   fileService: FileApplicationService;
   identityRepository: SqliteIdentityRepository;
+  newsService: NewsApplicationService;
   policyRepository: SqliteServicePolicyRepository;
   tokenService: TokenService;
   uploadService: UploadApplicationService;
@@ -145,6 +148,12 @@ export async function createRuntime(config: AppConfig): Promise<AppRuntime> {
     tokenService,
   });
 
+  const newsRepository = new SqliteNewsRepository(database.connection);
+  const newsService = new NewsApplicationService({
+    clock,
+    newsRepository,
+  });
+
   return {
     administrationService,
     authService,
@@ -153,6 +162,7 @@ export async function createRuntime(config: AppConfig): Promise<AppRuntime> {
     database,
     fileService,
     identityRepository,
+    newsService,
     policyRepository: servicePolicyRepository,
     tokenService,
     uploadService,

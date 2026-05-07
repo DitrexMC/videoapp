@@ -6,6 +6,7 @@ import { ZodError } from "zod";
 import { registerAdminRoutes } from "../modules/administration/presentation/registerAdminRoutes.js";
 import { registerFileRoutes } from "../modules/files/presentation/registerFileRoutes.js";
 import { registerAuthRoutes } from "../modules/identity/presentation/registerAuthRoutes.js";
+import { registerNewsRoutes } from "../modules/news/presentation/registerNewsRoutes.js";
 import { registerUploadRoutes } from "../modules/uploads/presentation/registerUploadRoutes.js";
 import { isAppError } from "../shared/domain/errors.js";
 import type { AppConfig } from "./config.js";
@@ -106,6 +107,7 @@ export async function createApp(config: AppConfig): Promise<FastifyInstance> {
   await registerUploadRoutes(app, runtime);
   await registerFileRoutes(app, runtime);
   await registerAdminRoutes(app, runtime);
+  await registerNewsRoutes(app, runtime);
 
   app.addHook("onClose", async () => {
     await runtime.worker.stop();

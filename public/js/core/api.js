@@ -249,4 +249,10 @@ export const api = {
         }),
     },
   },
+
+  news: {
+    readUrls: () => request('GET', '/api/news/read-urls'),
+    markRead: (articleUrl) =>
+      request('POST', '/api/news/read', { body: { article_url: articleUrl } }),
+  },
 };

@@ -290,6 +290,74 @@ body {
   background: rgba(59, 130, 246, 0.08);
 }
 
+/* Notification bell */
+.nav-notify {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-sub);
+  cursor: pointer;
+  text-decoration: none;
+  position: relative;
+  flex-shrink: 0;
+  transition: color 0.2s, border-color 0.2s, background 0.2s, transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.nav-notify:hover {
+  color: var(--text);
+  border-color: var(--accent2);
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.nav-notify svg {
+  width: 16px;
+  height: 16px;
+}
+
+.nav-notify-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 9999px;
+  background: var(--red);
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  display: none;
+  font-family: "Inter", "Noto Sans JP", "Segoe UI", system-ui, sans-serif;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
+}
+
+.nav-notify-badge.visible {
+  display: block;
+}
+
+.nav-notify.has-unread {
+  color: var(--accent2);
+  border-color: var(--accent2);
+  animation: notifyPulse 2s ease-in-out infinite;
+}
+
+.nav-notify.has-unread:hover {
+  color: var(--accent2);
+  animation: none;
+}
+
+@keyframes notifyPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+
 /* ── Right-side Drawer ── */
 .drawer-overlay {
   position: fixed;
