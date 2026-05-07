@@ -2,7 +2,7 @@
 .news-banner {
   position: relative;
   z-index: 1;
-  padding: 90px 5vw 56px;
+  padding: 30px 5vw 56px;
   overflow: hidden;
   border-bottom: 1px solid var(--border);
   background: var(--bg2);
@@ -96,12 +96,6 @@
 }
 
 /* ── Main layout ── */
-main {
-  position: relative;
-  z-index: 1;
-  padding-top: 0;
-}
-
 .news-wrap {
   max-width: 1100px;
   margin-inline: auto;
