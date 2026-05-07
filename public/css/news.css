@@ -443,9 +443,53 @@
 
 /* ── Article page ── */
 .article-container {
-  max-width: 800px;
+  max-width: 860px;
   margin-inline: auto;
   padding: 40px 5vw 80px;
+}
+
+.article-layout {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+}
+
+.article-back {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-sub);
+  text-decoration: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg2);
+  white-space: nowrap;
+  transition: color 0.2s, border-color 0.2s, background 0.2s, opacity 0.55s, transform 0.55s cubic-bezier(0.4,0,0.2,1);
+}
+
+.article-back.reveal {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.article-back.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.article-back:hover {
+  color: var(--accent2);
+  border-color: rgba(59, 130, 246, 0.45);
+  background: var(--bg3);
+}
+
+.article-main {
+  flex: 1;
+  min-width: 0;
 }
 
 .article-crumb {
