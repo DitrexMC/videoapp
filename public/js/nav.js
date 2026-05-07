@@ -16,8 +16,11 @@ function onReady(fn) {
 
 // ── SPA Client-side navigation ─────────────────────────────────────────────────
 const pageCache = new Map();
-const cssCache = new Map();
 let navigating = false;
+const PERSISTENT_HEAD_SCRIPTS = new Set([
+  location.origin + '/js/nav-theme.js'
+]);
+let pendingHeadCleanup = null;
 
 function getDirection(fromPath, toPath) {
   const fromArticle = fromPath.startsWith('/news/articles/');
@@ -68,12 +71,9 @@ async function preparePage(html, url) {
   for (const link of doc.querySelectorAll('link[rel="stylesheet"]')) {
     const href = new URL(link.getAttribute('href'), baseUrl).href;
     if (currentSheets.has(href)) continue;
-    if (!cssCache.has(href)) {
-      try {
-        const res = await fetch(href);
-        cssCache.set(href, await res.text());
-      } catch { /* skip on failure */ }
-    }
+    try {
+      await fetch(href, { credentials: 'same-origin' });
+    } catch { /* skip on failure */ }
   }
 
   // Preload missing external scripts so they are available when inline scripts execute
@@ -106,32 +106,151 @@ async function preparePage(html, url) {
   return doc;
 }
 
+function cloneHeadNode(node, baseUrl) {
+  const clone = node.cloneNode(true);
+
+  if (clone.nodeType !== Node.ELEMENT_NODE) {
+    return clone;
+  }
+
+  if (clone.tagName === 'LINK') {
+    const href = clone.getAttribute('href');
+    if (href) clone.setAttribute('href', new URL(href, baseUrl).href);
+  }
+
+  if (clone.tagName === 'SCRIPT') {
+    const src = clone.getAttribute('src');
+    if (src) clone.setAttribute('src', new URL(src, baseUrl).href);
+  }
+
+  return clone;
+}
+
+function getHeadNodeKey(node, baseUrl, index) {
+  if (node.nodeType !== Node.ELEMENT_NODE) {
+    return `text:${index}:${node.textContent}`;
+  }
+
+  if (node.tagName === 'TITLE') {
+    return null;
+  }
+
+  if (node.tagName === 'SCRIPT') {
+    const src = node.getAttribute('src');
+    if (!src) return `script:inline:${index}`;
+    return `script:${new URL(src, baseUrl).href}`;
+  }
+
+  if (node.tagName === 'LINK') {
+    const rel = node.getAttribute('rel') || '';
+    const href = node.getAttribute('href') || '';
+    return `link:${rel}:${href ? new URL(href, baseUrl).href : index}`;
+  }
+
+  if (node.tagName === 'META') {
+    const name = node.getAttribute('name');
+    if (name) return `meta:name:${name}`;
+    const property = node.getAttribute('property');
+    if (property) return `meta:property:${property}`;
+    const httpEquiv = node.getAttribute('http-equiv');
+    if (httpEquiv) return `meta:http-equiv:${httpEquiv}`;
+    const charset = node.getAttribute('charset');
+    if (charset) return 'meta:charset';
+  }
+
+  if (node.id) {
+    return `${node.tagName.toLowerCase()}#${node.id}`;
+  }
+
+  return `${node.tagName.toLowerCase()}:${index}`;
+}
+
+function syncHead(doc, url) {
+  const baseUrl = new URL(url, location.origin);
+  const existingNodes = new Map();
+
+  Array.from(document.head.childNodes).forEach((node, index) => {
+    const key = getHeadNodeKey(node, location.origin, index);
+    if (!key) return;
+
+    if (node.nodeType === Node.ELEMENT_NODE && node.tagName === 'SCRIPT') {
+      const src = node.getAttribute('src');
+      if (src) {
+        const absSrc = new URL(src, location.origin).href;
+        if (PERSISTENT_HEAD_SCRIPTS.has(absSrc)) {
+          existingNodes.set(key, { node, preserve: true });
+          return;
+        }
+      }
+    }
+
+    existingNodes.set(key, { node, preserve: false });
+  });
+
+  const desiredKeys = new Set();
+  const fragment = document.createDocumentFragment();
+
+  Array.from(doc.head.childNodes).forEach((node, index) => {
+    const key = getHeadNodeKey(node, baseUrl, index);
+    if (!key) return;
+
+    if (node.nodeType === Node.ELEMENT_NODE && node.tagName === 'SCRIPT') {
+      const src = node.getAttribute('src');
+      if (src) {
+        const absSrc = new URL(src, baseUrl).href;
+        if (PERSISTENT_HEAD_SCRIPTS.has(absSrc)) {
+          desiredKeys.add(key);
+          return;
+        }
+      }
+    }
+
+    desiredKeys.add(key);
+    const existing = existingNodes.get(key);
+    const desiredNode = cloneHeadNode(node, baseUrl);
+
+    if (!existing) {
+      fragment.appendChild(desiredNode);
+      return;
+    }
+
+    if (existing.node.nodeType === Node.ELEMENT_NODE) {
+      if (existing.node.outerHTML !== desiredNode.outerHTML) {
+        existing.node.replaceWith(desiredNode);
+        existingNodes.set(key, { node: desiredNode, preserve: existing.preserve });
+      }
+      return;
+    }
+
+    if (existing.node.textContent !== desiredNode.textContent) {
+      existing.node.textContent = desiredNode.textContent;
+    }
+  });
+
+  if (fragment.childNodes.length > 0) {
+    document.head.appendChild(fragment);
+  }
+
+  const staleNodes = [];
+  existingNodes.forEach(({ node, preserve }, key) => {
+    if (preserve || desiredKeys.has(key)) {
+      return;
+    }
+    staleNodes.push(node);
+  });
+
+  return () => {
+    staleNodes.forEach(node => node.remove());
+  };
+}
+
 // ── Phase 2: all DOM mutations inside VT callback (atomic visual change) ──
 function swapPage(doc, url) {
   const oldMain = document.querySelector('main');
   const newMain = doc.querySelector('main');
   if (!oldMain || !newMain) return false;
 
-  const baseUrl = new URL(url, location.origin);
-
-  // Inject cached CSS as <style> (immediate, no network delay)
-  const currentSheets = new Set(
-    [...document.querySelectorAll('link[rel="stylesheet"]')].map(l => l.href)
-  );
-  document.querySelectorAll('[data-va-sheet]').forEach(el => currentSheets.add(el.getAttribute('data-va-sheet')));
-
-  doc.querySelectorAll('link[rel="stylesheet"]').forEach(link => {
-    const href = new URL(link.getAttribute('href'), baseUrl).href;
-    if (currentSheets.has(href)) return;
-    const cssText = cssCache.get(href);
-    if (!cssText) return;
-    const s = document.createElement('style');
-    s.textContent = cssText;
-    if (link.id) s.id = link.id;
-    s.setAttribute('data-va-sheet', href);
-    document.head.appendChild(s);
-    currentSheets.add(href);
-  });
+  pendingHeadCleanup = syncHead(doc, url);
 
   // Mirror body class + title
   document.body.className = doc.body.className;
@@ -245,7 +364,10 @@ async function navigate(url, pushState = true) {
       }
     });
     await transition.finished;
+    pendingHeadCleanup?.();
+    pendingHeadCleanup = null;
   } catch {
+    pendingHeadCleanup = null;
     if (pushState) history.replaceState(null, '', oldUrl);
     location.href = href;
     return;
