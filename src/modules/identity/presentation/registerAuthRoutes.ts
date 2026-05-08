@@ -32,6 +32,11 @@ export async function registerAuthRoutes(
       userAgent: request.headers["user-agent"] ?? null,
     });
 
+    request.log.info(
+      { action: "LOGIN" },
+      `${loginResult.user.username} (${request.ip})`,
+    );
+
     reply.header(
       "Set-Cookie",
       serializeSessionCookie(loginResult.session_token),
@@ -68,18 +73,30 @@ export async function registerAuthRoutes(
 
   app.post("/auth/logout", async (request, reply) => {
     const sessionToken = getBearerToken(request.headers.authorization);
+    const user = runtime.authService.getCurrentUser(sessionToken);
 
     runtime.authService.logout(sessionToken);
     reply.header("Set-Cookie", clearSessionCookie());
+
+    request.log.info(
+      { action: "LOGOUT" },
+      `${user.username} (${request.ip})`,
+    );
 
     return reply.status(204).send();
   });
 
   app.post("/auth/logout_all", async (request, reply) => {
     const sessionToken = getBearerToken(request.headers.authorization);
+    const user = runtime.authService.getCurrentUser(sessionToken);
 
     runtime.authService.logoutAll(sessionToken);
     reply.header("Set-Cookie", clearSessionCookie());
+
+    request.log.info(
+      { action: "LOGOUT_ALL" },
+      `${user.username} revoked all sessions (${request.ip})`,
+    );
 
     return reply.status(204).send();
   });

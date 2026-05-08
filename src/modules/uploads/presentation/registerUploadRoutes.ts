@@ -47,10 +47,17 @@ export async function registerUploadRoutes(
       );
     }
 
-    return runtime.uploadService.initUpload(
+    const result = runtime.uploadService.initUpload(
       sessionToken,
       buildInitUploadInput(body.data),
     );
+
+    request.log.info(
+      { action: "UPLOAD" },
+      `${body.data.name} (${formatSize(body.data.size)})`,
+    );
+
+    return result;
   });
 
   app.put("/upload/:uploadId/:index", async (request) => {
@@ -91,6 +98,11 @@ export async function registerUploadRoutes(
       body.data,
     );
 
+    request.log.info(
+      { action: "UPLOAD" },
+      `completed (${formatSize(body.data.totalSize)})`,
+    );
+
     return reply.status(202).send(result);
   });
 
@@ -110,6 +122,11 @@ export async function registerUploadRoutes(
       .parse(request.params);
 
     await runtime.uploadService.cancelUpload(sessionToken, params.uploadId);
+
+    request.log.info(
+      { action: "UPLOAD" },
+      `canceled ${params.uploadId}`,
+    );
 
     return reply.status(204).send();
   });
@@ -247,4 +264,20 @@ function buildInitUploadInput(data: z.infer<typeof initUploadSchema>): {
   }
 
   return initUploadInput;
+}
+
+function formatSize(bytes: number): string {
+  if (bytes >= 1024 * 1024 * 1024) {
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+  }
+
+  if (bytes >= 1024 * 1024) {
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
+  if (bytes >= 1024) {
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  }
+
+  return `${bytes} B`;
 }

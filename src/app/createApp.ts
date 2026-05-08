@@ -2,6 +2,8 @@ import staticPlugin from "@fastify/static";
 import Fastify, { type FastifyInstance } from "fastify";
 import { resolve } from "node:path";
 import { ZodError } from "zod";
+import type { FastifyServerOptions } from "fastify";
+import process from "node:process";
 
 import { registerAdminRoutes } from "../modules/administration/presentation/registerAdminRoutes.js";
 import { registerFileRoutes } from "../modules/files/presentation/registerFileRoutes.js";
@@ -14,11 +16,29 @@ import { createRuntime } from "./runtime.js";
 
 export async function createApp(config: AppConfig): Promise<FastifyInstance> {
   const runtime = await createRuntime(config);
+
+  const loggerOptions: FastifyServerOptions["logger"] = process.stdout.isTTY
+    ? {
+        level: config.LOG_LEVEL,
+        transport: {
+          target: "pino-pretty",
+          options: {
+            colorize: true,
+            translateTime: "SYS:HH:MM:ss.l",
+            ignore: "pid,hostname",
+            customColors:
+              "trace:gray,debug:cyan,info:green,warn:yellow,error:red,fatal:bgRed",
+            messageFormat: "{if action}[{action}]{end} {msg}",
+          },
+        },
+      }
+    : {
+        level: config.LOG_LEVEL,
+      };
+
   const app = Fastify({
     bodyLimit: Math.max(config.MAX_CHUNK_SIZE_BYTES, 1024 * 1024),
-    logger: {
-      level: config.LOG_LEVEL,
-    },
+    logger: loggerOptions,
   });
 
   app.addContentTypeParser(

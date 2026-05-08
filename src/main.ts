@@ -12,6 +12,9 @@ async function main(): Promise<void> {
 }
 
 main().catch((error: unknown) => {
-  console.error(error);
+  const ts = new Date().toISOString();
+  const message =
+    error instanceof Error ? error.stack ?? error.message : String(error);
+  process.stderr.write(`[${ts}] FATAL: ${message}\n`);
   process.exitCode = 1;
 });
