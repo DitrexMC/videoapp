@@ -309,7 +309,7 @@ function swapPage(doc, url) {
       s.setAttribute('data-va-inline', String(idx));
       document.body.appendChild(s);
     } catch (err) {
-      console.error('[va-nav] inline script failed:', err);
+
     }
   });
 

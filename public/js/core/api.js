@@ -215,17 +215,21 @@ export const api = {
   },
 
   upload: {
-    init: (payload, opts) => request('POST', '/upload/init', { body: payload, ...opts }),
+    init: (payload, opts) => request('POST', '/upload/init', {
+      body: payload,
+      retry: { maxRetries: 2, retryDelay: 2000, timeout: 30000 },
+      ...opts
+    }),
     chunk: (id, index, buffer, headers) =>
       request('PUT', `/upload/${id}/${index}`, {
         body: buffer,
         headers,
-        retry: { maxRetries: 5, retryDelay: 1000, timeout: 30000 },
+        retry: { maxRetries: 3, retryDelay: 2000, timeout: 60000 },
       }),
     complete: (payload) =>
       request('POST', '/upload/complete', {
         body: payload,
-        retry: { maxRetries: 5, retryDelay: 1000, timeout: 15000 },
+        retry: { maxRetries: 3, retryDelay: 2000, timeout: 30000 },
       }),
     status: (id) => request('GET', `/upload/${id}/status`),
     cancel: (id) => request('DELETE', `/upload/${id}`),

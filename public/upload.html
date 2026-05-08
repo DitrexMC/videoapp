@@ -581,21 +581,13 @@
                 let nextIndex = 0;
                 const workers = [];
 
-                async function sendChunk(i, retriesLeft = 2) {
+                async function sendChunk(i) {
                     const start = i * chunkSize;
                     const end = Math.min(start + chunkSize, file.size);
                     const chunk = file.slice(start, end);
                     const buf = await chunk.arrayBuffer();
 
-                    try {
-                        await api.upload.chunk(uploadId, i, buf, { 'X-File-Id': fileId });
-                    } catch (err) {
-                        if (retriesLeft > 0) {
-                            await new Promise(r => setTimeout(r, 1000));
-                            return sendChunk(i, retriesLeft - 1);
-                        }
-                        throw err;
-                    }
+                    await api.upload.chunk(uploadId, i, buf, { 'X-File-Id': fileId });
 
                     uploadedBytes += buf.byteLength;
                     completedChunks++;

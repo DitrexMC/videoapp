@@ -554,7 +554,7 @@
                 const totalStorage = allUsers.reduce((acc, u) => acc + (u.storageUsedBytes ?? 0), 0);
                 document.getElementById('stat-storage').textContent = fmtBytes(totalStorage);
                 renderUsers(allUsers);
-            } catch (e) { console.error(e); }
+            } catch {}
         }
 
         async function loadFileStats() {
@@ -564,7 +564,7 @@
                 filePage = 1;
                 document.getElementById('stat-files').textContent = allFiles.length;
                 renderAdminFiles();
-            } catch (e) { console.error(e); }
+            } catch {}
         }
 
         // ── User Management ────────────────────────────────────
@@ -793,7 +793,7 @@
                 filePage = 1;
                 document.getElementById('stat-files').textContent = allFiles.length;
                 renderAdminFiles();
-            } catch (e) { console.error(e); }
+            } catch {}
         });
 
         document.getElementById('file-search-input').addEventListener('keydown', e => {
@@ -819,7 +819,7 @@
                 document.getElementById('pol-chunk').value = p.defaultChunkSizeBytes ? Math.round(p.defaultChunkSizeBytes / 1048576) : '';
                 document.getElementById('pol-zip-count').value = p.maxZipFileCount ?? '';
                 document.getElementById('pol-zip-size').value = p.maxZipTotalBytes ? Math.round(p.maxZipTotalBytes / 1048576) : '';
-            } catch (e) { console.error(e); }
+            } catch {}
         }
 
         document.getElementById('policy-form').addEventListener('submit', async e => {
