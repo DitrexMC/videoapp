@@ -13,6 +13,17 @@ class ApiError extends Error {
   }
 }
 
+let progressBarRef = null;
+
+function getProgressBar() {
+  if (!progressBarRef) {
+    try {
+      progressBarRef = window.__progressBar;
+    } catch { }
+  }
+  return progressBarRef;
+}
+
 // ─────────────────────────────
 // Auth lazy reference (safe)
 // ─────────────────────────────
@@ -72,58 +83,65 @@ async function request(method, path, options = {}) {
   const retryDelay = typeof retry?.retryDelay === 'number' ? retry.retryDelay : 2000;
   let attempt = 0;
 
-  while (true) {
-    let response;
-    try {
-      response = await fetch(url, {
-        method,
-        headers: { ...headers },
-        body: rawBody,
-        signal,
-      });
-    } catch (err) {
-      throw err;
-    }
+  const pb = getProgressBar();
+  if (pb) pb.start();
 
-    if (response.status === 204 || response.headers.get('content-length') === '0') {
-      return null;
-    }
-
-    const contentType = response.headers.get('content-type') ?? '';
-
-    if (response.status === 429) {
-      if (attempt < maxRetries) {
-        const retryAfter = parseInt(response.headers.get('retry-after'), 10) * 1000 || retryDelay;
-        attempt++;
-        await new Promise(r => setTimeout(r, retryAfter));
-        continue;
-      }
-    }
-
-    if (!response.ok) {
-      let errBody = {};
+  try {
+    while (true) {
+      let response;
       try {
-        errBody = await response.json();
-      } catch { }
-
-      if (response.status === 401 && headers['Authorization']) {
-        auth.clearSession?.();
-        window.location.replace('/login.html');
+        response = await fetch(url, {
+          method,
+          headers: { ...headers },
+          body: rawBody,
+          signal,
+        });
+      } catch (err) {
+        throw err;
       }
 
-      throw new ApiError(
-        response.status,
-        errBody.code ?? 'unknown_error',
-        errBody.message ?? `HTTP ${response.status}`,
-        errBody.details
-      );
-    }
+      if (response.status === 204 || response.headers.get('content-length') === '0') {
+        return null;
+      }
 
-    if (contentType.includes('application/json')) {
-      return response.json();
-    }
+      const contentType = response.headers.get('content-type') ?? '';
 
-    return response;
+      if (response.status === 429) {
+        if (attempt < maxRetries) {
+          const retryAfter = parseInt(response.headers.get('retry-after'), 10) * 1000 || retryDelay;
+          attempt++;
+          await new Promise(r => setTimeout(r, retryAfter));
+          continue;
+        }
+      }
+
+      if (!response.ok) {
+        let errBody = {};
+        try {
+          errBody = await response.json();
+        } catch { }
+
+        if (response.status === 401 && headers['Authorization']) {
+          auth.clearSession?.();
+          window.location.replace('/login.html');
+        }
+
+        throw new ApiError(
+          response.status,
+          errBody.code ?? 'unknown_error',
+          errBody.message ?? `HTTP ${response.status}`,
+          errBody.details
+        );
+      }
+
+      if (contentType.includes('application/json')) {
+        return response.json();
+      }
+
+      return response;
+    }
+  } finally {
+    if (pb) pb.done();
   }
 }
 

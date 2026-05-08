@@ -275,6 +275,10 @@ export class UploadApplicationService {
       throw new NotFoundError("アップロードが見つかりません。");
     }
 
+    if (upload.status === "processing" || upload.status === "ready") {
+      throw new ConflictError("このアップロードはすでに処理中または完了済みです。");
+    }
+
     this.uploadRepository.markUploadCancelled(uploadId, this.clock.nowIsoString());
     await this.storage.removeUploadDirectory(uploadId);
   }

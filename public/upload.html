@@ -11,6 +11,7 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+JP:wght@400;500;700&display=swap"
         rel="stylesheet">
+    <script src="/js/ui/progress-bar.js" defer></script>
     <script src="/js/nav-theme.js"></script>
     <link rel="stylesheet" href="/css/common.css">
     <link rel="stylesheet" href="/css/app.css">
@@ -297,6 +298,12 @@
         const expirySelect = document.getElementById('expiry-select');
         const customDaysInput = document.getElementById('custom-days');
 
+        const queuedFileKeys = new Set();
+
+        function fileKey(file) {
+            return `${file.name}::${file.size}::${file.lastModified}`;
+        }
+
         publicToggle.addEventListener('change', () => {
             publicLabel.textContent = publicToggle.checked ? 'オン（公開）' : 'オフ（非公開）';
         });
@@ -438,8 +445,16 @@
 
         function startQueue(files) {
             const MAX_SIZE = 5 * 1024 * 1024 * 1024;
-            const tooBig = files.filter(f => f.size > MAX_SIZE);
-            const valid = files.filter(f => f.size <= MAX_SIZE);
+            const unique = files.filter(f => {
+                const key = fileKey(f);
+                if (queuedFileKeys.has(key)) return false;
+                queuedFileKeys.add(key);
+                return true;
+            });
+            if (unique.length === 0) return;
+
+            const tooBig = unique.filter(f => f.size > MAX_SIZE);
+            const valid = unique.filter(f => f.size <= MAX_SIZE);
 
             queueSec.hidden = false;
 
@@ -466,7 +481,6 @@
             const expiryDays = getExpiryDays();
             const expiresAt = expiryDays ? new Date(Date.now() + expiryDays * 86400000).toISOString() : null;
 
-            // Multi-file: create auto-folder
             if (batchSize >= 2) {
                 uploadConcurrent(items, isPublic, expiresAt, batchSize);
             } else {
@@ -653,13 +667,34 @@
                 onDone();
             } catch (err) {
                 item.progressEl.hidden = true;
-                item.statusEl.textContent = 'エラー';
-                item.statusEl.className = 'qi-status qi-status--error';
-                item.resultEl.hidden = false;
-                item.resultEl.innerHTML = `<span class="qi-error-msg">${esc(err?.message ?? 'アップロードに失敗しました')}</span>`;
 
-                if (uploadId) {
+                let cancelled = false;
+                if (uploadId && err instanceof api.ApiError) {
+                    cancelled = true;
                     api.upload.cancel(uploadId).catch(() => { });
+                } else if (uploadId) {
+                    try {
+                        const st = await api.upload.status(uploadId);
+                        if (st && (st.status === 'processing' || st.status === 'ready')) {
+                            item.statusEl.textContent = '完了';
+                            item.statusEl.className = 'qi-status qi-status--done';
+                            item.resultEl.hidden = false;
+                            item.resultEl.innerHTML = `<span style="color:var(--text-sub)">サーバーで処理中です。ファイル一覧を確認してください。</span>`;
+                            onDone();
+                            return;
+                        }
+                    } catch { }
+                    cancelled = true;
+                    api.upload.cancel(uploadId).catch(() => { });
+                }
+
+                if (cancelled || !uploadId) {
+                    item.statusEl.textContent = 'エラー';
+                    item.statusEl.className = 'qi-status qi-status--error';
+                }
+                item.resultEl.hidden = false;
+                if (!item.resultEl.innerHTML) {
+                    item.resultEl.innerHTML = `<span class="qi-error-msg">${esc(err?.message ?? 'アップロードに失敗しました')}</span>`;
                 }
                 onDone();
                 setTimeout(() => { item.el.style.opacity = '0'; item.el.style.transition = 'opacity .3s'; setTimeout(() => item.el.remove(), 300); }, 4000);
