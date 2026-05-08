@@ -52,9 +52,10 @@ export async function registerUploadRoutes(
       buildInitUploadInput(body.data),
     );
 
+    const user = runtime.authService.authenticate(sessionToken).user;
     request.log.info(
-      { action: "UPLOAD" },
-      `${body.data.name} (${formatSize(body.data.size)})`,
+      { action: "Upload" },
+      `${body.data.name} (${formatSize(body.data.size)}, ${user.username})`,
     );
 
     return result;
@@ -98,9 +99,10 @@ export async function registerUploadRoutes(
       body.data,
     );
 
+    const user = runtime.authService.authenticate(sessionToken).user;
     request.log.info(
-      { action: "UPLOAD" },
-      `completed (${formatSize(body.data.totalSize)})`,
+      { action: "Upload" },
+      `completed (${formatSize(body.data.totalSize)}, ${user.username})`,
     );
 
     return reply.status(202).send(result);
@@ -123,9 +125,10 @@ export async function registerUploadRoutes(
 
     await runtime.uploadService.cancelUpload(sessionToken, params.uploadId);
 
+    const user = runtime.authService.authenticate(sessionToken).user;
     request.log.info(
-      { action: "UPLOAD" },
-      `canceled ${params.uploadId}`,
+      { action: "Upload" },
+      `canceled ${params.uploadId} (${user.username})`,
     );
 
     return reply.status(204).send();

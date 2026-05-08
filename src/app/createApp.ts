@@ -25,10 +25,8 @@ export async function createApp(config: AppConfig): Promise<FastifyInstance> {
           options: {
             colorize: true,
             translateTime: "SYS:HH:MM:ss.l",
-            ignore: "pid,hostname,reqId",
-            customColors:
-              "trace:gray,debug:cyan,info:green,warn:yellow,error:red,fatal:bgRed",
-            messageFormat: "{msg}",
+            ignore: "pid,hostname,reqId,action",
+            messageFormat: "{if action}[{action}] {end}{msg}",
           },
         },
       }

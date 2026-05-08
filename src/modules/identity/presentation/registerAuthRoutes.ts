@@ -33,7 +33,7 @@ export async function registerAuthRoutes(
     });
 
     request.log.info(
-      { action: "LOGIN" },
+      { action: "Login" },
       `${loginResult.user.username} (${request.ip})`,
     );
 
@@ -79,7 +79,7 @@ export async function registerAuthRoutes(
     reply.header("Set-Cookie", clearSessionCookie());
 
     request.log.info(
-      { action: "LOGOUT" },
+      { action: "Logout" },
       `${user.username} (${request.ip})`,
     );
 
@@ -94,7 +94,7 @@ export async function registerAuthRoutes(
     reply.header("Set-Cookie", clearSessionCookie());
 
     request.log.info(
-      { action: "LOGOUT_ALL" },
+      { action: "Logout All" },
       `${user.username} revoked all sessions (${request.ip})`,
     );
 
