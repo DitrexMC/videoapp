@@ -1,6 +1,6 @@
-const CACHE_VERSION = 'fv-v17';
+const CACHE_VERSION = 'fv-v18';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
-const API_PREFIX = '/api/';
+const HTML_CACHE = `${CACHE_VERSION}-html`;
 
 const STATIC_ASSETS = [
   '/css/variables.css',
@@ -8,19 +8,44 @@ const STATIC_ASSETS = [
   '/css/layout.css',
   '/css/components.css',
   '/css/animations.css',
+  '/css/file-preview.css',
+  '/css/news.css',
+  '/css/common.css',
+  '/css/app.css',
   '/js/ui/toast.js',
   '/js/ui/theme.js',
   '/js/ui/shell.js',
   '/js/ui/modal.js',
   '/js/ui/format.js',
+  '/js/nav.js',
+  '/js/nav-theme.js',
+  '/js/file-row.js',
+  '/js/particles.js',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
+  '/manifest.json',
+];
+
+const HTML_PAGES = [
+  '/',
+  '/index.html',
+  '/files.html',
+  '/file.html',
+  '/upload.html',
+  '/login.html',
+  '/settings.html',
+  '/admin.html',
+  '/news.html',
+  '/privacy.html',
+  '/terms.html',
 ];
 
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(STATIC_CACHE).then(cache => cache.addAll(STATIC_ASSETS))
-      .then(() => self.skipWaiting())
+    Promise.all([
+      caches.open(STATIC_CACHE).then(cache => cache.addAll(STATIC_ASSETS)),
+      caches.open(HTML_CACHE).then(cache => cache.addAll(HTML_PAGES)),
+    ]).then(() => self.skipWaiting())
   );
 });
 
@@ -29,7 +54,7 @@ self.addEventListener('activate', event => {
     caches.keys().then(keys =>
       Promise.all(
         keys
-          .filter(k => k.startsWith('fv-') && k !== STATIC_CACHE)
+          .filter(k => k.startsWith('fv-') && ![STATIC_CACHE, HTML_CACHE].includes(k))
           .map(k => caches.delete(k))
       )
     ).then(() => self.clients.claim())
@@ -38,57 +63,58 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   const { request } = event;
-  const path = new URL(request.url).pathname;
+  const url = new URL(request.url);
+  const path = url.pathname;
 
-  // Let all API routes pass through without SW interference
-  // SW's fetch(request) can corrupt binary bodies (chunk uploads get 415)
-  if (path.startsWith('/api/') || isApiRoute(path)) {
+  if (request.method !== 'GET') return;
+
+  if (isStaticAsset(url)) {
+    event.respondWith(cacheFirst(request, STATIC_CACHE));
     return;
   }
 
-  // Cache-first for static assets
-  if (isStaticAsset(request.url)) {
-    event.respondWith(
-      caches.match(request).then(cached => {
-        const fetchPromise = fetch(request).then(response => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(STATIC_CACHE).then(cache => cache.put(request, clone));
-          }
-          return response;
-        });
-
-        return cached || fetchPromise;
-      })
-    );
+  if (isHtmlPage(request, path)) {
+    event.respondWith(staleWhileRevalidate(request, HTML_CACHE));
     return;
   }
 
-  // Network-first for HTML pages
-  if (request.headers.get('accept')?.includes('text/html')) {
-    event.respondWith(
-      fetch(request).catch(() => caches.match(request))
-    );
-    return;
-  }
-
-  // Default: network
   event.respondWith(fetch(request));
 });
 
-function isStaticAsset(url) {
-  // Skip core JS modules — network-first to avoid stale cache
-  if (url.includes('/js/core/')) return false;
-  return /\.(css|js|png|jpg|jpeg|gif|svg|woff2?|ttf)(\?.*)?$/.test(url);
+function cacheFirst(request, cacheName) {
+  return caches.match(request).then(cached => {
+    const fetchPromise = fetch(request).then(response => {
+      if (response.ok) {
+        const clone = response.clone();
+        caches.open(cacheName).then(cache => cache.put(request, clone));
+      }
+      return response;
+    }).catch(() => cached);
+    return cached || fetchPromise;
+  });
 }
 
-function isApiRoute(path) {
-  return (
-    path.startsWith('/upload/') ||
-    path.startsWith('/files/') ||
-    path.startsWith('/admin/') ||
-    path.startsWith('/auth/') ||
-    path.startsWith('/folders/') ||
-    path.startsWith('/groups/')
+function staleWhileRevalidate(request, cacheName) {
+  return caches.open(cacheName).then(cache =>
+    cache.match(request).then(cached => {
+      const fetchPromise = fetch(request).then(response => {
+        if (response.ok) {
+          cache.put(request, response.clone());
+        }
+        return response;
+      }).catch(() => cached);
+      return cached || fetchPromise;
+    })
   );
+}
+
+function isStaticAsset(url) {
+  if (url.href.includes('/js/core/')) return false;
+  return /\.(css|js|png|jpg|jpeg|gif|svg|woff2?|ttf)(\?.*)?$/.test(url.href);
+}
+
+function isHtmlPage(request, path) {
+  if (request.headers.get('accept')?.includes('text/html')) return true;
+  if (path === '/' || path.endsWith('.html')) return true;
+  return false;
 }

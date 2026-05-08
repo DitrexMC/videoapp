@@ -436,6 +436,7 @@
     <script type="module">
         import { auth } from '/js/core/auth.js';
         import { api } from '/js/core/api.js';
+        import { cache } from '/js/core/cache.js';
 
         if (!auth.requireAuth()) {
             throw new Error('redirect');
@@ -469,6 +470,17 @@
         }
         typeLoop();
 
+        // Show cached user immediately — no network wait
+        const cachedUser = auth.getUser();
+        if (cachedUser) {
+            document.getElementById('nav-username').textContent = cachedUser.username ?? '';
+            document.getElementById('drawerUsername').textContent = cachedUser.username ?? '';
+            document.getElementById('hero-name').textContent = cachedUser.username ?? 'guest';
+            if (cachedUser.role === 'admin') {
+                document.getElementById('drawer-admin').classList.remove('hidden');
+            }
+        }
+
         async function init() {
             const me = await api.auth.me();
             auth.updateUser(me);
@@ -483,7 +495,31 @@
         }
 
         async function loadContent(me) {
+            const meCacheKey = 'me:' + (me.id || 'anon');
+            const filesCacheKey = 'files:list:' + (me.id || 'anon');
+
+            // Show cached file stats immediately if available
+            const cachedFiles = cache.getSync(filesCacheKey);
+            if (cachedFiles) {
+                const files = cachedFiles?.items ?? [];
+                const cachedUsedBytes = files.reduce((sum, f) => sum + (f.size ?? 0), 0);
+                const cachedQuotaBytes = me.storage_limit_bytes ?? 0;
+                const cachedPct = Math.min(100, cachedQuotaBytes > 0 ? (cachedUsedBytes / cachedQuotaBytes) * 100 : 0);
+                document.getElementById('usage-bar').style.width = cachedPct + '%';
+                document.getElementById('hc-used').textContent = fmtBytes(cachedUsedBytes);
+                document.getElementById('hc-quota').textContent = cachedQuotaBytes > 0 ? fmtBytes(cachedQuotaBytes) : '無制限';
+                document.getElementById('hc-usage-txt').textContent = cachedQuotaBytes > 0
+                    ? `${fmtBytes(cachedUsedBytes)} / ${fmtBytes(cachedQuotaBytes)}`
+                    : `${fmtBytes(cachedUsedBytes)} / 無制限`;
+                document.getElementById('hero-badges').innerHTML = `
+                    <span class="badge badge-blue">${files.length} ファイル</span>
+                    <span class="badge badge-gray">${fmtBytes(cachedUsedBytes)} 使用中</span>
+                    ${auth.isAdmin() ? '<span class="badge badge-gold">管理者</span>' : ''}
+                `;
+            }
+
             const filesResponse = await api.files.list({ limit: 100 });
+            cache.set(filesCacheKey, filesResponse);
             const files = filesResponse?.items ?? [];
 
             const usedBytes = files.reduce((sum, f) => sum + (f.size ?? 0), 0);

@@ -267,8 +267,25 @@
     <script type="module">
         import { auth } from '/js/core/auth.js';
         import { api } from '/js/core/api.js';
+        import { cache } from '/js/core/cache.js';
 
         if (!auth.requireAuth()) throw new Error('auth required');
+
+        // Show cached user immediately — no network wait
+        const cachedUser = auth.getUser();
+        if (cachedUser) {
+            document.getElementById('nav-username').textContent = cachedUser.username ?? '';
+            document.getElementById('drawerUsername').textContent = cachedUser.username ?? '';
+            if (cachedUser.role === 'admin') {
+                document.getElementById('drawer-admin').classList.remove('hidden');
+            }
+            const used = cachedUser.storage_used_bytes ?? 0;
+            const limit = cachedUser.storage_limit_bytes ?? 0;
+            const pct = limit > 0 ? Math.min(100, used / limit * 100) : 0;
+            document.getElementById('usage-bar').style.width = pct.toFixed(1) + '%';
+            document.getElementById('usage-label').textContent =
+                limit > 0 ? fmtBytes(used) + ' / ' + fmtBytes(limit) : fmtBytes(used) + ' / 無制限';
+        }
 
         /* ─── state ─────────────────────────────────────────── */
         const PAGE_SIZE = 50;

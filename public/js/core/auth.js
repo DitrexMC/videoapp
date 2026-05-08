@@ -2,6 +2,10 @@
  * Auth state management.
  * Stores session_token in sessionStorage (cleared on tab close).
  * Falls back to localStorage when "remember" is set.
+ *
+ * User data is cached aggressively so every page can render
+ * the UI shell (username, avatar, role badges) instantly without
+ * waiting for the /auth/me network round-trip.
  */
 
 const SESSION_KEY = 'va_session';
@@ -41,7 +45,7 @@ export const auth = {
     return load()?.token ?? null;
   },
 
-  /** Get cached user object. */
+  /** Get cached user object synchronously — no network. */
   getUser() {
     const raw = sessionStorage.getItem(USER_KEY) ?? localStorage.getItem(USER_KEY);
     if (!raw) return null;
