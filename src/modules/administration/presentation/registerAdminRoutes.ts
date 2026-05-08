@@ -187,7 +187,7 @@ export async function registerAdminRoutes(app: FastifyInstance, runtime: AppRunt
     const sessionToken = getRequiredBearerToken(request.headers.authorization);
     const params = z.object({ fileId: z.string().uuid() }).parse(request.params);
 
-    runtime.administrationService.softDeleteFile(sessionToken, params.fileId);
+    await runtime.administrationService.softDeleteFile(sessionToken, params.fileId);
 
     return reply.status(204).send();
   });

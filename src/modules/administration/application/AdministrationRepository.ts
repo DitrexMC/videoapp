@@ -68,6 +68,7 @@ export interface AdministrationRepository {
   setFileVisibility(fileId: string, isPublic: boolean, updatedAt: string): void;
   setUserStatus(userId: string, status: UserStatus, updatedAt: string): void;
   softDeleteFile(fileId: string, updatedAt: string): void;
+  countNonDeletedFilesByStoragePath(storagePath: string): number;
   updatePolicies(policies: ServicePolicies): void;
   updateUserLimits(userId: string, maxFileSizeBytes: number | null, storageLimitBytes: number | null, updatedAt: string): void;
   updateUsername(userId: string, username: string, updatedAt: string): void;

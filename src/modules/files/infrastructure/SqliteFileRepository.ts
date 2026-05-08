@@ -350,6 +350,20 @@ export class SqliteFileRepository implements FileRepository {
       .run(deletedAt, fileId);
   }
 
+  countNonDeletedFilesByStoragePath(storagePath: string): number {
+    const row = this.connection
+      .prepare<[string], { cnt: number }>(
+        `
+      SELECT COUNT(*) AS cnt
+      FROM files
+      WHERE storage_path = ?
+        AND is_deleted = 0
+    `,
+      )
+      .get(storagePath);
+    return row?.cnt ?? 0;
+  }
+
   updateFilePreview(
     fileId: string,
     previewPath: string | null,

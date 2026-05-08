@@ -370,7 +370,7 @@ export class FileApplicationService {
     );
   }
 
-  removeFile(sessionToken: string, fileId: string): void {
+  async removeFile(sessionToken: string, fileId: string): Promise<void> {
     const actor = this.authService.authenticate(sessionToken).user;
     const file = this.fileRepository.findFileById(fileId);
 
@@ -380,6 +380,16 @@ export class FileApplicationService {
 
     assertCanManageFile(file, actor);
     this.fileRepository.softDeleteFile(file.id, this.clock.nowIsoString());
+
+    if (file.storagePath) {
+      const remainingRefs = this.fileRepository.countNonDeletedFilesByStoragePath(file.storagePath);
+      if (remainingRefs === 0) {
+        await this.storage.removeFile(file.storagePath);
+      }
+    }
+    if (file.previewPath) {
+      await this.storage.removeFile(file.previewPath);
+    }
   }
 
   removeFolder(sessionToken: string, folderId: string): void {

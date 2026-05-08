@@ -9,12 +9,14 @@ import {
 } from "../../../shared/domain/errors.js";
 import { generateId } from "../../../shared/domain/id.js";
 import type { TokenService } from "../../../shared/infrastructure/security/TokenService.js";
+import type { LocalFileStorage } from "../../../shared/infrastructure/storage/LocalFileStorage.js";
 import type { AdministrationRepository } from "./AdministrationRepository.js";
 
 export interface AdministrationServiceDependencies {
   administrationRepository: AdministrationRepository;
   authService: AuthApplicationService;
   clock: Clock;
+  storage: LocalFileStorage;
   tokenService: TokenService;
 }
 
@@ -22,12 +24,14 @@ export class AdministrationService {
   private readonly administrationRepository: AdministrationRepository;
   private readonly authService: AuthApplicationService;
   private readonly clock: Clock;
+  private readonly storage: LocalFileStorage;
   private readonly tokenService: TokenService;
 
   constructor(dependencies: AdministrationServiceDependencies) {
     this.administrationRepository = dependencies.administrationRepository;
     this.authService = dependencies.authService;
     this.clock = dependencies.clock;
+    this.storage = dependencies.storage;
     this.tokenService = dependencies.tokenService;
   }
 
@@ -207,7 +211,7 @@ export class AdministrationService {
     );
   }
 
-  softDeleteFile(sessionToken: string, fileId: string): void {
+  async softDeleteFile(sessionToken: string, fileId: string): Promise<void> {
     this.requireAdmin(sessionToken);
     const file = this.administrationRepository.findAdminFileById(fileId);
 
@@ -219,6 +223,16 @@ export class AdministrationService {
       fileId,
       this.clock.nowIsoString(),
     );
+
+    if (file.storagePath) {
+      const remainingRefs = this.administrationRepository.countNonDeletedFilesByStoragePath(file.storagePath);
+      if (remainingRefs === 0) {
+        await this.storage.removeFile(file.storagePath);
+      }
+    }
+    if (file.previewPath) {
+      await this.storage.removeFile(file.previewPath);
+    }
   }
 
   updatePolicies(

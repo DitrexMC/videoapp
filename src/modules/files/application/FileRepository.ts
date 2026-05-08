@@ -67,6 +67,7 @@ export interface FileRepository {
   ): void;
   softDeleteFile(fileId: string, deletedAt: string): void;
   softDeleteFilesInFolder(folderId: string, deletedAt: string): void;
+  countNonDeletedFilesByStoragePath(storagePath: string): number;
   updateFilePreview(
     fileId: string,
     previewPath: string | null,

@@ -239,7 +239,7 @@ export async function registerFileRoutes(
       .object({ fileId: z.string().uuid() })
       .parse(request.params);
 
-    runtime.fileService.removeFile(sessionToken, params.fileId);
+    await runtime.fileService.removeFile(sessionToken, params.fileId);
 
     return reply.status(204).send();
   });
