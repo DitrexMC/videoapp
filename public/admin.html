@@ -702,9 +702,23 @@
             }
         });
 
+        function copyToClipboard(text) {
+            if (navigator.clipboard) {
+                return navigator.clipboard.writeText(text);
+            }
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            return Promise.resolve();
+        }
         document.getElementById('copy-token-btn').addEventListener('click', () => {
             const input = document.getElementById('new-token-out');
-            navigator.clipboard.writeText(input.value).catch(() => { });
+            copyToClipboard(input.value).catch(() => { });
             const btn = document.getElementById('copy-token-btn');
             btn.textContent = 'コピー済み';
             btn.classList.add('copied');
