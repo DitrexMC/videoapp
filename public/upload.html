@@ -540,9 +540,7 @@
                 };
                 if (folderContext) initPayload.folderContext = folderContext;
 
-                const initRes = await api.upload.init(initPayload, {
-                    retry: { maxRetries: 3, retryDelay: 2000 },
-                });
+                const initRes = await api.upload.init(initPayload);
                 uploadId = initRes.uploadId;
                 const fileId = initRes.fileId;
                 const chunkSize = initRes.chunkSize;

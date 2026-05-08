@@ -1,17 +1,18 @@
 import { createHash } from "node:crypto";
 import { spawn } from "node:child_process";
-import { createWriteStream } from "node:fs";
+import { createReadStream, createWriteStream } from "node:fs";
 import {
   access,
   copyFile,
   mkdir,
-  readFile,
   rename,
   rm,
   stat,
   writeFile,
 } from "node:fs/promises";
 import { dirname, extname, join } from "node:path";
+import { Transform } from "node:stream";
+import { pipeline } from "node:stream/promises";
 
 import { NotFoundError } from "../../domain/errors.js";
 
@@ -74,22 +75,25 @@ export class LocalFileStorage {
 
     await rm(mergedFilePath, { force: true });
 
-    const writeStream = createWriteStream(mergedFilePath, { flags: "a" });
-
     for (let index = 0; index < totalChunks; index += 1) {
       const partPath = this.getUploadPartPath(uploadId, index);
-      const buffer = await readFile(partPath);
-      hash.update(buffer);
-      sizeBytes += buffer.length;
-
-      await new Promise<void>((resolve, reject) => {
-        writeStream.write(buffer, (err) => (err ? reject(err) : resolve()));
+      const transform = new Transform({
+        transform(chunk, _encoding, callback) {
+          const bufferChunk = Buffer.isBuffer(chunk)
+            ? chunk
+            : Buffer.from(chunk);
+          hash.update(bufferChunk);
+          sizeBytes += bufferChunk.length;
+          callback(null, bufferChunk);
+        },
       });
-    }
 
-    await new Promise<void>((resolve, reject) => {
-      writeStream.end((err: Error | null) => (err ? reject(err) : resolve()));
-    });
+      await pipeline(
+        createReadStream(partPath),
+        transform,
+        createWriteStream(mergedFilePath, { flags: "a" }),
+      );
+    }
 
     const checksum = hash.digest("hex");
     const storagePath = this.getBlobPath(checksum);

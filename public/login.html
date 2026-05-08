@@ -87,6 +87,15 @@
             font-size: .85rem;
             margin-top: .8rem;
             font-weight: 600;
+            transition: opacity .2s;
+        }
+
+        #error-msg.visible {
+            background: rgba(239, 68, 68, .12);
+            border: 1px solid rgba(239, 68, 68, .35);
+            padding: .55rem .75rem;
+            border-radius: 8px;
+            line-height: 1.5;
         }
 
         .login-footer {
@@ -190,15 +199,24 @@
             tokenEl.type = isPass ? 'text' : 'password';
         });
 
+        tokenEl.addEventListener('input', () => {
+            errorEl.textContent = '';
+            errorEl.classList.remove('visible');
+        });
+
         form.addEventListener('submit', async e => {
             e.preventDefault();
             errorEl.textContent = '';
+            errorEl.classList.remove('visible');
             setLoadingState(true);
             try {
                 const res = await api.auth.login(tokenEl.value.trim());
                 finishLogin(res);
             } catch (err) {
-                errorEl.textContent = err.status === 401 ? 'トークンが正しくありません' : 'ログインに失敗しました';
+                errorEl.textContent = err.status === 401
+                    ? 'トークンが正しくありません'
+                    : err?.message || 'ログインに失敗しました';
+                errorEl.classList.add('visible');
                 setLoadingState(false);
             }
         });

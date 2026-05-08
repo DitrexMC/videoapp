@@ -106,7 +106,7 @@ async function request(method, path, options = {}) {
         errBody = await response.json();
       } catch { }
 
-      if (response.status === 401) {
+      if (response.status === 401 && headers['Authorization']) {
         auth.clearSession?.();
         window.location.replace('/login.html');
       }

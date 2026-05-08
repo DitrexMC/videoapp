@@ -484,7 +484,7 @@ export class SqliteUploadRepository implements UploadRepository {
         .prepare(
           `
         UPDATE upload_sessions
-        SET status = 'failed', updated_at = ?
+        SET status = 'cancelled', updated_at = ?
         WHERE id = ?
       `,
         )
@@ -494,7 +494,7 @@ export class SqliteUploadRepository implements UploadRepository {
         .prepare(
           `
         UPDATE files
-        SET status = 'failed', is_deleted = 1, updated_at = ?
+        SET status = 'deleted', is_deleted = 1, updated_at = ?
         WHERE upload_id = ?
           AND is_deleted = 0
           AND status = 'processing'
