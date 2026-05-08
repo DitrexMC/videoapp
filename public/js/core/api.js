@@ -81,6 +81,7 @@ async function request(method, path, options = {}) {
 
   const maxRetries = retry?.maxRetries ?? 0;
   const retryDelay = typeof retry?.retryDelay === 'number' ? retry.retryDelay : 2000;
+  const timeout = retry?.timeout;
   let attempt = 0;
 
   const pb = getProgressBar();
@@ -90,13 +91,27 @@ async function request(method, path, options = {}) {
     while (true) {
       let response;
       try {
+        let fetchSignal = signal;
+        let timeoutId = null;
+        if (timeout && !fetchSignal) {
+          const ac = new AbortController();
+          fetchSignal = ac.signal;
+          timeoutId = setTimeout(() => ac.abort(), timeout);
+        }
         response = await fetch(url, {
           method,
           headers: { ...headers },
           body: rawBody,
-          signal,
+          signal: fetchSignal,
         });
+        if (timeoutId) clearTimeout(timeoutId);
       } catch (err) {
+        const isRetryable = err instanceof TypeError || err.name === 'AbortError';
+        if (isRetryable && attempt < maxRetries) {
+          attempt++;
+          await new Promise(r => setTimeout(r, retryDelay * Math.pow(2, attempt - 1)));
+          continue;
+        }
         throw err;
       }
 
@@ -113,6 +128,12 @@ async function request(method, path, options = {}) {
           await new Promise(r => setTimeout(r, retryAfter));
           continue;
         }
+      }
+
+      if (response.status >= 500 && attempt < maxRetries) {
+        attempt++;
+        await new Promise(r => setTimeout(r, retryDelay * Math.pow(2, attempt - 1)));
+        continue;
       }
 
       if (!response.ok) {
@@ -199,12 +220,12 @@ export const api = {
       request('PUT', `/upload/${id}/${index}`, {
         body: buffer,
         headers,
-        retry: { maxRetries: 3, retryDelay: 2000 },
+        retry: { maxRetries: 5, retryDelay: 1000, timeout: 30000 },
       }),
     complete: (payload) =>
       request('POST', '/upload/complete', {
         body: payload,
-        retry: { maxRetries: 3, retryDelay: 2000 },
+        retry: { maxRetries: 5, retryDelay: 1000, timeout: 15000 },
       }),
     status: (id) => request('GET', `/upload/${id}/status`),
     cancel: (id) => request('DELETE', `/upload/${id}`),

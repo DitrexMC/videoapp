@@ -298,6 +298,8 @@
         const expirySelect = document.getElementById('expiry-select');
         const customDaysInput = document.getElementById('custom-days');
 
+        let isUploading = false;
+
         const queuedFileKeys = new Set();
 
         function fileKey(file) {
@@ -444,6 +446,8 @@
         }
 
         function startQueue(files) {
+            if (isUploading) return;
+
             const MAX_SIZE = 5 * 1024 * 1024 * 1024;
             const unique = files.filter(f => {
                 const key = fileKey(f);
@@ -467,6 +471,8 @@
                 });
             }
             if (valid.length === 0) return;
+
+            isUploading = true;
 
             const fragment = document.createDocumentFragment();
             const items = valid.map((file, i) => {
@@ -510,7 +516,9 @@
                     uploadOne(item, isPublic, expiresAt, totalCount, folderRef, onFolderCreated, () => {
                         active--;
                         completed++;
-                        if (completed === items.length && hasFolder && folderRef.id) {
+                        if (completed === items.length) {
+                            isUploading = false;
+                            if (hasFolder && folderRef.id) {
                             const groupEl = document.createElement('div');
                             groupEl.className = 'qi';
                             groupEl.style.borderColor = 'var(--accent2)';
@@ -521,6 +529,7 @@
                                     <a class="btn btn-primary btn-sm" href="/files.html" style="text-decoration:none">ファイル一覧 →</a>
                                 </div>`;
                             queueList.insertBefore(groupEl, queueList.firstChild);
+                            }
                         }
                         next();
                     });
@@ -572,13 +581,21 @@
                 let nextIndex = 0;
                 const workers = [];
 
-                async function sendChunk(i) {
+                async function sendChunk(i, retriesLeft = 2) {
                     const start = i * chunkSize;
                     const end = Math.min(start + chunkSize, file.size);
                     const chunk = file.slice(start, end);
                     const buf = await chunk.arrayBuffer();
 
-                    await api.upload.chunk(uploadId, i, buf, { 'X-File-Id': fileId });
+                    try {
+                        await api.upload.chunk(uploadId, i, buf, { 'X-File-Id': fileId });
+                    } catch (err) {
+                        if (retriesLeft > 0) {
+                            await new Promise(r => setTimeout(r, 1000));
+                            return sendChunk(i, retriesLeft - 1);
+                        }
+                        throw err;
+                    }
 
                     uploadedBytes += buf.byteLength;
                     completedChunks++;
