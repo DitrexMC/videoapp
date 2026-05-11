@@ -15,6 +15,7 @@ const updatePoliciesSchema = z.object({
   defaultFileExpiryDays: z.number().int().positive().nullable().optional(),
   defaultMaxFileSizeBytes: z.number().int().positive().optional(),
   defaultStorageLimitBytes: z.number().int().positive().optional(),
+  maxChunkConcurrencyPerUser: z.number().int().positive().optional(),
   maxChunkSizeBytes: z.number().int().positive().optional(),
   maxFileExpiryDays: z.number().int().positive().nullable().optional(),
   maxZipFileCount: z.number().int().positive().optional(),
@@ -290,6 +291,7 @@ function buildPolicyPatchInput(data: z.infer<typeof updatePoliciesSchema>): Part
   defaultFileExpiryDays: number | null;
   defaultMaxFileSizeBytes: number;
   defaultStorageLimitBytes: number;
+  maxChunkConcurrencyPerUser: number;
   maxChunkSizeBytes: number;
   maxFileExpiryDays: number | null;
   maxZipFileCount: number;
@@ -302,6 +304,7 @@ function buildPolicyPatchInput(data: z.infer<typeof updatePoliciesSchema>): Part
     defaultFileExpiryDays: number | null;
     defaultMaxFileSizeBytes: number;
     defaultStorageLimitBytes: number;
+    maxChunkConcurrencyPerUser: number;
     maxChunkSizeBytes: number;
     maxFileExpiryDays: number | null;
     maxZipFileCount: number;
@@ -324,6 +327,10 @@ function buildPolicyPatchInput(data: z.infer<typeof updatePoliciesSchema>): Part
 
   if (data.defaultStorageLimitBytes !== undefined) {
     input.defaultStorageLimitBytes = data.defaultStorageLimitBytes;
+  }
+
+  if (data.maxChunkConcurrencyPerUser !== undefined) {
+    input.maxChunkConcurrencyPerUser = data.maxChunkConcurrencyPerUser;
   }
 
   if (data.maxChunkSizeBytes !== undefined) {

@@ -335,6 +335,16 @@
   flex-wrap: wrap;
 }
 
+.news-unread-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent2, #3b82f6);
+  flex-shrink: 0;
+  margin-right: auto;
+  margin-left: 0.25rem;
+}
+
 /* ── Badges ── */
 .news-badge {
   font-size: 0.6rem;

@@ -24,7 +24,9 @@ describe("upload flow", () => {
         DEFAULT_CHUNK_SIZE_BYTES: 4,
         DEFAULT_MAX_FILE_SIZE_BYTES: 1024,
         LOG_LEVEL: "silent",
+        MAX_CHUNK_CONCURRENCY_PER_USER: 12,
         MAX_CHUNK_SIZE_BYTES: 16,
+        MAX_FINALIZE_JOBS: 4,
         MIN_CHUNK_SIZE_BYTES: 1,
         PREVIEW_ROOT: "previews",
         STORAGE_ROOT: "storage",
@@ -147,21 +149,29 @@ describe("upload flow", () => {
     assert.equal(initResponse.statusCode, 200);
 
     const initPayload = initResponse.json();
-    const chunkResponse = await app.inject({
-      headers: {
-        authorization: `Bearer ${sessionToken}`,
-        "content-type": "application/octet-stream",
-        "x-chunk-size": String(initPayload.chunkSize),
-        "x-file-id": initPayload.fileId,
-        "x-total-chunks": String(initPayload.maxChunks),
-        "x-total-size": "12",
-      },
-      method: "PUT",
-      payload: Buffer.from("private file"),
-      url: `/upload/${initPayload.uploadId}/0`,
-    });
+    const chunks = [
+      Buffer.from("priv"),
+      Buffer.from("ate "),
+      Buffer.from("file"),
+    ];
 
-    assert.equal(chunkResponse.statusCode, 200);
+    for (const [index, chunk] of chunks.entries()) {
+      const chunkResponse = await app.inject({
+        headers: {
+          authorization: `Bearer ${sessionToken}`,
+          "content-type": "application/octet-stream",
+          "x-chunk-size": String(initPayload.chunkSize),
+          "x-file-id": initPayload.fileId,
+          "x-total-chunks": String(initPayload.maxChunks),
+          "x-total-size": "12",
+        },
+        method: "PUT",
+        payload: chunk,
+        url: `/upload/${initPayload.uploadId}/${index}`,
+      });
+
+      assert.equal(chunkResponse.statusCode, 200);
+    }
 
     const completeResponse = await app.inject({
       headers: {

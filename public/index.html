@@ -439,6 +439,10 @@
         import { api } from '/js/core/api.js';
         import { cache } from '/js/core/cache.js';
 
+        if (window.__vaIndexInit) throw new Error('already initialized');
+        window.__vaIndexInit = true;
+        document.addEventListener('va:navigate-away', () => { window.__vaIndexInit = false; });
+
         if (!auth.requireAuth()) {
             throw new Error('redirect');
         }

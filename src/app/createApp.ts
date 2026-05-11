@@ -8,6 +8,7 @@ import process from "node:process";
 import { registerAdminRoutes } from "../modules/administration/presentation/registerAdminRoutes.js";
 import { registerFileRoutes } from "../modules/files/presentation/registerFileRoutes.js";
 import { registerAuthRoutes } from "../modules/identity/presentation/registerAuthRoutes.js";
+import { registerNewsAdminRoutes } from "../modules/news/presentation/registerNewsAdminRoutes.js";
 import { registerNewsRoutes } from "../modules/news/presentation/registerNewsRoutes.js";
 import { registerUploadRoutes } from "../modules/uploads/presentation/registerUploadRoutes.js";
 import { isAppError } from "../shared/domain/errors.js";
@@ -126,6 +127,7 @@ export async function createApp(config: AppConfig): Promise<FastifyInstance> {
   await registerUploadRoutes(app, runtime);
   await registerFileRoutes(app, runtime);
   await registerAdminRoutes(app, runtime);
+  await registerNewsAdminRoutes(app, runtime);
   await registerNewsRoutes(app, runtime);
 
   app.addHook("onClose", async () => {

@@ -165,6 +165,10 @@
     <script type="module">
         import { auth } from '/js/core/auth.js';
 
+        if (window.__vaArticleChunkInit) throw new Error('already initialized');
+        window.__vaArticleChunkInit = true;
+        document.addEventListener('va:navigate-away', () => { window.__vaArticleChunkInit = false; });
+
         if (!auth.requireAuth()) throw new Error('redirect');
         const user = auth.getUser();
         document.getElementById('nav-username').textContent = user?.username ?? '';

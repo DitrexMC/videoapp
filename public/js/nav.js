@@ -538,9 +538,14 @@ onReady(() => {
   initNotifyBell();
   updateNotifyBadge();
 
-  // Mark news article as read on direct page load
+  // Mark news article as read on direct page load (old static pages)
   if (location.pathname.startsWith('/news/articles/')) {
     api.news.markRead(location.pathname + location.search).catch(() => {});
+  }
+  // Mark dynamic article as read
+  if (location.pathname === '/news/article.html') {
+    const slug = new URLSearchParams(location.search).get('slug');
+    if (slug) api.news.markRead(slug).catch(() => {});
   }
 });
 
@@ -581,12 +586,16 @@ async function updateNotifyBadge() {
   if (!badge || !btn) return;
 
   try {
-    const { read_urls } = await api.news.readUrls();
-    const manifestRes = await fetch('/news/manifest.json');
-    if (!manifestRes.ok) return;
-    const manifest = await manifestRes.json();
+    const [readData, articlesData] = await Promise.all([
+      api.news.readUrls(),
+      api.news.articles(),
+    ]);
 
-    const unread = manifest.length - read_urls.length;
+    const read_urls = readData?.read_urls || [];
+    const articles = Array.isArray(articlesData) ? articlesData : [];
+
+    const readSet = new Set(read_urls);
+    const unread = articles.filter((a) => !readSet.has(a.slug)).length;
     if (unread > 0) {
       badge.textContent = unread > 99 ? '99+' : String(unread);
       badge.classList.add('visible');

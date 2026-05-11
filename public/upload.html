@@ -277,6 +277,11 @@
         import { auth } from '/js/core/auth.js';
         import { api } from '/js/core/api.js';
 
+        // Guard against SPA re-execution (nav.js re-injects inline scripts)
+        if (window.__vaUploadInit) throw new Error('already initialized');
+        window.__vaUploadInit = true;
+        document.addEventListener('va:navigate-away', () => { window.__vaUploadInit = false; });
+
         if (!auth.isLoggedIn()) {
             window.location.replace('/login.html');
             throw new Error('redirect');
@@ -298,13 +303,7 @@
         const expirySelect = document.getElementById('expiry-select');
         const customDaysInput = document.getElementById('custom-days');
 
-        let isUploading = false;
-
-        const queuedFileKeys = new Set();
-
-        function fileKey(file) {
-            return `${file.name}::${file.size}::${file.lastModified}`;
-        }
+        // Uploads run independently — new files always accepted, SPA guard prevents dupes
 
         publicToggle.addEventListener('change', () => {
             publicLabel.textContent = publicToggle.checked ? 'オン（公開）' : 'オフ（非公開）';
@@ -446,41 +445,28 @@
         }
 
         function startQueue(files) {
-            if (isUploading) return;
-
             const MAX_SIZE = 5 * 1024 * 1024 * 1024;
-            const unique = files.filter(f => {
-                const key = fileKey(f);
-                if (queuedFileKeys.has(key)) return false;
-                queuedFileKeys.add(key);
-                return true;
-            });
-            if (unique.length === 0) return;
-
-            const tooBig = unique.filter(f => f.size > MAX_SIZE);
-            const valid = unique.filter(f => f.size <= MAX_SIZE);
-
-            queueSec.hidden = false;
+            const tooBig = files.filter(f => f.size > MAX_SIZE);
+            const valid = files.filter(f => f.size <= MAX_SIZE);
 
             if (tooBig.length > 0) {
+                queueSec.hidden = false;
                 tooBig.forEach(f => {
                     const err = document.createElement('div');
                     err.className = 'qi';
                     err.innerHTML = `<div class="qi-header"><span class="qi-name">${esc(f.name)}</span><span class="qi-size">${fmtBytes(f.size)}</span><span class="qi-status qi-status--error">サイズ超過 (最大5GB)</span></div>`;
-                    queueList.prepend(err);
+                    queueList.appendChild(err);
                 });
             }
             if (valid.length === 0) return;
 
-            isUploading = true;
+            queueSec.hidden = false;
 
-            const fragment = document.createDocumentFragment();
             const items = valid.map((file, i) => {
                 const item = createQueueItem(file, i + Date.now());
-                fragment.appendChild(item.el);
+                queueList.appendChild(item.el);
                 return { file, ...item };
             });
-            queueList.insertBefore(fragment, queueList.firstChild);
 
             const batchSize = valid.length;
             const isPublic = publicToggle.checked;
@@ -498,13 +484,11 @@
         function uploadConcurrent(items, isPublic, expiresAt, totalCount, folderId = null) {
             let idx = 0;
             let active = 0;
-            let completed = 0;
-            const hasFolder = totalCount >= 2;
             const folderRef = { id: folderId, emitted: !!folderId };
 
-            function onFolderCreated(folderId) {
+            function onFolderCreated(fid) {
                 if (folderRef.emitted) return;
-                folderRef.id = folderId;
+                folderRef.id = fid;
                 folderRef.emitted = true;
                 next();
             }
@@ -515,22 +499,6 @@
                     const item = items[idx++];
                     uploadOne(item, isPublic, expiresAt, totalCount, folderRef, onFolderCreated, () => {
                         active--;
-                        completed++;
-                        if (completed === items.length) {
-                            isUploading = false;
-                            if (hasFolder && folderRef.id) {
-                            const groupEl = document.createElement('div');
-                            groupEl.className = 'qi';
-                            groupEl.style.borderColor = 'var(--accent2)';
-                            groupEl.style.borderWidth = '2px';
-                            groupEl.innerHTML = `
-                                <div style="text-align:center;padding:.5rem">
-                                    <div style="font-weight:700;margin-bottom:.5rem;color:var(--accent2)">${items.length}ファイルのグループ</div>
-                                    <a class="btn btn-primary btn-sm" href="/files.html" style="text-decoration:none">ファイル一覧 →</a>
-                                </div>`;
-                            queueList.insertBefore(groupEl, queueList.firstChild);
-                            }
-                        }
                         next();
                     });
                 }
@@ -538,7 +506,7 @@
             next();
         }
 
-        // ── Single file upload (parallel chunked) ───────────────
+        // ── Single file upload (parallel chunked, retry + resume) ──
         async function uploadOne(item, isPublic, expiresAt, totalCount, folderRef, onFolderCreated, onDone) {
             item.statusEl.textContent = 'アップロード中';
             item.statusEl.className = 'qi-status qi-status--uploading';
@@ -569,14 +537,27 @@
                 const chunkSize = initRes.chunkSize;
                 const maxChunks = initRes.maxChunks;
 
+                sessionStorage.setItem('lastUploadId', uploadId);
+
                 if (initRes.folderId && !folderRef.emitted && onFolderCreated) {
                     onFolderCreated(initRes.folderId);
                 }
 
+                // Resume: check which chunks the server already has
+                let receivedSet = new Set();
+                try {
+                    const st = await api.upload.status(uploadId);
+                    if (st && st.receivedChunks) {
+                        for (const idx of st.receivedChunks) receivedSet.add(idx);
+                    }
+                } catch { }
+
                 const startTime = Date.now();
                 let uploadedBytes = 0;
-                let completedChunks = 0;
+                let completedChunks = receivedSet.size;
                 const CHUNK_CONCURRENCY = 6;
+                const MAX_CHUNK_RETRIES = 3;
+                const CHUNK_RETRY_BASE_DELAY = 2000;
 
                 let nextIndex = 0;
                 const workers = [];
@@ -586,13 +567,26 @@
                     const end = Math.min(start + chunkSize, file.size);
                     const chunk = file.slice(start, end);
                     const buf = await chunk.arrayBuffer();
+                    const chunkBytes = buf.byteLength;
 
-                    await api.upload.chunk(uploadId, i, buf, { 'X-File-Id': fileId });
+                    let lastErr = null;
+                    for (let attempt = 0; attempt <= MAX_CHUNK_RETRIES; attempt++) {
+                        try {
+                            await api.upload.chunk(uploadId, i, buf, { 'X-File-Id': fileId });
+                            uploadedBytes += chunkBytes;
+                            completedChunks++;
+                            lastErr = null;
+                            break;
+                        } catch (err) {
+                            lastErr = err;
+                            if (attempt < MAX_CHUNK_RETRIES) {
+                                await new Promise(r => setTimeout(r, CHUNK_RETRY_BASE_DELAY * Math.pow(2, attempt)));
+                            }
+                        }
+                    }
+                    if (lastErr) throw lastErr;
 
-                    uploadedBytes += buf.byteLength;
-                    completedChunks++;
-
-                    const pct = Math.round((completedChunks / maxChunks) * 100);
+                    const pct = Math.min(Math.round((completedChunks / maxChunks) * 100), 100);
                     const elapsed = (Date.now() - startTime) / 1000 || 0.001;
                     const speedMB = (uploadedBytes / elapsed) / 1048576;
                     const remaining = speedMB > 0 ? (file.size - uploadedBytes) / (speedMB * 1048576) : 0;
@@ -611,28 +605,59 @@
                 async function worker() {
                     while (nextIndex < maxChunks) {
                         const i = nextIndex++;
+                        if (receivedSet.has(i)) continue;
                         await sendChunk(i);
                     }
                 }
 
-                for (let w = 0; w < Math.min(CHUNK_CONCURRENCY, maxChunks); w++) {
+                const workerCount = Math.min(CHUNK_CONCURRENCY, maxChunks);
+                for (let w = 0; w < workerCount; w++) {
                     workers.push(worker());
                 }
                 await Promise.all(workers);
 
-                const compRes = await api.upload.complete({
-                    fileId,
-                    totalChunks: maxChunks,
-                    totalSize: file.size,
-                    uploadId,
-                });
+                // Complete with retry + status check before cancelling
+                {
+                    let completeOk = false;
+                    for (let attempt = 0; attempt <= 3; attempt++) {
+                        try {
+                            await api.upload.complete({
+                                fileId,
+                                totalChunks: maxChunks,
+                                totalSize: file.size,
+                                uploadId,
+                            });
+                            completeOk = true;
+                            break;
+                        } catch (err) {
+                            if (attempt < 3) {
+                                try {
+                                    const st = await api.upload.status(uploadId);
+                                    if (st && (st.status === 'processing' || st.status === 'ready')) {
+                                        completeOk = true;
+                                        break;
+                                    }
+                                } catch { }
+                                await new Promise(r => setTimeout(r, 2000 * Math.pow(2, attempt)));
+                            } else {
+                                throw err;
+                            }
+                        }
+                    }
+                    if (!completeOk) {
+                        const st = await api.upload.status(uploadId);
+                        if (!st || (st.status !== 'processing' && st.status !== 'ready')) {
+                            throw new api.ApiError(0, 'complete_failed', '完了処理に失敗しました');
+                        }
+                    }
+                }
 
                 item.progressEl.hidden = true;
                 item.statusEl.textContent = '完了';
                 item.statusEl.className = 'qi-status qi-status--done';
                 item.resultEl.hidden = false;
+                sessionStorage.removeItem('lastUploadId');
 
-                const dlUrl = `${location.origin}/files/${fileId}/download`;
                 const fileUrl = `${location.origin}/file.html?id=${fileId}`;
                 const rawUrl = `${location.origin}/files/${fileId}/stream`;
 
@@ -683,11 +708,7 @@
             } catch (err) {
                 item.progressEl.hidden = true;
 
-                let cancelled = false;
-                if (uploadId && err instanceof api.ApiError) {
-                    cancelled = true;
-                    api.upload.cancel(uploadId).catch(() => { });
-                } else if (uploadId) {
+                if (uploadId) {
                     try {
                         const st = await api.upload.status(uploadId);
                         if (st && (st.status === 'processing' || st.status === 'ready')) {
@@ -695,18 +716,17 @@
                             item.statusEl.className = 'qi-status qi-status--done';
                             item.resultEl.hidden = false;
                             item.resultEl.innerHTML = `<span style="color:var(--text-sub)">サーバーで処理中です。ファイル一覧を確認してください。</span>`;
+                            sessionStorage.removeItem('lastUploadId');
                             onDone();
                             return;
                         }
                     } catch { }
-                    cancelled = true;
                     api.upload.cancel(uploadId).catch(() => { });
+                    sessionStorage.removeItem('lastUploadId');
                 }
 
-                if (cancelled || !uploadId) {
-                    item.statusEl.textContent = 'エラー';
-                    item.statusEl.className = 'qi-status qi-status--error';
-                }
+                item.statusEl.textContent = 'エラー';
+                item.statusEl.className = 'qi-status qi-status--error';
                 item.resultEl.hidden = false;
                 if (!item.resultEl.innerHTML) {
                     item.resultEl.innerHTML = `<span class="qi-error-msg">${esc(err?.message ?? 'アップロードに失敗しました')}</span>`;

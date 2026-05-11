@@ -7,13 +7,14 @@ import type { UploadRepository } from "../../uploads/application/UploadRepositor
 export interface BackgroundWorkerDependencies {
   clock: Clock;
   fileRepository: FileRepository;
+  maxConcurrentJobs: number;
   pollIntervalMilliseconds: number;
   storage: LocalFileStorage;
   uploadRepository: UploadRepository;
 }
 
 export class BackgroundWorker {
-  private static readonly MAX_CONCURRENT_JOBS = 3;
+  private readonly maxConcurrentJobs: number;
 
   private readonly clock: Clock;
   private readonly fileRepository: FileRepository;
@@ -28,6 +29,7 @@ export class BackgroundWorker {
     this.clock = dependencies.clock;
     this.fileRepository = dependencies.fileRepository;
     this.inFlightCount = 0;
+    this.maxConcurrentJobs = dependencies.maxConcurrentJobs;
     this.pollIntervalMilliseconds = dependencies.pollIntervalMilliseconds;
     this.storage = dependencies.storage;
     this.uploadRepository = dependencies.uploadRepository;
@@ -72,7 +74,7 @@ export class BackgroundWorker {
     this.uploadRepository.expireDueResources(this.clock.nowIsoString());
 
     for (;;) {
-      if (this.inFlightCount >= BackgroundWorker.MAX_CONCURRENT_JOBS) {
+      if (this.inFlightCount >= this.maxConcurrentJobs) {
         break;
       }
 

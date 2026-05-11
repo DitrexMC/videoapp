@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>以前のユーザーデータについて — videoapp</title>
+    <title>お知らせ — videoapp</title>
     <link rel="icon" href="/icons/icon-192.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link
@@ -112,7 +112,6 @@
             </div>
             <p class="drawer-footer-desc">プライベートファイルストレージ</p>
             <div class="drawer-footer-credits">
-
                 <span>© 2026 Videoapp</span><span class="dot">·</span>
                 <span>DitrexMC</span>
             </div>
@@ -129,45 +128,40 @@
                         <span>›</span>
                         <a href="/news.html">お知らせ</a>
                         <span>›</span>
-                        <span>以前のユーザーデータについて</span>
+                        <span id="crumbCur"></span>
                     </div>
 
                     <article class="article-body reveal reveal-d1">
                         <div class="article-header">
                             <div class="article-meta">
-                                <span class="news-badge nb-danger">Danger</span>
-                                <time class="article-date">2026-05-03</time>
+                                <span class="news-badge" id="articleBadge"></span>
+                                <time class="article-date" id="articleDate"></time>
                             </div>
-                            <h1 class="article-title">以前のユーザーデータについて</h1>
-                            <p class="article-subtitle">以前のユーザーデータの引き続きに関する重要なお知らせです。</p>
+                            <h1 class="article-title" id="articleTitle"></h1>
+                            <p class="article-subtitle" id="articleSubtitle"></p>
                         </div>
 
-                        <div class="article-content" id="articleContent"></div>
+                        <div class="article-content" id="articleContent">
+                            <!-- MD content rendered here -->
+                        </div>
                     </article>
 
                     <div class="article-footer reveal">
                         <a href="/news.html" class="btn btn-ghost">← お知らせ一覧に戻る</a>
                     </div>
-                </div><!-- .article-main -->
-            </div><!-- .article-layout -->
+                </div>
+            </div>
         </div>
     </main>
-
-    <button class="back-to-top" id="backToTop" aria-label="トップに戻る">
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="18 15 12 9 6 15" />
-        </svg>
-    </button>
 
     <script src="/js/particles.js"></script>
     <script type="module" src="/js/nav.js"></script>
     <script type="module">
         import { auth } from '/js/core/auth.js';
 
-        if (window.__vaArticleUserResetInit) throw new Error('already initialized');
-        window.__vaArticleUserResetInit = true;
-        document.addEventListener('va:navigate-away', () => { window.__vaArticleUserResetInit = false; });
+        if (window.__vaArticleInit) throw new Error('already initialized');
+        window.__vaArticleInit = true;
+        document.addEventListener('va:navigate-away', () => { window.__vaArticleInit = false; });
 
         if (!auth.requireAuth()) throw new Error('redirect');
         const user = auth.getUser();
@@ -175,35 +169,13 @@
         document.getElementById('drawerUsername').textContent = user?.username ?? '';
         if (auth.isAdmin()) document.getElementById('drawer-admin').classList.remove('hidden');
 
-        const MD_CONTENT = `
-## 概要
-
-以前のユーザーデータの取り扱いについて重要なお知らせがあります。
-
-## 内容
-
-今回のサービス正式リリースに伴い、これまでのアップロード履歴やファイル、ユーザー情報は現在のサービスには引き継がれません。
-
-そのため、以前のデータにアクセスすることはできなくなります。
-新しいサービスをご利用いただく場合は、新たにアカウント申請を行い、必要なファイルを再アップロードしていただく必要があります。
-
-運営上の都合によりご不便をおかけし申し訳ありませんが、何卒ご理解いただけますようお願いいたします。
-
-## 注意事項
-
-- サービスの利用継続には、アカウントの再申請が必要です。
-- アカウント申請はDiscordより受け付けております。
-`;
-
-        document.getElementById('articleContent').innerHTML = renderMD(MD_CONTENT);
-
-        const backToTop = document.getElementById('backToTop');
-        window.addEventListener('scroll', () => {
-            backToTop.classList.toggle('visible', window.scrollY > 400);
-        }, { passive: true });
-        backToTop.addEventListener('click', () => {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        });
+        const TYPE_CLASS = {
+            News: 'nb-news',
+            Update: 'nb-update',
+            Guide: 'nb-guide',
+            Note: 'nb-note',
+            Danger: 'nb-danger',
+        };
 
         function renderMD(md) {
             return md
@@ -219,6 +191,63 @@
                 .replace(/^(?!<[hulo]).+$/gm, s => s.trim() ? `<p>${s}</p>` : '')
                 .replace(/\n{2,}/g, '\n');
         }
+
+        (async () => {
+            const params = new URLSearchParams(window.location.search);
+            const slug = params.get('slug');
+
+            if (!slug) {
+                document.getElementById('articleContent').innerHTML =
+                    '<p style="color:var(--text-sub)">記事が指定されていません。</p>';
+                return;
+            }
+
+            try {
+                const token = auth.getToken();
+                const res = await fetch(`/api/news/articles/${encodeURIComponent(slug)}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!res.ok) {
+                    if (res.status === 404) {
+                        document.getElementById('articleContent').innerHTML =
+                            '<p style="color:var(--text-sub)">記事が見つかりませんでした。</p>';
+                    } else {
+                        throw new Error(`HTTP ${res.status}`);
+                    }
+                    return;
+                }
+
+                const article = await res.json();
+
+                document.title = `${article.title} — videoapp`;
+                document.getElementById('crumbCur').textContent = article.title;
+
+                const typeDisplay = article.type.charAt(0).toUpperCase() + article.type.slice(1);
+                const badge = document.getElementById('articleBadge');
+                badge.textContent = typeDisplay;
+                badge.className = `news-badge ${TYPE_CLASS[typeDisplay] || 'nb-news'}`;
+
+                document.getElementById('articleDate').textContent = article.date;
+                document.getElementById('articleTitle').textContent = article.title;
+                document.getElementById('articleSubtitle').textContent = article.subtitle;
+
+                document.getElementById('articleContent').innerHTML = renderMD(article.content || '');
+
+                fetch('/api/news/read', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ article_url: slug }),
+                }).catch(() => {});
+
+            } catch (e) {
+                document.getElementById('articleContent').innerHTML =
+                    '<p style="color:var(--text-sub)">記事の読み込みに失敗しました。</p>';
+            }
+        })();
     </script>
     <script src="/js/dev-reload.js?v=1" defer></script>
 </body>

@@ -74,7 +74,7 @@ self.addEventListener('fetch', event => {
   }
 
   if (isHtmlPage(request, path)) {
-    event.respondWith(staleWhileRevalidate(request, HTML_CACHE));
+    event.respondWith(networkFirst(request, HTML_CACHE));
     return;
   }
 
@@ -94,18 +94,16 @@ function cacheFirst(request, cacheName) {
   });
 }
 
-function staleWhileRevalidate(request, cacheName) {
-  return caches.open(cacheName).then(cache =>
-    cache.match(request).then(cached => {
-      const fetchPromise = fetch(request).then(response => {
-        if (response.ok) {
-          cache.put(request, response.clone());
-        }
-        return response;
-      }).catch(() => cached);
-      return cached || fetchPromise;
-    })
-  );
+function staleWhileRevalidate(_request, _cacheName) { return fetch(_request); }
+
+function networkFirst(request, cacheName) {
+  return fetch(request).then(response => {
+    if (response.ok) {
+      const clone = response.clone();
+      caches.open(cacheName).then(cache => cache.put(request, clone));
+    }
+    return response;
+  }).catch(() => caches.match(request));
 }
 
 function isStaticAsset(url) {

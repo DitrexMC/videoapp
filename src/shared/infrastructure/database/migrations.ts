@@ -51,7 +51,6 @@ const migrations = [
         id TEXT PRIMARY KEY,
         owner_user_id TEXT NOT NULL REFERENCES users(id),
         name TEXT NOT NULL,
-        public INTEGER NOT NULL CHECK (public IN (0, 1)) DEFAULT 1,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
         deleted_at TEXT
@@ -71,7 +70,6 @@ const migrations = [
         id TEXT PRIMARY KEY,
         upload_id TEXT UNIQUE,
         folder_id TEXT REFERENCES folders(id),
-        group_id TEXT REFERENCES groups(id) ON DELETE SET NULL,
         name TEXT NOT NULL,
         safe_name TEXT NOT NULL,
         size_bytes INTEGER NOT NULL,
@@ -79,7 +77,6 @@ const migrations = [
         storage_path TEXT,
         owner_user_id TEXT NOT NULL REFERENCES users(id),
         public INTEGER NOT NULL CHECK (public IN (0, 1)),
-        show_uploader INTEGER NOT NULL CHECK (show_uploader IN (0, 1)) DEFAULT 1,
         status TEXT NOT NULL CHECK (status IN ('uploading', 'processing', 'ready', 'expired', 'deleted')),
         expires_at TEXT,
         preview_status TEXT NOT NULL CHECK (preview_status IN ('none', 'pending', 'ready', 'failed')),
@@ -138,16 +135,6 @@ const migrations = [
         created_at TEXT NOT NULL
       );
 
-      CREATE TABLE IF NOT EXISTS groups (
-        id TEXT PRIMARY KEY,
-        owner_user_id TEXT NOT NULL REFERENCES users(id),
-        label TEXT NOT NULL DEFAULT '',
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL,
-        expires_at TEXT,
-        is_private INTEGER NOT NULL CHECK (is_private IN (0, 1)) DEFAULT 0
-      );
-
       CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
       CREATE INDEX IF NOT EXISTS idx_sessions_active_lookup ON sessions(session_token_hash, revoked_at);
       CREATE INDEX IF NOT EXISTS idx_files_owner_created_at ON files(owner_user_id, created_at DESC);
@@ -162,16 +149,6 @@ const migrations = [
   {
     id: "002_add_groups",
     sql: `
-      CREATE TABLE IF NOT EXISTS groups (
-        id TEXT PRIMARY KEY,
-        owner_user_id TEXT NOT NULL REFERENCES users(id),
-        label TEXT NOT NULL DEFAULT '',
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL,
-        expires_at TEXT,
-        is_private INTEGER NOT NULL CHECK (is_private IN (0, 1)) DEFAULT 0
-      );
-
       ALTER TABLE files ADD COLUMN group_id TEXT REFERENCES groups(id) ON DELETE SET NULL;
     `,
   },
@@ -198,6 +175,30 @@ const migrations = [
       );
     `,
   },
+  {
+    id: "006_add_chunk_concurrency_policy",
+    sql: `
+      ALTER TABLE service_policies ADD COLUMN max_chunk_concurrency_per_user INTEGER NOT NULL DEFAULT 12;
+    `,
+  },
+  {
+    id: "007_news_articles",
+    sql: `
+      CREATE TABLE IF NOT EXISTS news_articles (
+        id TEXT PRIMARY KEY,
+        slug TEXT NOT NULL UNIQUE,
+        title TEXT NOT NULL,
+        subtitle TEXT NOT NULL DEFAULT '',
+        type TEXT NOT NULL CHECK (type IN ('news', 'update', 'guide', 'note', 'danger')),
+        date TEXT NOT NULL,
+        tags TEXT NOT NULL DEFAULT '',
+        image TEXT NOT NULL DEFAULT '',
+        content TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+    `,
+  },
 ] as const;
 
 export interface DefaultPolicySeed {
@@ -206,6 +207,7 @@ export interface DefaultPolicySeed {
   defaultFileExpiryDays: number | null;
   defaultMaxFileSizeBytes: number;
   defaultStorageLimitBytes: number;
+  maxChunkConcurrencyPerUser: number;
   maxChunkSizeBytes: number;
   maxFileExpiryDays: number | null;
   maxZipFileCount: number;
@@ -270,12 +272,13 @@ export function seedDefaultPolicy(
       default_chunk_size_bytes,
       min_chunk_size_bytes,
       max_chunk_size_bytes,
+      max_chunk_concurrency_per_user,
       session_ttl_seconds,
       default_file_expiry_days,
       max_file_expiry_days,
       created_at,
       updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `,
     )
     .run(
@@ -287,6 +290,7 @@ export function seedDefaultPolicy(
       policy.defaultChunkSizeBytes,
       policy.minChunkSizeBytes,
       policy.maxChunkSizeBytes,
+      policy.maxChunkConcurrencyPerUser,
       policy.sessionTtlSeconds,
       policy.defaultFileExpiryDays,
       policy.maxFileExpiryDays,

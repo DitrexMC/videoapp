@@ -80,6 +80,16 @@ const environmentSchema = z.object({
     .int()
     .positive()
     .default(50 * 1024 * 1024),
+  MAX_CHUNK_CONCURRENCY_PER_USER: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(12),
+  MAX_FINALIZE_JOBS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(8),
   DEFAULT_FILE_EXPIRY_DAYS: nullableNumberSchema.default(null),
   MAX_FILE_EXPIRY_DAYS: nullableNumberSchema.default(null),
   EMBED_WORKER: booleanSchema.default(true),

@@ -247,6 +247,10 @@
     <script type="module">
         import { auth } from '/js/core/auth.js';
 
+        if (window.__vaTermsInit) throw new Error('already initialized');
+        window.__vaTermsInit = true;
+        document.addEventListener('va:navigate-away', () => { window.__vaTermsInit = false; });
+
         const user = auth.getUser();
         if (user) {
             document.getElementById('nav-username').textContent = user.username ?? '';

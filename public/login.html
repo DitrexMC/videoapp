@@ -177,6 +177,10 @@
         import { auth } from '/js/core/auth.js';
         import { api } from '/js/core/api.js';
 
+        if (window.__vaLoginInit) throw new Error('already initialized');
+        window.__vaLoginInit = true;
+        document.addEventListener('va:navigate-away', () => { window.__vaLoginInit = false; });
+
         auth.requireGuest('/');
 
         const form = document.getElementById('login-form');

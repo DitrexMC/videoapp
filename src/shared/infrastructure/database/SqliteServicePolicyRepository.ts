@@ -8,6 +8,7 @@ interface PolicyRow {
   default_file_expiry_days: number | null;
   default_max_file_size_bytes: number;
   default_storage_limit_bytes: number;
+  max_chunk_concurrency_per_user: number;
   max_chunk_size_bytes: number;
   max_file_expiry_days: number | null;
   max_zip_file_count: number;
@@ -34,6 +35,7 @@ export class SqliteServicePolicyRepository implements ServicePolicyRepository {
         default_chunk_size_bytes,
         min_chunk_size_bytes,
         max_chunk_size_bytes,
+        max_chunk_concurrency_per_user,
         session_ttl_seconds,
         default_file_expiry_days,
         max_file_expiry_days,
@@ -52,6 +54,7 @@ export class SqliteServicePolicyRepository implements ServicePolicyRepository {
       defaultFileExpiryDays: row.default_file_expiry_days,
       defaultMaxFileSizeBytes: row.default_max_file_size_bytes,
       defaultStorageLimitBytes: row.default_storage_limit_bytes,
+      maxChunkConcurrencyPerUser: row.max_chunk_concurrency_per_user,
       maxChunkSizeBytes: row.max_chunk_size_bytes,
       maxFileExpiryDays: row.max_file_expiry_days,
       maxZipFileCount: row.max_zip_file_count,

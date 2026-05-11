@@ -483,6 +483,11 @@
                                 <input class="input" id="pol-chunk" type="number" min="0" placeholder="例: 10">
                             </div>
                             <div class="form-group">
+                                <label>最大同時チャンク数</label>
+                                <input class="input" id="pol-chunk-concurrency" type="number" min="1"
+                                    placeholder="例: 12">
+                            </div>
+                            <div class="form-group">
                                 <label>ZIP最大ファイル数</label>
                                 <input class="input" id="pol-zip-count" type="number" min="0" placeholder="例: 100">
                             </div>
@@ -507,6 +512,10 @@
     <script type="module">
         import { auth } from '/js/core/auth.js';
         import { api } from '/js/core/api.js';
+
+        if (window.__vaAdminInit) throw new Error('already initialized');
+        window.__vaAdminInit = true;
+        document.addEventListener('va:navigate-away', () => { window.__vaAdminInit = false; });
 
         if (!auth.requireAuth()) throw new Error('redirect');
         if (!auth.isAdmin()) { location.href = '/'; throw new Error('not admin'); }
@@ -554,7 +563,7 @@
                 const totalStorage = allUsers.reduce((acc, u) => acc + (u.storageUsedBytes ?? 0), 0);
                 document.getElementById('stat-storage').textContent = fmtBytes(totalStorage);
                 renderUsers(allUsers);
-            } catch {}
+            } catch { }
         }
 
         async function loadFileStats() {
@@ -564,7 +573,7 @@
                 filePage = 1;
                 document.getElementById('stat-files').textContent = allFiles.length;
                 renderAdminFiles();
-            } catch {}
+            } catch { }
         }
 
         // ── User Management ────────────────────────────────────
@@ -793,7 +802,7 @@
                 filePage = 1;
                 document.getElementById('stat-files').textContent = allFiles.length;
                 renderAdminFiles();
-            } catch {}
+            } catch { }
         });
 
         document.getElementById('file-search-input').addEventListener('keydown', e => {
@@ -817,9 +826,10 @@
                 document.getElementById('pol-max-expiry').value = p.maxFileExpiryDays ?? 0;
                 document.getElementById('pol-session').value = p.sessionTtlSeconds ?? '';
                 document.getElementById('pol-chunk').value = p.defaultChunkSizeBytes ? Math.round(p.defaultChunkSizeBytes / 1048576) : '';
+                document.getElementById('pol-chunk-concurrency').value = p.maxChunkConcurrencyPerUser ?? 12;
                 document.getElementById('pol-zip-count').value = p.maxZipFileCount ?? '';
                 document.getElementById('pol-zip-size').value = p.maxZipTotalBytes ? Math.round(p.maxZipTotalBytes / 1048576) : '';
-            } catch {}
+            } catch { }
         }
 
         document.getElementById('policy-form').addEventListener('submit', async e => {
@@ -840,6 +850,8 @@
             if (session !== undefined) payload.sessionTtlSeconds = session;
             const chunk = mb(document.getElementById('pol-chunk'));
             if (chunk !== undefined) payload.defaultChunkSizeBytes = chunk;
+            const chunkConcurrency = v(document.getElementById('pol-chunk-concurrency'));
+            if (chunkConcurrency !== undefined) payload.maxChunkConcurrencyPerUser = chunkConcurrency;
             const zipCount = v(document.getElementById('pol-zip-count'));
             if (zipCount !== undefined) payload.maxZipFileCount = zipCount;
             const zipSize = mb(document.getElementById('pol-zip-size'));

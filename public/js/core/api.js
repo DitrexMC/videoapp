@@ -321,5 +321,6 @@ export const api = {
     readUrls: () => request('GET', '/api/news/read-urls'),
     markRead: (articleUrl) =>
       request('POST', '/api/news/read', { body: { article_url: articleUrl } }),
+    articles: () => request('GET', '/api/news/articles'),
   },
 };

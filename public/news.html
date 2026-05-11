@@ -180,6 +180,10 @@
     <script type="module">
         import { auth } from '/js/core/auth.js';
 
+        if (window.__vaNewsInit) throw new Error('already initialized');
+        window.__vaNewsInit = true;
+        document.addEventListener('va:navigate-away', () => { window.__vaNewsInit = false; });
+
         if (!auth.requireAuth()) throw new Error('redirect');
 
         const user = auth.getUser();
@@ -196,14 +200,16 @@
         };
 
         let allArticles = [];
+        let readUrls = new Set();
         let currentFilter = 'all';
         let currentSearch = '';
 
         function buildCard(art) {
             const a = document.createElement('a');
-            a.href = art.url;
+            a.href = `/news/article.html?slug=${encodeURIComponent(art.slug)}`;
             a.className = 'news-card';
-            a.dataset.type = art.type || 'News';
+            const typeDisplay = art.type ? art.type.charAt(0).toUpperCase() + art.type.slice(1) : 'News';
+            a.dataset.type = typeDisplay;
 
             if (art.image) {
                 const bg = document.createElement('div');
@@ -213,17 +219,20 @@
                 a.classList.add('has-bg');
             }
 
-            const type = art.type || 'News';
-            const badgeClass = TYPE_CLASS[type] || 'nb-news';
+            const badgeClass = TYPE_CLASS[typeDisplay] || 'nb-news';
             const tagsHtml = (art.tags || '')
                 .split(',').map(t => t.trim()).filter(Boolean)
                 .map(t => `<span class="news-tag">${t}</span>`).join('');
+
+            const isUnread = !readUrls.has(art.slug);
+            const unreadBadge = isUnread ? '<span class="news-unread-dot" title="未読"></span>' : '';
 
             const body = document.createElement('div');
             body.className = 'news-card-body';
             body.innerHTML = `
                 <div class="news-card-meta">
-                    <span class="news-badge ${badgeClass}">${type}</span>
+                    <span class="news-badge ${badgeClass}">${typeDisplay}</span>
+                    ${unreadBadge}
                     <span class="news-card-date">${art.date || ''}</span>
                 </div>
                 <div class="news-card-title">${art.title || 'Untitled'}</div>
@@ -244,7 +253,8 @@
 
             const q = currentSearch.toLowerCase();
             const filtered = allArticles.filter(art => {
-                const matchType = currentFilter === 'all' || art.type === currentFilter;
+                const typeDisplay = art.type ? art.type.charAt(0).toUpperCase() + art.type.slice(1) : 'News';
+                const matchType = currentFilter === 'all' || typeDisplay === currentFilter;
                 const matchSearch = !q
                     || (art.title || '').toLowerCase().includes(q)
                     || (art.subtitle || '').toLowerCase().includes(q)
@@ -298,10 +308,23 @@
 
         (async () => {
             try {
-                const res = await fetch('/news/manifest.json');
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                allArticles = await res.json();
+                const token = auth.getToken();
+                const headers = { 'Authorization': `Bearer ${token}` };
+
+                const [articlesRes, readRes] = await Promise.all([
+                    fetch('/api/news/articles', { headers }),
+                    fetch('/api/news/read-urls', { headers }),
+                ]);
+
+                if (!articlesRes.ok) throw new Error(`HTTP ${articlesRes.status}`);
+                allArticles = await articlesRes.json();
                 allArticles.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                if (readRes.ok) {
+                    const readData = await readRes.json();
+                    readUrls = new Set(readData.read_urls || []);
+                }
+
                 render();
             } catch (e) {
                 document.getElementById('newsGrid').innerHTML =

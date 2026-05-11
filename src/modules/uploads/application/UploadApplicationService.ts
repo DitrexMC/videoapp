@@ -33,6 +33,7 @@ export class UploadApplicationService {
   private readonly policyRepository: ServicePolicyRepository;
   private readonly storage: LocalFileStorage;
   private readonly uploadRepository: UploadRepository;
+  private readonly userChunkConcurrency: Map<string, number>;
 
   constructor(dependencies: UploadApplicationServiceDependencies) {
     this.authService = dependencies.authService;
@@ -41,6 +42,7 @@ export class UploadApplicationService {
     this.policyRepository = dependencies.policyRepository;
     this.storage = dependencies.storage;
     this.uploadRepository = dependencies.uploadRepository;
+    this.userChunkConcurrency = new Map();
   }
 
   async completeUpload(sessionToken: string, input: { fileId: string; totalChunks: number; totalSize: number; uploadId: string }) {
@@ -216,6 +218,7 @@ export class UploadApplicationService {
     body: Buffer
   ) {
     const actor = this.authService.authenticate(sessionToken).user;
+    const policies = this.policyRepository.findPolicies();
     const upload = this.uploadRepository.findUploadById(uploadId);
 
     if (!upload || upload.ownerUserId !== actor.id) {
@@ -226,45 +229,61 @@ export class UploadApplicationService {
       throw new ConflictError("このアップロードはchunk受付中ではありません。");
     }
 
-    assertChunkIndex(index, upload.totalChunks);
-
-    if (headers.fileId && headers.fileId !== upload.fileId) {
-      throw new ValidationError("X-File-Id が一致しません。");
+    // Per-user chunk concurrency rate limiting
+    const current = this.userChunkConcurrency.get(actor.id) ?? 0;
+    if (current >= policies.maxChunkConcurrencyPerUser) {
+      throw new ConflictError("同時処理チャンク数が上限を超えています。しばらく待ってから再送してください。");
     }
+    this.userChunkConcurrency.set(actor.id, current + 1);
 
-    if (headers.chunkSize && headers.chunkSize !== upload.chunkSizeBytes) {
-      throw new ValidationError("X-Chunk-Size が一致しません。");
+    try {
+      assertChunkIndex(index, upload.totalChunks);
+
+      if (headers.fileId && headers.fileId !== upload.fileId) {
+        throw new ValidationError("X-File-Id が一致しません。");
+      }
+
+      if (headers.chunkSize && headers.chunkSize !== upload.chunkSizeBytes) {
+        throw new ValidationError("X-Chunk-Size が一致しません。");
+      }
+
+      if (headers.totalChunks && headers.totalChunks !== upload.totalChunks) {
+        throw new ValidationError("X-Total-Chunks が一致しません。");
+      }
+
+      if (headers.totalSize && headers.totalSize !== upload.totalSizeBytes) {
+        throw new ValidationError("X-Total-Size が一致しません。");
+      }
+
+      const isFinalChunk = index === upload.totalChunks - 1;
+      const finalChunkExpectedSize = upload.totalSizeBytes - upload.chunkSizeBytes * (upload.totalChunks - 1);
+
+      if (!isFinalChunk && body.length !== upload.chunkSizeBytes) {
+        throw new ValidationError("最終chunk以外は固定chunkSizeである必要があります。");
+      }
+
+      if (isFinalChunk && body.length !== finalChunkExpectedSize) {
+        throw new ValidationError("最終chunkのサイズが不正です。");
+      }
+
+      const checksum = createHash("sha256").update(body).digest("hex");
+
+      await this.storage.writeUploadPart(upload.id, index, body);
+      this.uploadRepository.storeUploadPart(upload.id, index, body.length, checksum, this.clock.nowIsoString());
+
+      return {
+        index,
+        received: true,
+        storedSize: body.length
+      };
+    } finally {
+      const count = this.userChunkConcurrency.get(actor.id) ?? 0;
+      if (count <= 1) {
+        this.userChunkConcurrency.delete(actor.id);
+      } else {
+        this.userChunkConcurrency.set(actor.id, count - 1);
+      }
     }
-
-    if (headers.totalChunks && headers.totalChunks !== upload.totalChunks) {
-      throw new ValidationError("X-Total-Chunks が一致しません。");
-    }
-
-    if (headers.totalSize && headers.totalSize !== upload.totalSizeBytes) {
-      throw new ValidationError("X-Total-Size が一致しません。");
-    }
-
-    const isFinalChunk = index === upload.totalChunks - 1;
-    const finalChunkExpectedSize = upload.totalSizeBytes - upload.chunkSizeBytes * (upload.totalChunks - 1);
-
-    if (!isFinalChunk && body.length !== upload.chunkSizeBytes) {
-      throw new ValidationError("最終chunk以外は固定chunkSizeである必要があります。");
-    }
-
-    if (isFinalChunk && body.length !== finalChunkExpectedSize) {
-      throw new ValidationError("最終chunkのサイズが不正です。");
-    }
-
-    const checksum = createHash("sha256").update(body).digest("hex");
-
-    await this.storage.writeUploadPart(upload.id, index, body);
-    this.uploadRepository.storeUploadPart(upload.id, index, body.length, checksum, this.clock.nowIsoString());
-
-    return {
-      index,
-      received: true,
-      storedSize: body.length
-    };
   }
 
   async cancelUpload(sessionToken: string, uploadId: string): Promise<void> {

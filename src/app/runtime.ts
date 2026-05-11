@@ -7,6 +7,7 @@ import { AuthApplicationService } from "../modules/identity/application/AuthAppl
 import { SqliteIdentityRepository } from "../modules/identity/infrastructure/SqliteIdentityRepository.js";
 import { NewsApplicationService } from "../modules/news/application/NewsApplicationService.js";
 import { SqliteNewsRepository } from "../modules/news/infrastructure/SqliteNewsRepository.js";
+import { seedDefaultNewsArticles } from "../modules/news/infrastructure/seedNews.js";
 import { BackgroundWorker } from "../modules/processing/application/BackgroundWorker.js";
 import { UploadApplicationService } from "../modules/uploads/application/UploadApplicationService.js";
 import { SqliteUploadRepository } from "../modules/uploads/infrastructure/SqliteUploadRepository.js";
@@ -44,6 +45,7 @@ export async function createRuntime(config: AppConfig): Promise<AppRuntime> {
     defaultFileExpiryDays: config.DEFAULT_FILE_EXPIRY_DAYS,
     defaultMaxFileSizeBytes: config.DEFAULT_MAX_FILE_SIZE_BYTES,
     defaultStorageLimitBytes: config.DEFAULT_STORAGE_LIMIT_BYTES,
+    maxChunkConcurrencyPerUser: config.MAX_CHUNK_CONCURRENCY_PER_USER,
     maxChunkSizeBytes: config.MAX_CHUNK_SIZE_BYTES,
     maxFileExpiryDays: config.MAX_FILE_EXPIRY_DAYS,
     maxZipFileCount: config.MAX_ZIP_FILE_COUNT,
@@ -132,6 +134,7 @@ export async function createRuntime(config: AppConfig): Promise<AppRuntime> {
   const worker = new BackgroundWorker({
     clock,
     fileRepository,
+    maxConcurrentJobs: config.MAX_FINALIZE_JOBS,
     pollIntervalMilliseconds: config.WORKER_POLL_INTERVAL_MS,
     storage,
     uploadRepository,
@@ -150,7 +153,9 @@ export async function createRuntime(config: AppConfig): Promise<AppRuntime> {
   });
 
   const newsRepository = new SqliteNewsRepository(database.connection);
+  seedDefaultNewsArticles(database.connection);
   const newsService = new NewsApplicationService({
+    authService,
     clock,
     newsRepository,
   });

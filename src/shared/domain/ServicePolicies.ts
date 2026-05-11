@@ -3,6 +3,7 @@ export interface ServicePolicies {
   defaultFileExpiryDays: number | null;
   defaultMaxFileSizeBytes: number;
   defaultStorageLimitBytes: number;
+  maxChunkConcurrencyPerUser: number;
   maxChunkSizeBytes: number;
   maxFileExpiryDays: number | null;
   maxZipFileCount: number;

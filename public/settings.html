@@ -289,6 +289,10 @@
         import { auth } from '/js/core/auth.js?v=1';
         import { api } from '/js/core/api.js?v=1';
 
+        if (window.__vaSettingsInit) throw new Error('already initialized');
+        window.__vaSettingsInit = true;
+        document.addEventListener('va:navigate-away', () => { window.__vaSettingsInit = false; });
+
         if (!auth.requireAuth()) throw new Error('redirect');
 
         const me = auth.getUser();
