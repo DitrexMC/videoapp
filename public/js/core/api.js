@@ -224,7 +224,7 @@ export const api = {
       request('PUT', `/upload/${id}/${index}`, {
         body: buffer,
         headers,
-        retry: { maxRetries: 3, retryDelay: 2000, timeout: 60000 },
+        retry: { maxRetries: 2, retryDelay: 500, timeout: 60000 },
       }),
     complete: (payload) =>
       request('POST', '/upload/complete', {

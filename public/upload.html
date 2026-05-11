@@ -89,9 +89,21 @@
             </a>
         </div>
         <ul class="nav-links">
-            <li><a href="/"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span class="nav-label">ホーム</span></a></li>
-            <li><a href="/upload.html" class="active"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><span class="nav-label">アップロード</span></a></li>
-            <li><a href="/files.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg><span class="nav-label">マイファイル</span></a></li>
+            <li><a href="/"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                        <polyline points="9 22 9 12 15 12 15 22" />
+                    </svg><span class="nav-label">ホーム</span></a></li>
+            <li><a href="/upload.html" class="active"><svg class="nav-icon" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="17 8 12 3 7 8" />
+                        <line x1="12" y1="3" x2="12" y2="15" />
+                    </svg><span class="nav-label">アップロード</span></a></li>
+            <li><a href="/files.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                    </svg><span class="nav-label">マイファイル</span></a></li>
         </ul>
         <div class="nav-right">
             <span id="nav-username" class="nav-username"></span>
@@ -494,7 +506,7 @@
             }
 
             function next() {
-                while (active < (folderRef.id ? 5 : 1) && idx < items.length) {
+                while (active < (folderRef.id ? 8 : 1) && idx < items.length) {
                     active++;
                     const item = items[idx++];
                     uploadOne(item, isPublic, expiresAt, totalCount, folderRef, onFolderCreated, () => {
@@ -537,30 +549,16 @@
                 const chunkSize = initRes.chunkSize;
                 const maxChunks = initRes.maxChunks;
 
-                sessionStorage.setItem('lastUploadId', uploadId);
-
                 if (initRes.folderId && !folderRef.emitted && onFolderCreated) {
                     onFolderCreated(initRes.folderId);
                 }
 
-                // Resume: check which chunks the server already has
-                let receivedSet = new Set();
-                try {
-                    const st = await api.upload.status(uploadId);
-                    if (st && st.receivedChunks) {
-                        for (const idx of st.receivedChunks) receivedSet.add(idx);
-                    }
-                } catch { }
-
                 const startTime = Date.now();
                 let uploadedBytes = 0;
-                let completedChunks = receivedSet.size;
-                const CHUNK_CONCURRENCY = 6;
-                const MAX_CHUNK_RETRIES = 3;
-                const CHUNK_RETRY_BASE_DELAY = 2000;
+                let completedChunks = 0;
+                const CHUNK_CONCURRENCY = 16;
 
                 let nextIndex = 0;
-                const workers = [];
 
                 async function sendChunk(i) {
                     const start = i * chunkSize;
@@ -569,22 +567,9 @@
                     const buf = await chunk.arrayBuffer();
                     const chunkBytes = buf.byteLength;
 
-                    let lastErr = null;
-                    for (let attempt = 0; attempt <= MAX_CHUNK_RETRIES; attempt++) {
-                        try {
-                            await api.upload.chunk(uploadId, i, buf, { 'X-File-Id': fileId });
-                            uploadedBytes += chunkBytes;
-                            completedChunks++;
-                            lastErr = null;
-                            break;
-                        } catch (err) {
-                            lastErr = err;
-                            if (attempt < MAX_CHUNK_RETRIES) {
-                                await new Promise(r => setTimeout(r, CHUNK_RETRY_BASE_DELAY * Math.pow(2, attempt)));
-                            }
-                        }
-                    }
-                    if (lastErr) throw lastErr;
+                    await api.upload.chunk(uploadId, i, buf, { 'X-File-Id': fileId });
+                    uploadedBytes += chunkBytes;
+                    completedChunks++;
 
                     const pct = Math.min(Math.round((completedChunks / maxChunks) * 100), 100);
                     const elapsed = (Date.now() - startTime) / 1000 || 0.001;
@@ -605,58 +590,24 @@
                 async function worker() {
                     while (nextIndex < maxChunks) {
                         const i = nextIndex++;
-                        if (receivedSet.has(i)) continue;
                         await sendChunk(i);
                     }
                 }
 
                 const workerCount = Math.min(CHUNK_CONCURRENCY, maxChunks);
-                for (let w = 0; w < workerCount; w++) {
-                    workers.push(worker());
-                }
-                await Promise.all(workers);
+                await Promise.all(Array.from({ length: workerCount }, worker));
 
-                // Complete with retry + status check before cancelling
-                {
-                    let completeOk = false;
-                    for (let attempt = 0; attempt <= 3; attempt++) {
-                        try {
-                            await api.upload.complete({
-                                fileId,
-                                totalChunks: maxChunks,
-                                totalSize: file.size,
-                                uploadId,
-                            });
-                            completeOk = true;
-                            break;
-                        } catch (err) {
-                            if (attempt < 3) {
-                                try {
-                                    const st = await api.upload.status(uploadId);
-                                    if (st && (st.status === 'processing' || st.status === 'ready')) {
-                                        completeOk = true;
-                                        break;
-                                    }
-                                } catch { }
-                                await new Promise(r => setTimeout(r, 2000 * Math.pow(2, attempt)));
-                            } else {
-                                throw err;
-                            }
-                        }
-                    }
-                    if (!completeOk) {
-                        const st = await api.upload.status(uploadId);
-                        if (!st || (st.status !== 'processing' && st.status !== 'ready')) {
-                            throw new api.ApiError(0, 'complete_failed', '完了処理に失敗しました');
-                        }
-                    }
-                }
+                await api.upload.complete({
+                    fileId,
+                    totalChunks: maxChunks,
+                    totalSize: file.size,
+                    uploadId,
+                });
 
                 item.progressEl.hidden = true;
                 item.statusEl.textContent = '完了';
                 item.statusEl.className = 'qi-status qi-status--done';
                 item.resultEl.hidden = false;
-                sessionStorage.removeItem('lastUploadId');
 
                 const fileUrl = `${location.origin}/file.html?id=${fileId}`;
                 const rawUrl = `${location.origin}/files/${fileId}/stream`;
@@ -707,30 +658,13 @@
                 onDone();
             } catch (err) {
                 item.progressEl.hidden = true;
-
                 if (uploadId) {
-                    try {
-                        const st = await api.upload.status(uploadId);
-                        if (st && (st.status === 'processing' || st.status === 'ready')) {
-                            item.statusEl.textContent = '完了';
-                            item.statusEl.className = 'qi-status qi-status--done';
-                            item.resultEl.hidden = false;
-                            item.resultEl.innerHTML = `<span style="color:var(--text-sub)">サーバーで処理中です。ファイル一覧を確認してください。</span>`;
-                            sessionStorage.removeItem('lastUploadId');
-                            onDone();
-                            return;
-                        }
-                    } catch { }
                     api.upload.cancel(uploadId).catch(() => { });
-                    sessionStorage.removeItem('lastUploadId');
                 }
-
                 item.statusEl.textContent = 'エラー';
                 item.statusEl.className = 'qi-status qi-status--error';
                 item.resultEl.hidden = false;
-                if (!item.resultEl.innerHTML) {
-                    item.resultEl.innerHTML = `<span class="qi-error-msg">${esc(err?.message ?? 'アップロードに失敗しました')}</span>`;
-                }
+                item.resultEl.innerHTML = `<span class="qi-error-msg">${esc(err?.message ?? 'アップロードに失敗しました')}</span>`;
                 onDone();
                 setTimeout(() => { item.el.style.opacity = '0'; item.el.style.transition = 'opacity .3s'; setTimeout(() => item.el.remove(), 300); }, 4000);
             }
