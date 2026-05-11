@@ -932,8 +932,6 @@ html.vt-navigated .viewer {
 
 @media(max-width:768px){
   nav{padding:0 1rem;}
-  .nav-links{gap:.75rem;}
-  .nav-links a{font-size:.85rem;}
   .nav-user{gap:.5rem;}
   .page-content{padding:1rem .75rem;}
   .upload-zone{padding:2rem 1rem;}
@@ -950,8 +948,6 @@ html.vt-navigated .viewer {
 }
 @media(max-width:600px){
   .file-table{display:block;overflow-x:auto;white-space:nowrap;}
-  .nav-links{gap:.5rem;}
-  .nav-links a{font-size:.78rem;}
   .hero-title{font-size:1.6rem;}
   .hero-sub{font-size:.9rem;}
   .admin-stats { grid-template-columns:1fr 1fr; }
@@ -959,6 +955,5 @@ html.vt-navigated .viewer {
   .dash-cards  { grid-template-columns:1fr 1fr; }
 }
 @media(max-width:480px){
-  .nav-links{display:none;}
   .nav-logo{font-size:1rem;}
 }

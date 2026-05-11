@@ -262,6 +262,10 @@ body {
   transform: scaleX(1);
 }
 
+.nav-icon {
+  display: none;
+}
+
 /* ── Nav right ── */
 .nav-right {
   display: flex;
@@ -1281,11 +1285,46 @@ html.vt-navigated .viewer {
 
 @media (max-width: 768px) {
   #nav {
-    padding: 0 1rem 0 0.6rem;
+    padding: 0 0.8rem;
     height: 56px;
+    grid-template-columns: auto 1fr auto;
+  }
+  .nav-left {
+    justify-self: start;
+    padding-right: 0;
   }
   .nav-links {
+    display: flex;
+    gap: 0.3rem;
+    justify-self: center;
+  }
+  .nav-links a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    padding: 0;
+    transition: color 0.2s, background 0.2s;
+  }
+  .nav-links a::after {
     display: none;
+  }
+  .nav-links a:hover {
+    background: rgba(59, 130, 246, 0.1);
+  }
+  .nav-icon {
+    display: block;
+    width: 20px;
+    height: 20px;
+  }
+  .nav-label {
+    display: none;
+  }
+  .nav-right {
+    gap: 0.5rem;
+    justify-self: end;
   }
   .nav-username {
     display: none;

@@ -1107,7 +1107,6 @@ pre.hljs-pre code.hljs {
   }
   .nav-links {
     gap: 0.5rem;
-    display: none;
   }
   .nav-links a {
     font-size: 0.78rem;
@@ -1187,9 +1186,6 @@ pre.hljs-pre code.hljs {
   }
 }
 @media (max-width: 480px) {
-  .nav-links {
-    display: none;
-  }
   .nav-username {
     display: none;
   }
