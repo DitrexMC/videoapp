@@ -342,7 +342,7 @@ async function navigate(url, pushState = true) {
 
   // Mark news article as read on navigation
   if (u.pathname.startsWith('/news/articles/')) {
-    api.news.markRead(u.pathname + u.search).catch(() => {});
+    api.news.markRead(u.pathname + u.search).catch(() => { });
   }
 
   const fromPath = pushState ? location.pathname : currentSpaPath;
@@ -540,12 +540,12 @@ onReady(() => {
 
   // Mark news article as read on direct page load (old static pages)
   if (location.pathname.startsWith('/news/articles/')) {
-    api.news.markRead(location.pathname + location.search).catch(() => {});
+    api.news.markRead(location.pathname + location.search).catch(() => { });
   }
   // Mark dynamic article as read
   if (location.pathname === '/news/article.html') {
     const slug = new URLSearchParams(location.search).get('slug');
-    if (slug) api.news.markRead(slug).catch(() => {});
+    if (slug) api.news.markRead(slug).catch(() => { });
   }
 });
 

@@ -315,6 +315,14 @@ export const api = {
           body: { expiresAt: at },
         }),
     },
+
+    news: {
+      list: () => request('GET', '/admin/news'),
+      get: (id) => request('GET', `/admin/news/${id}`),
+      create: (payload) => request('POST', '/admin/news', { body: payload }),
+      update: (id, payload) => request('PATCH', `/admin/news/${id}`, { body: payload }),
+      delete: (id) => request('DELETE', `/admin/news/${id}`),
+    },
   },
 
   news: {

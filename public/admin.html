@@ -339,6 +339,7 @@
             <div class="tabs reveal reveal-d3">
                 <button class="tab-btn active" data-tab="users">ユーザー管理</button>
                 <button class="tab-btn" data-tab="files">ファイル管理</button>
+                <button class="tab-btn" data-tab="news">ニュース管理</button>
                 <button class="tab-btn" data-tab="policies">設定</button>
             </div>
 
@@ -449,6 +450,136 @@
                         <button class="btn btn-ghost btn-sm" id="file-page-prev">← 前へ</button>
                         <button class="btn btn-ghost btn-sm" id="file-page-next">次へ →</button>
                     </div>
+                </div>
+            </div>
+
+            <!-- News tab -->
+            <div class="tab-panel" id="tab-news" style="display:none">
+                <div class="card mb-2">
+                    <div class="section-title">新規記事作成</div>
+                    <form id="news-create-form" style="margin-top:.6rem">
+                        <div class="create-form">
+                            <div class="form-group">
+                                <label for="nc-slug">スラッグ</label>
+                                <input class="input" id="nc-slug" type="text" placeholder="例: my-article" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="nc-title">タイトル</label>
+                                <input class="input" id="nc-title" type="text" placeholder="記事タイトル" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="nc-subtitle">サブタイトル</label>
+                                <input class="input" id="nc-subtitle" type="text" placeholder="サブタイトル（任意）">
+                            </div>
+                            <div class="form-group">
+                                <label for="nc-type">タイプ</label>
+                                <select class="input" id="nc-type">
+                                    <option value="news">news</option>
+                                    <option value="update">update</option>
+                                    <option value="guide">guide</option>
+                                    <option value="note">note</option>
+                                    <option value="danger">danger</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="nc-date">日付</label>
+                                <input class="input" id="nc-date" type="date" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="nc-tags">タグ</label>
+                                <input class="input" id="nc-tags" type="text" placeholder="カンマ区切り（任意）">
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-top:.6rem">
+                            <label for="nc-content">本文（Markdown）</label>
+                            <textarea class="input" id="nc-content" rows="8" placeholder="記事の本文..."
+                                style="resize:vertical;font-family:monospace;font-size:.85rem"></textarea>
+                        </div>
+                        <div style="margin-top:.6rem;display:flex;gap:.6rem;align-items:center">
+                            <button type="submit" class="btn btn-primary">記事を作成</button>
+                            <span id="news-msg" style="font-size:.82rem;font-weight:700"></span>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="table-wrap">
+                    <table class="table admin-table">
+                        <colgroup>
+                            <col style="width:auto">
+                            <col style="width:6rem">
+                            <col style="width:7rem">
+                            <col style="width:8rem">
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th class="ellipsis-cell">タイトル / スラッグ</th>
+                                <th>タイプ</th>
+                                <th>日付</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="news-list">
+                            <tr class="empty-row">
+                                <td colspan="4">読み込み中...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- News edit modal -->
+            <div id="news-edit-overlay"
+                style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;overflow-y:auto">
+                <div
+                    style="max-width:640px;margin:3rem auto;padding:1.5rem;background:var(--bg2);border-radius:12px;border:1px solid var(--border)">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+                        <strong style="font-size:1rem">記事を編集</strong>
+                        <button id="news-edit-close" class="btn btn-ghost btn-sm">✕ 閉じる</button>
+                    </div>
+                    <form id="news-edit-form">
+                        <input type="hidden" id="ne-id">
+                        <div class="create-form">
+                            <div class="form-group">
+                                <label for="ne-slug">スラッグ</label>
+                                <input class="input" id="ne-slug" type="text" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="ne-title">タイトル</label>
+                                <input class="input" id="ne-title" type="text" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="ne-subtitle">サブタイトル</label>
+                                <input class="input" id="ne-subtitle" type="text">
+                            </div>
+                            <div class="form-group">
+                                <label for="ne-type">タイプ</label>
+                                <select class="input" id="ne-type">
+                                    <option value="news">news</option>
+                                    <option value="update">update</option>
+                                    <option value="guide">guide</option>
+                                    <option value="note">note</option>
+                                    <option value="danger">danger</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="ne-date">日付</label>
+                                <input class="input" id="ne-date" type="date" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="ne-tags">タグ</label>
+                                <input class="input" id="ne-tags" type="text">
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-top:.6rem">
+                            <label for="ne-content">本文（Markdown）</label>
+                            <textarea class="input" id="ne-content" rows="10"
+                                style="resize:vertical;font-family:monospace;font-size:.85rem"></textarea>
+                        </div>
+                        <div style="margin-top:.8rem;display:flex;gap:.6rem;align-items:center">
+                            <button type="submit" class="btn btn-primary">保存</button>
+                            <span id="news-edit-msg" style="font-size:.82rem;font-weight:700"></span>
+                        </div>
+                    </form>
                 </div>
             </div>
 
@@ -872,6 +1003,158 @@
         loadStats();
         loadFileStats();
         loadPolicies();
+        loadNews();
+
+        // ── News Management ────────────────────────────────────
+        let allNews = [];
+
+        async function loadNews() {
+            try {
+                const res = await api.admin.news.list();
+                allNews = res?.items ?? [];
+                renderNewsList();
+            } catch {
+                document.getElementById('news-list').innerHTML =
+                    '<tr class="empty-row"><td colspan="5">読み込みに失敗しました</td></tr>';
+            }
+        }
+
+        const newsTypeColors = {
+            news: 'var(--accent3)',
+            update: 'var(--accent2)',
+            guide: 'var(--green)',
+            note: 'var(--text-sub)',
+            danger: 'var(--red)',
+        };
+
+        function renderNewsList() {
+            const tbody = document.getElementById('news-list');
+            if (!allNews.length) {
+                tbody.innerHTML = '<tr class="empty-row"><td colspan="5">記事がありません</td></tr>';
+                return;
+            }
+            tbody.innerHTML = allNews.map(a => `
+                <tr>
+                    <td class="ellipsis-cell" title="${esc(a.slug)}">
+                        <strong>${esc(a.title)}</strong>
+                        <span style="font-size:.75rem;color:var(--text-sub);display:block">${esc(a.slug)}</span>
+                    </td>
+                    <td><span class="badge" style="background:${newsTypeColors[a.type] ?? 'var(--bg3)'};color:#fff">${esc(a.type)}</span></td>
+                    <td>${esc(a.date)}</td>
+                    <td>
+                        <div class="fr-actions">
+                            <button class="btn btn-ghost btn-sm news-edit-btn" data-id="${esc(a.id)}">編集</button>
+                            <button class="btn btn-ghost btn-sm news-del-btn" data-id="${esc(a.id)}" data-title="${esc(a.title)}" style="color:var(--red)">削除</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+
+            tbody.querySelectorAll('.news-edit-btn').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const id = btn.dataset.id;
+                    try {
+                        const a = await api.admin.news.get(id);
+                        document.getElementById('ne-id').value = a.id;
+                        document.getElementById('ne-slug').value = a.slug;
+                        document.getElementById('ne-title').value = a.title;
+                        document.getElementById('ne-subtitle').value = a.subtitle ?? '';
+                        document.getElementById('ne-type').value = a.type;
+                        document.getElementById('ne-date').value = a.date;
+                        document.getElementById('ne-tags').value = a.tags ?? '';
+                        document.getElementById('ne-content').value = a.content ?? '';
+                        document.getElementById('news-edit-msg').textContent = '';
+                        document.getElementById('news-edit-overlay').style.display = '';
+                    } catch {
+                        alert('記事の取得に失敗しました');
+                    }
+                });
+            });
+
+            tbody.querySelectorAll('.news-del-btn').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    if (!confirm(`「${btn.dataset.title}」を削除しますか？`)) return;
+                    btn.disabled = true;
+                    try {
+                        await api.admin.news.delete(btn.dataset.id);
+                        allNews = allNews.filter(a => a.id !== btn.dataset.id);
+                        renderNewsList();
+                    } catch {
+                        btn.disabled = false;
+                        alert('削除に失敗しました');
+                    }
+                });
+            });
+        }
+
+        document.getElementById('nc-date').value = new Date().toISOString().slice(0, 10);
+
+        document.getElementById('news-create-form').addEventListener('submit', async e => {
+            e.preventDefault();
+            const msg = document.getElementById('news-msg');
+            msg.textContent = '';
+            msg.style.color = '';
+            const payload = {
+                slug: document.getElementById('nc-slug').value.trim(),
+                title: document.getElementById('nc-title').value.trim(),
+                subtitle: document.getElementById('nc-subtitle').value.trim(),
+                type: document.getElementById('nc-type').value,
+                date: document.getElementById('nc-date').value,
+                tags: document.getElementById('nc-tags').value.trim(),
+                content: document.getElementById('nc-content').value,
+            };
+            try {
+                await api.admin.news.create(payload);
+                msg.textContent = '記事を作成しました';
+                msg.style.color = 'var(--green)';
+                document.getElementById('nc-slug').value = '';
+                document.getElementById('nc-title').value = '';
+                document.getElementById('nc-subtitle').value = '';
+                document.getElementById('nc-tags').value = '';
+                document.getElementById('nc-content').value = '';
+                await loadNews();
+            } catch (err) {
+                msg.textContent = err?.message ?? '作成に失敗しました';
+                msg.style.color = 'var(--red)';
+            }
+            setTimeout(() => { msg.textContent = ''; }, 4000);
+        });
+
+        document.getElementById('news-edit-close').addEventListener('click', () => {
+            document.getElementById('news-edit-overlay').style.display = 'none';
+        });
+
+        document.getElementById('news-edit-form').addEventListener('submit', async e => {
+            e.preventDefault();
+            const msg = document.getElementById('news-edit-msg');
+            msg.textContent = '';
+            const id = document.getElementById('ne-id').value;
+            const payload = {
+                slug: document.getElementById('ne-slug').value.trim(),
+                title: document.getElementById('ne-title').value.trim(),
+                subtitle: document.getElementById('ne-subtitle').value.trim(),
+                type: document.getElementById('ne-type').value,
+                date: document.getElementById('ne-date').value,
+                tags: document.getElementById('ne-tags').value.trim(),
+                content: document.getElementById('ne-content').value,
+            };
+            try {
+                await api.admin.news.update(id, payload);
+                msg.textContent = '保存しました';
+                msg.style.color = 'var(--green)';
+                await loadNews();
+                setTimeout(() => {
+                    document.getElementById('news-edit-overlay').style.display = 'none';
+                }, 800);
+            } catch (err) {
+                msg.textContent = err?.message ?? '保存に失敗しました';
+                msg.style.color = 'var(--red)';
+            }
+        });
+
+        document.getElementById('news-edit-overlay').addEventListener('click', e => {
+            if (e.target === e.currentTarget) e.currentTarget.style.display = 'none';
+        });
 
         if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => { });
     </script>
