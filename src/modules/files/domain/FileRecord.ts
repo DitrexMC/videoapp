@@ -79,7 +79,7 @@ export function assertCanReadFile(file: FileRecord, actor: User | null): void {
     return;
   }
 
-  throw new NotFoundError("ファイルが見つかりません。");
+  throw new AuthorizationError("このファイルは非公開です。");
 }
 
 export function assertFileIsDownloadable(file: FileRecord): void {
