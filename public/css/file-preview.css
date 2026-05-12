@@ -1,25 +1,25 @@
 :root {
-  --accent:    #1d4ed8;
-  --accent2:   #3b82f6;
-  --accent3:   #60a5fa;
-  --green:     #22c55e;
-  --red:       #ef4444;
-  --yellow:    #f59e0b;
-  --purple:    #8b5cf6;
-  --bg:        #0f1117;
-  --bg2:       #141924;
-  --bg3:       #1c2438;
-  --text:      #e2e8f0;
-  --text-sub:  #94a3b8;
-  --border:    rgba(59,130,246,.15);
+  --accent: #1d4ed8;
+  --accent2: #3b82f6;
+  --accent3: #60a5fa;
+  --green: #22c55e;
+  --red: #ef4444;
+  --yellow: #f59e0b;
+  --purple: #8b5cf6;
+  --bg: #0f1117;
+  --bg2: #141924;
+  --bg3: #1c2438;
+  --text: #e2e8f0;
+  --text-sub: #94a3b8;
+  --border: rgba(59, 130, 246, 0.15);
 }
 [data-theme="light"] {
-  --bg:        #f1f5f9;
-  --bg2:       #ffffff;
-  --bg3:       #e8eef6;
-  --text:      #0f172a;
-  --text-sub:  #475569;
-  --border:    rgba(59,130,246,.48);
+  --bg: #f1f5f9;
+  --bg2: #ffffff;
+  --bg3: #eaeff6;
+  --text: #0f172a;
+  --text-sub: #4b5563;
+  --border: rgba(0, 0, 0, 0.12);
 }
 *,
 *::before,
@@ -100,6 +100,11 @@ body {
 .btn.copied {
   color: var(--green) !important;
   border-color: var(--green) !important;
+}
+.btn.copy-btn {
+  min-width: 7.5rem;
+  justify-content: center;
+  white-space: nowrap;
 }
 .theme-toggle {
   width: 34px;

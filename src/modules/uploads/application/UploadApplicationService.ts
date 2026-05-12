@@ -5,7 +5,11 @@ import type { FileRepository } from "../../files/application/FileRepository.js";
 import { resolveSafeName } from "../../files/domain/NameCollisionResolver.js";
 import type { AuthApplicationService } from "../../identity/application/AuthApplicationService.js";
 import type { Clock } from "../../../shared/domain/clock.js";
-import { ConflictError, NotFoundError, ValidationError } from "../../../shared/domain/errors.js";
+import {
+  ConflictError,
+  NotFoundError,
+  ValidationError,
+} from "../../../shared/domain/errors.js";
 import { generateId } from "../../../shared/domain/id.js";
 import type { LocalFileStorage } from "../../../shared/infrastructure/storage/LocalFileStorage.js";
 import { assertChunkIndex } from "../domain/UploadSession.js";
@@ -45,38 +49,142 @@ export class UploadApplicationService {
     this.userChunkConcurrency = new Map();
   }
 
-  async completeUpload(sessionToken: string, input: { fileId: string; totalChunks: number; totalSize: number; uploadId: string }) {
+  async directUpload(
+    sessionToken: string,
+    input: {
+      expiresAt: string | null;
+      groupId: string | null;
+      isPublic: boolean;
+      mimeType: string;
+      name: string;
+      size: number;
+      tempPath: string;
+    },
+  ): Promise<{ fileId: string; url: string }> {
+    const actor = this.authService.authenticate(sessionToken).user;
+    const policies = this.policyRepository.findPolicies();
+    const normalizedName = input.name.trim() || "upload";
+
+    if (input.size <= 0) {
+      throw new ValidationError("ファイルサイズが不正です。");
+    }
+
+    if (input.size > actor.maxFileSizeBytes) {
+      throw new ValidationError("ユーザーの最大ファイルサイズを超えています。");
+    }
+
+    const currentStorageUsage = this.fileRepository.getStorageUsage(actor.id);
+    if (currentStorageUsage + input.size > actor.storageLimitBytes) {
+      throw new ValidationError("ユーザーのストレージ上限を超えています。");
+    }
+
+    const resolvedExpiresAt = resolveExpiresAt(
+      this.clock.now(),
+      input.expiresAt,
+      policies.defaultFileExpiryDays,
+      policies.maxFileExpiryDays,
+    );
+
+    if (input.groupId) {
+      const existing = this.fileRepository.findGroupById(input.groupId);
+      if (!existing) {
+        this.fileRepository.createGroup({
+          createdAt: this.clock.nowIsoString(),
+          expiresAt: resolvedExpiresAt,
+          id: input.groupId,
+          isPrivate: !input.isPublic,
+          label: "",
+          ownerUserId: actor.id,
+          updatedAt: this.clock.nowIsoString(),
+        });
+      }
+    }
+
+    const existingNames = this.fileRepository.listSafeNames(actor.id, null);
+    const safeName = resolveSafeName(normalizedName, existingNames);
+    const timestamp = this.clock.nowIsoString();
+    const fileId = generateId();
+
+    const finalized = await this.storage.storeDirectFile(input.tempPath);
+    const preview = await this.storage.generatePreview(
+      fileId,
+      input.mimeType,
+      finalized.storagePath,
+    );
+
+    this.fileRepository.createFile({
+      checksum: finalized.checksum,
+      createdAt: timestamp,
+      expiresAt: resolvedExpiresAt,
+      folderId: null,
+      groupId: input.groupId,
+      id: fileId,
+      mimeType: input.mimeType,
+      name: normalizedName,
+      ownerUserId: actor.id,
+      previewPath: preview.previewPath,
+      previewStatus: preview.previewStatus,
+      public: input.isPublic,
+      safeName,
+      sizeBytes: finalized.sizeBytes,
+      storagePath: finalized.storagePath,
+      updatedAt: timestamp,
+    });
+
+    return { fileId, url: `/file.html?id=${fileId}` };
+  }
+
+  async completeUpload(
+    sessionToken: string,
+    input: {
+      fileId: string;
+      totalChunks: number;
+      totalSize: number;
+      uploadId: string;
+    },
+  ) {
     const actor = this.authService.authenticate(sessionToken).user;
     const upload = this.uploadRepository.findUploadById(input.uploadId);
     const file = this.fileRepository.findFileById(input.fileId);
 
-    if (!upload || upload.ownerUserId !== actor.id || upload.fileId !== input.fileId) {
+    if (
+      !upload ||
+      upload.ownerUserId !== actor.id ||
+      upload.fileId !== input.fileId
+    ) {
       throw new NotFoundError("アップロードが見つかりません。");
     }
 
     if (!file || file.isDeleted || file.status === "deleted") {
-      throw new ConflictError("削除済みファイルのアップロードは完了できません。");
+      throw new ConflictError(
+        "削除済みファイルのアップロードは完了できません。",
+      );
     }
 
     if (upload.status === "processing" || upload.status === "ready") {
       return {
         fileId: upload.fileId,
         missingChunks: [],
-        status: upload.status
+        status: upload.status,
       };
     }
 
     if (upload.status !== "uploading") {
       throw new ConflictError("このアップロードは完了できない状態です。", {
-        status: upload.status
+        status: upload.status,
       });
     }
 
-    if (upload.totalChunks !== input.totalChunks || upload.totalSizeBytes !== input.totalSize) {
+    if (
+      upload.totalChunks !== input.totalChunks ||
+      upload.totalSizeBytes !== input.totalSize
+    ) {
       throw new ValidationError("アップロードの総量情報が一致しません。");
     }
 
-    const receivedChunks = this.uploadRepository.findUploadReceivedIndices(upload.id);
+    const receivedChunks = this.uploadRepository.findUploadReceivedIndices(
+      upload.id,
+    );
     const missingChunks: number[] = [];
 
     for (let index = 0; index < upload.totalChunks; index += 1) {
@@ -85,12 +193,14 @@ export class UploadApplicationService {
       }
     }
 
-    const uploadedByteCount = this.uploadRepository.findUploadedByteCount(upload.id);
+    const uploadedByteCount = this.uploadRepository.findUploadedByteCount(
+      upload.id,
+    );
 
     if (uploadedByteCount !== upload.totalSizeBytes) {
       throw new ConflictError("アップロード済みサイズが一致しません。", {
         expectedSize: upload.totalSizeBytes,
-        uploadedByteCount
+        uploadedByteCount,
       });
     }
 
@@ -101,12 +211,16 @@ export class UploadApplicationService {
     const timestamp = this.clock.nowIsoString();
     const jobId = generateId();
 
-    this.uploadRepository.markUploadProcessingAndQueueJob(jobId, upload.id, timestamp);
+    this.uploadRepository.markUploadProcessingAndQueueJob(
+      jobId,
+      upload.id,
+      timestamp,
+    );
 
     return {
       fileId: upload.fileId,
       missingChunks: [],
-      status: "processing"
+      status: "processing",
     };
   }
 
@@ -118,32 +232,48 @@ export class UploadApplicationService {
       throw new NotFoundError("アップロードが見つかりません。");
     }
 
-    const receivedChunks = this.uploadRepository.findUploadReceivedIndices(uploadId);
+    const receivedChunks =
+      this.uploadRepository.findUploadReceivedIndices(uploadId);
     const latestJobState = this.uploadRepository.findLatestJobState(uploadId);
-    const uploadProgress = Math.round((receivedChunks.length / upload.totalChunks) * 100);
-    const processingProgress = upload.status === "ready"
-      ? 100
-      : latestJobState?.status === "failed"
+    const uploadProgress = Math.round(
+      (receivedChunks.length / upload.totalChunks) * 100,
+    );
+    const processingProgress =
+      upload.status === "ready"
         ? 100
-        : upload.status === "processing"
-          ? 50
-          : 0;
+        : latestJobState?.status === "failed"
+          ? 100
+          : upload.status === "processing"
+            ? 50
+            : 0;
 
     return {
       chunkSize: upload.chunkSizeBytes,
       fileId: upload.fileId,
-      processingError: latestJobState?.status === "failed" ? latestJobState.lastError : null,
+      processingError:
+        latestJobState?.status === "failed" ? latestJobState.lastError : null,
       processingProgress,
       processingState: latestJobState?.status ?? null,
       receivedChunks,
       status: upload.status,
       totalChunks: upload.totalChunks,
       uploadId: upload.id,
-      uploadProgress
+      uploadProgress,
     };
   }
 
-  initUpload(sessionToken: string, input: { chunkSize?: number; expiresAt?: string | null; folderContext?: FolderContextInput; mime_type: string; name: string; public: boolean; size: number }) {
+  initUpload(
+    sessionToken: string,
+    input: {
+      chunkSize?: number;
+      expiresAt?: string | null;
+      folderContext?: FolderContextInput;
+      mime_type: string;
+      name: string;
+      public: boolean;
+      size: number;
+    },
+  ) {
     const actor = this.authService.authenticate(sessionToken).user;
     const policies = this.policyRepository.findPolicies();
     const normalizedName = input.name.trim();
@@ -168,11 +298,19 @@ export class UploadApplicationService {
 
     const chunkSize = input.chunkSize ?? policies.defaultChunkSizeBytes;
 
-    if (chunkSize < policies.minChunkSizeBytes || chunkSize > policies.maxChunkSizeBytes) {
+    if (
+      chunkSize < policies.minChunkSizeBytes ||
+      chunkSize > policies.maxChunkSizeBytes
+    ) {
       throw new ValidationError("chunkSize は許可された範囲外です。");
     }
 
-    const resolvedExpiresAt = resolveExpiresAt(this.clock.now(), input.expiresAt ?? null, policies.defaultFileExpiryDays, policies.maxFileExpiryDays);
+    const resolvedExpiresAt = resolveExpiresAt(
+      this.clock.now(),
+      input.expiresAt ?? null,
+      policies.defaultFileExpiryDays,
+      policies.maxFileExpiryDays,
+    );
 
     const folderId = this.resolveFolder(actor.id, input.folderContext);
     const existingNames = this.fileRepository.listSafeNames(actor.id, folderId);
@@ -196,7 +334,7 @@ export class UploadApplicationService {
       sizeBytes: input.size,
       totalChunks,
       updatedAt: timestamp,
-      visibility: input.public
+      visibility: input.public,
     });
 
     return {
@@ -206,7 +344,7 @@ export class UploadApplicationService {
       maxChunks: totalChunks,
       status: "uploading",
       uploadId,
-      url: `/file/${fileId}`
+      url: `/file/${fileId}`,
     };
   }
 
@@ -214,8 +352,13 @@ export class UploadApplicationService {
     sessionToken: string,
     uploadId: string,
     index: number,
-    headers: { chunkSize?: number; fileId?: string; totalChunks?: number; totalSize?: number },
-    body: Buffer
+    headers: {
+      chunkSize?: number;
+      fileId?: string;
+      totalChunks?: number;
+      totalSize?: number;
+    },
+    body: Buffer,
   ) {
     const actor = this.authService.authenticate(sessionToken).user;
     const policies = this.policyRepository.findPolicies();
@@ -232,7 +375,9 @@ export class UploadApplicationService {
     // Per-user chunk concurrency rate limiting
     const current = this.userChunkConcurrency.get(actor.id) ?? 0;
     if (current >= policies.maxChunkConcurrencyPerUser) {
-      throw new ConflictError("同時処理チャンク数が上限を超えています。しばらく待ってから再送してください。");
+      throw new ConflictError(
+        "同時処理チャンク数が上限を超えています。しばらく待ってから再送してください。",
+      );
     }
     this.userChunkConcurrency.set(actor.id, current + 1);
 
@@ -256,10 +401,14 @@ export class UploadApplicationService {
       }
 
       const isFinalChunk = index === upload.totalChunks - 1;
-      const finalChunkExpectedSize = upload.totalSizeBytes - upload.chunkSizeBytes * (upload.totalChunks - 1);
+      const finalChunkExpectedSize =
+        upload.totalSizeBytes -
+        upload.chunkSizeBytes * (upload.totalChunks - 1);
 
       if (!isFinalChunk && body.length !== upload.chunkSizeBytes) {
-        throw new ValidationError("最終chunk以外は固定chunkSizeである必要があります。");
+        throw new ValidationError(
+          "最終chunk以外は固定chunkSizeである必要があります。",
+        );
       }
 
       if (isFinalChunk && body.length !== finalChunkExpectedSize) {
@@ -269,12 +418,18 @@ export class UploadApplicationService {
       const checksum = createHash("sha256").update(body).digest("hex");
 
       await this.storage.writeUploadPart(upload.id, index, body);
-      this.uploadRepository.storeUploadPart(upload.id, index, body.length, checksum, this.clock.nowIsoString());
+      this.uploadRepository.storeUploadPart(
+        upload.id,
+        index,
+        body.length,
+        checksum,
+        this.clock.nowIsoString(),
+      );
 
       return {
         index,
         received: true,
-        storedSize: body.length
+        storedSize: body.length,
       };
     } finally {
       const count = this.userChunkConcurrency.get(actor.id) ?? 0;
@@ -295,14 +450,22 @@ export class UploadApplicationService {
     }
 
     if (upload.status === "processing" || upload.status === "ready") {
-      throw new ConflictError("このアップロードはすでに処理中または完了済みです。");
+      throw new ConflictError(
+        "このアップロードはすでに処理中または完了済みです。",
+      );
     }
 
-    this.uploadRepository.markUploadCancelled(uploadId, this.clock.nowIsoString());
+    this.uploadRepository.markUploadCancelled(
+      uploadId,
+      this.clock.nowIsoString(),
+    );
     await this.storage.removeUploadDirectory(uploadId);
   }
 
-  private resolveFolder(ownerUserId: string, folderContext?: FolderContextInput): string | null {
+  private resolveFolder(
+    ownerUserId: string,
+    folderContext?: FolderContextInput,
+  ): string | null {
     if (!folderContext || folderContext.mode === "single") {
       return null;
     }
@@ -312,7 +475,10 @@ export class UploadApplicationService {
         throw new ValidationError("existing モードでは folderId が必要です。");
       }
 
-      const folder = this.uploadRepository.findUserFolder(folderContext.folderId, ownerUserId);
+      const folder = this.uploadRepository.findUserFolder(
+        folderContext.folderId,
+        ownerUserId,
+      );
 
       if (!folder || folder.deletedAt) {
         throw new NotFoundError("フォルダが見つかりません。");
@@ -322,7 +488,10 @@ export class UploadApplicationService {
     }
 
     if (folderContext.mode === "batch" && folderContext.folderId) {
-      const folder = this.uploadRepository.findUserFolder(folderContext.folderId, ownerUserId);
+      const folder = this.uploadRepository.findUserFolder(
+        folderContext.folderId,
+        ownerUserId,
+      );
 
       if (!folder || folder.deletedAt) {
         throw new NotFoundError("フォルダが見つかりません。");
@@ -339,7 +508,7 @@ export class UploadApplicationService {
       name: `フォルダ (${folderContext.itemCount ?? 0}件)`,
       ownerUserId: ownerUserId,
       public: true,
-      updatedAt: timestamp
+      updatedAt: timestamp,
     };
 
     this.uploadRepository.createSystemFolder(folder);
@@ -348,19 +517,31 @@ export class UploadApplicationService {
   }
 }
 
-function resolveExpiresAt(now: Date, requestedExpiresAt: string | null, defaultFileExpiryDays: number | null, maxFileExpiryDays: number | null): string | null {
+function resolveExpiresAt(
+  now: Date,
+  requestedExpiresAt: string | null,
+  defaultFileExpiryDays: number | null,
+  maxFileExpiryDays: number | null,
+): string | null {
   if (requestedExpiresAt) {
     const parsedExpiresAt = new Date(requestedExpiresAt);
 
-    if (Number.isNaN(parsedExpiresAt.getTime()) || parsedExpiresAt.getTime() <= now.getTime()) {
+    if (
+      Number.isNaN(parsedExpiresAt.getTime()) ||
+      parsedExpiresAt.getTime() <= now.getTime()
+    ) {
       throw new ValidationError("expiresAt は未来日時である必要があります。");
     }
 
     if (maxFileExpiryDays !== null) {
-      const maximumAllowedExpiresAt = new Date(now.getTime() + maxFileExpiryDays * 24 * 60 * 60 * 1000);
+      const maximumAllowedExpiresAt = new Date(
+        now.getTime() + maxFileExpiryDays * 24 * 60 * 60 * 1000,
+      );
 
       if (parsedExpiresAt.getTime() > maximumAllowedExpiresAt.getTime()) {
-        throw new ValidationError("expiresAt が許可された最大期限を超えています。");
+        throw new ValidationError(
+          "expiresAt が許可された最大期限を超えています。",
+        );
       }
     }
 
@@ -371,5 +552,7 @@ function resolveExpiresAt(now: Date, requestedExpiresAt: string | null, defaultF
     return null;
   }
 
-  return new Date(now.getTime() + defaultFileExpiryDays * 24 * 60 * 60 * 1000).toISOString();
+  return new Date(
+    now.getTime() + defaultFileExpiryDays * 24 * 60 * 60 * 1000,
+  ).toISOString();
 }

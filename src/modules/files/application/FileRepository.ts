@@ -14,9 +14,39 @@ export interface CreateFolderInput {
   updatedAt: string;
 }
 
+export interface CreateGroupInput {
+  createdAt: string;
+  expiresAt: string | null;
+  id: string;
+  isPrivate: boolean;
+  label: string;
+  ownerUserId: string;
+  updatedAt: string;
+}
+
+export interface CreateFileInput {
+  checksum: string;
+  createdAt: string;
+  expiresAt: string | null;
+  folderId: string | null;
+  groupId: string | null;
+  id: string;
+  mimeType: string;
+  name: string;
+  ownerUserId: string;
+  previewPath: string | null;
+  previewStatus: PreviewStatus;
+  public: boolean;
+  safeName: string;
+  sizeBytes: number;
+  storagePath: string;
+  updatedAt: string;
+}
+
 export interface FileListFilters {
   cursor?: string;
   folderId?: string;
+  groupId?: string;
   limit: number;
   ownerUserId: string;
   status?: FileRecord["status"];
@@ -24,7 +54,9 @@ export interface FileListFilters {
 
 export interface FileRepository {
   countFilesInFolder(folderId: string): number;
+  createFile(input: CreateFileInput): FileRecord;
   createFolder(input: CreateFolderInput): FolderRecord;
+  createGroup(input: CreateGroupInput): GroupRecord;
   deleteFolder(folderId: string, deletedAt: string): void;
   findFileById(fileId: string): FileRecord | null;
   findFolderById(folderId: string): FolderRecord | null;

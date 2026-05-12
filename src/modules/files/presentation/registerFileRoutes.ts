@@ -89,6 +89,7 @@ export async function registerFileRoutes(
       .object({
         cursor: z.string().optional(),
         folderId: z.string().uuid().optional(),
+        groupId: z.string().uuid().optional(),
         limit: z.coerce.number().int().positive().max(100).optional(),
         status: z
           .enum(["uploading", "processing", "ready", "expired", "deleted"])
@@ -98,6 +99,7 @@ export async function registerFileRoutes(
     const fileListQuery: {
       cursor?: string;
       folderId?: string;
+      groupId?: string;
       limit?: number;
       status?: "uploading" | "processing" | "ready" | "expired" | "deleted";
     } = {};
@@ -108,6 +110,10 @@ export async function registerFileRoutes(
 
     if (query.folderId !== undefined) {
       fileListQuery.folderId = query.folderId;
+    }
+
+    if (query.groupId !== undefined) {
+      fileListQuery.groupId = query.groupId;
     }
 
     if (query.limit !== undefined) {

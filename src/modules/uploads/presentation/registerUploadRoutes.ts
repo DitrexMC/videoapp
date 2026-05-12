@@ -1,5 +1,8 @@
+import { stat } from "node:fs/promises";
+import { join } from "node:path";
+
+import multipart from "@fastify/multipart";
 import type { FastifyInstance } from "fastify";
-import { z } from "zod";
 
 import type { AppRuntime } from "../../../app/runtime.js";
 import {
@@ -7,131 +10,70 @@ import {
   ValidationError,
 } from "../../../shared/domain/errors.js";
 
-const folderContextSchema = z
-  .object({
-    folderId: z.string().uuid().optional(),
-    itemCount: z.number().int().positive().optional(),
-    mode: z.enum(["single", "existing", "batch"]),
-  })
-  .optional();
-
-const initUploadSchema = z.object({
-  chunkSize: z.number().int().positive().optional(),
-  expiresAt: z.string().datetime().nullable().optional(),
-  folderContext: folderContextSchema,
-  mime_type: z.string().min(1),
-  name: z.string().min(1),
-  public: z.boolean(),
-  size: z.number().int().positive(),
-});
-
-const completeUploadSchema = z.object({
-  fileId: z.string().uuid(),
-  totalChunks: z.number().int().positive(),
-  totalSize: z.number().int().positive(),
-  uploadId: z.string().uuid(),
-});
+const MAX_FILE_SIZE_FALLBACK = 5 * 1024 * 1024 * 1024;
 
 export async function registerUploadRoutes(
   app: FastifyInstance,
   runtime: AppRuntime,
 ): Promise<void> {
-  app.post("/upload/init", async (request) => {
-    const sessionToken = getRequiredBearerToken(request.headers.authorization);
-    const body = initUploadSchema.safeParse(request.body);
+  const maxFileSize =
+    runtime.config.DEFAULT_MAX_FILE_SIZE_BYTES ?? MAX_FILE_SIZE_FALLBACK;
+  const tempDir = join(
+    runtime.config.TEMP_UPLOAD_ROOT ?? `${runtime.config.DATA_DIR}/uploads`,
+    "direct",
+  );
 
-    if (!body.success) {
-      throw new ValidationError(
-        "upload/init の入力が不正です。",
-        body.error.flatten(),
-      );
+  await app.register(multipart, {
+    limits: {
+      fileSize: maxFileSize,
+      files: 1,
+    },
+  });
+
+  app.post("/upload", async (request, reply) => {
+    const sessionToken = getRequiredBearerToken(request.headers.authorization);
+
+    const saved = await request.saveRequestFiles({
+      limits: { fileSize: maxFileSize },
+      tmpdir: tempDir,
+    });
+
+    if (saved.files.length === 0) {
+      throw new ValidationError("ファイルが添付されていません。");
     }
 
-    const result = runtime.uploadService.initUpload(
-      sessionToken,
-      buildInitUploadInput(body.data),
-    );
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const sf = saved.files[0]!;
+    const filename = sf.filename || "upload";
+    const mimetype = sf.mimetype || "application/octet-stream";
+    const tempPath = sf.filepath;
 
-    const user = runtime.authService.authenticate(sessionToken).user;
+    const publicVal = getFieldStr(saved.values, "public");
+    const expiresAtVal = getFieldStr(saved.values, "expiresAt");
+    const groupIdVal = getFieldStr(saved.values, "groupId");
+
+    const isPublic = publicVal !== "0" && publicVal !== "false";
+    const expiresAt = expiresAtVal || null;
+    const groupId = groupIdVal || null;
+
+    const fileStats = await stat(tempPath);
+
+    const result = await runtime.uploadService.directUpload(sessionToken, {
+      expiresAt,
+      groupId,
+      isPublic,
+      mimeType: mimetype,
+      name: filename,
+      size: fileStats.size,
+      tempPath,
+    });
+
     request.log.info(
       { action: "Upload" },
-      `${body.data.name} (${formatSize(body.data.size)}, ${user.username})`,
+      `${filename} (${formatSize(fileStats.size)}, direct)`,
     );
 
-    return result;
-  });
-
-  app.put("/upload/:uploadId/:index", async (request) => {
-    const sessionToken = getRequiredBearerToken(request.headers.authorization);
-    const params = z
-      .object({
-        index: z.coerce.number().int().min(0),
-        uploadId: z.string().uuid(),
-      })
-      .parse(request.params);
-
-    if (!Buffer.isBuffer(request.body)) {
-      throw new ValidationError("chunk本体はバイナリで送信してください。");
-    }
-
-    return runtime.uploadService.storeChunk(
-      sessionToken,
-      params.uploadId,
-      params.index,
-      buildChunkHeaderInput(request.headers),
-      request.body,
-    );
-  });
-
-  app.post("/upload/complete", async (request, reply) => {
-    const sessionToken = getRequiredBearerToken(request.headers.authorization);
-    const body = completeUploadSchema.safeParse(request.body);
-
-    if (!body.success) {
-      throw new ValidationError(
-        "upload/complete の入力が不正です。",
-        body.error.flatten(),
-      );
-    }
-
-    const result = await runtime.uploadService.completeUpload(
-      sessionToken,
-      body.data,
-    );
-
-    const user = runtime.authService.authenticate(sessionToken).user;
-    request.log.info(
-      { action: "Upload" },
-      `completed (${formatSize(body.data.totalSize)}, ${user.username})`,
-    );
-
-    return reply.status(202).send(result);
-  });
-
-  app.get("/upload/:uploadId/status", async (request) => {
-    const sessionToken = getRequiredBearerToken(request.headers.authorization);
-    const params = z
-      .object({ uploadId: z.string().uuid() })
-      .parse(request.params);
-
-    return runtime.uploadService.getStatus(sessionToken, params.uploadId);
-  });
-
-  app.delete("/upload/:uploadId", async (request, reply) => {
-    const sessionToken = getRequiredBearerToken(request.headers.authorization);
-    const params = z
-      .object({ uploadId: z.string().uuid() })
-      .parse(request.params);
-
-    await runtime.uploadService.cancelUpload(sessionToken, params.uploadId);
-
-    const user = runtime.authService.authenticate(sessionToken).user;
-    request.log.info(
-      { action: "Upload" },
-      `canceled ${params.uploadId} (${user.username})`,
-    );
-
-    return reply.status(204).send();
+    return reply.send({ ok: true, fileId: result.fileId, url: result.url });
   });
 }
 
@@ -151,124 +93,6 @@ function getRequiredBearerToken(
   return token;
 }
 
-function parseOptionalIntegerHeader(
-  value: string | string[] | undefined,
-): number | undefined {
-  if (typeof value !== "string") {
-    return undefined;
-  }
-
-  const parsedValue = Number.parseInt(value, 10);
-
-  return Number.isNaN(parsedValue) ? undefined : parsedValue;
-}
-
-function buildChunkHeaderInput(headers: Record<string, unknown>): {
-  chunkSize?: number;
-  fileId?: string;
-  totalChunks?: number;
-  totalSize?: number;
-} {
-  const chunkHeaderInput: {
-    chunkSize?: number;
-    fileId?: string;
-    totalChunks?: number;
-    totalSize?: number;
-  } = {};
-  const chunkSize = parseOptionalIntegerHeader(
-    headers["x-chunk-size"] as string | string[] | undefined,
-  );
-  const totalChunks = parseOptionalIntegerHeader(
-    headers["x-total-chunks"] as string | string[] | undefined,
-  );
-  const totalSize = parseOptionalIntegerHeader(
-    headers["x-total-size"] as string | string[] | undefined,
-  );
-  const fileId =
-    typeof headers["x-file-id"] === "string" ? headers["x-file-id"] : undefined;
-
-  if (chunkSize !== undefined) {
-    chunkHeaderInput.chunkSize = chunkSize;
-  }
-
-  if (totalChunks !== undefined) {
-    chunkHeaderInput.totalChunks = totalChunks;
-  }
-
-  if (totalSize !== undefined) {
-    chunkHeaderInput.totalSize = totalSize;
-  }
-
-  if (fileId) {
-    chunkHeaderInput.fileId = fileId;
-  }
-
-  return chunkHeaderInput;
-}
-
-function buildInitUploadInput(data: z.infer<typeof initUploadSchema>): {
-  chunkSize?: number;
-  expiresAt?: string | null;
-  folderContext?: {
-    folderId?: string;
-    itemCount?: number;
-    mode: "batch" | "existing" | "single";
-  };
-  mime_type: string;
-  name: string;
-  public: boolean;
-  size: number;
-} {
-  const initUploadInput: {
-    chunkSize?: number;
-    expiresAt?: string | null;
-    folderContext?: {
-      folderId?: string;
-      itemCount?: number;
-      mode: "batch" | "existing" | "single";
-    };
-    mime_type: string;
-    name: string;
-    public: boolean;
-    size: number;
-  } = {
-    mime_type: data.mime_type,
-    name: data.name,
-    public: data.public,
-    size: data.size,
-  };
-
-  if (data.chunkSize !== undefined) {
-    initUploadInput.chunkSize = data.chunkSize;
-  }
-
-  if (data.expiresAt !== undefined) {
-    initUploadInput.expiresAt = data.expiresAt;
-  }
-
-  if (data.folderContext !== undefined) {
-    const folderContext: {
-      folderId?: string;
-      itemCount?: number;
-      mode: "batch" | "existing" | "single";
-    } = {
-      mode: data.folderContext.mode,
-    };
-
-    if (data.folderContext.folderId !== undefined) {
-      folderContext.folderId = data.folderContext.folderId;
-    }
-
-    if (data.folderContext.itemCount !== undefined) {
-      folderContext.itemCount = data.folderContext.itemCount;
-    }
-
-    initUploadInput.folderContext = folderContext;
-  }
-
-  return initUploadInput;
-}
-
 function formatSize(bytes: number): string {
   if (bytes >= 1024 * 1024 * 1024) {
     return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
@@ -283,4 +107,18 @@ function formatSize(bytes: number): string {
   }
 
   return `${bytes} B`;
+}
+
+function getFieldStr(
+  fields: Record<string, unknown>,
+  key: string,
+): string | null {
+  const f = fields[key] as
+    | { type: string; value: string }
+    | { type: string; value: string }[]
+    | undefined;
+  if (!f) return null;
+  const entry = Array.isArray(f) ? f[0] : f;
+  if (!entry || entry.type !== "field") return null;
+  return entry.value ?? null;
 }

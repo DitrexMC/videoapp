@@ -262,6 +262,7 @@ export const api = {
 
   groups: {
     list: (params) => request('GET', '/groups', { params }),
+    files: (id) => request('GET', '/files', { params: { groupId: id, limit: 100 } }),
     rename: (id, label) =>
       request('PATCH', `/groups/${id}`, { body: { label } }),
     togglePrivacy: (id, isPrivate) =>

@@ -36,9 +36,10 @@ export async function createApp(config: AppConfig): Promise<FastifyInstance> {
       };
 
   const app = Fastify({
-    bodyLimit: Math.max(config.MAX_CHUNK_SIZE_BYTES, 1024 * 1024),
+    bodyLimit: config.DEFAULT_MAX_FILE_SIZE_BYTES + 10 * 1024 * 1024,
     disableRequestLogging: true,
     logger: loggerOptions,
+    trustProxy: true,
   });
 
   app.addContentTypeParser(

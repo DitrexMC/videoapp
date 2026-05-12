@@ -2,6 +2,8 @@ import type Database from "better-sqlite3";
 
 import type {
   CreateFolderInput,
+  CreateFileInput,
+  CreateGroupInput,
   FileListFilters,
   FileRepository,
 } from "../application/FileRepository.js";
@@ -79,6 +81,62 @@ export class SqliteFileRepository implements FileRepository {
     return row?.count ?? 0;
   }
 
+  createFile(input: CreateFileInput): FileRecord {
+    const now = input.createdAt;
+
+    this.connection
+      .prepare(
+        `
+      INSERT INTO files (
+        id, upload_id, folder_id, group_id, name, safe_name, size_bytes, mime_type,
+        storage_path, owner_user_id, public, show_uploader, status, expires_at,
+        preview_status, preview_path, checksum, created_at, updated_at, is_deleted
+      ) VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 'ready', ?, ?, ?, ?, ?, ?, 0)
+    `,
+      )
+      .run(
+        input.id,
+        input.folderId,
+        input.groupId,
+        input.name,
+        input.safeName,
+        input.sizeBytes,
+        input.mimeType,
+        input.storagePath,
+        input.ownerUserId,
+        input.public ? 1 : 0,
+        input.expiresAt,
+        input.previewStatus,
+        input.previewPath,
+        input.checksum,
+        now,
+        input.updatedAt,
+      );
+
+    return {
+      checksum: input.checksum,
+      createdAt: input.createdAt,
+      expiresAt: input.expiresAt,
+      folderId: input.folderId,
+      groupId: input.groupId,
+      id: input.id,
+      isDeleted: false,
+      mimeType: input.mimeType,
+      name: input.name,
+      ownerUserId: input.ownerUserId,
+      previewPath: input.previewPath,
+      previewStatus: input.previewStatus,
+      public: input.public,
+      safeName: input.safeName,
+      showUploader: true,
+      sizeBytes: input.sizeBytes,
+      status: "ready",
+      storagePath: input.storagePath,
+      updatedAt: input.updatedAt,
+      uploadId: null,
+    };
+  }
+
   createFolder(input: CreateFolderInput): FolderRecord {
     this.connection
       .prepare(
@@ -103,6 +161,35 @@ export class SqliteFileRepository implements FileRepository {
       name: input.name,
       ownerUserId: input.ownerUserId,
       public: input.public !== false,
+      updatedAt: input.updatedAt,
+    };
+  }
+
+  createGroup(input: CreateGroupInput): GroupRecord {
+    this.connection
+      .prepare(
+        `
+      INSERT INTO groups (id, owner_user_id, label, created_at, updated_at, expires_at, is_private)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `,
+      )
+      .run(
+        input.id,
+        input.ownerUserId,
+        input.label,
+        input.createdAt,
+        input.updatedAt,
+        input.expiresAt,
+        input.isPrivate ? 1 : 0,
+      );
+
+    return {
+      createdAt: input.createdAt,
+      expiresAt: input.expiresAt,
+      id: input.id,
+      isPrivate: input.isPrivate,
+      label: input.label,
+      ownerUserId: input.ownerUserId,
       updatedAt: input.updatedAt,
     };
   }
@@ -249,6 +336,7 @@ export class SqliteFileRepository implements FileRepository {
     const parameters: Record<string, unknown> = {
       cursor: filters.cursor ?? null,
       folderId: filters.folderId ?? null,
+      groupId: filters.groupId ?? null,
       limit: filters.limit,
       ownerUserId: filters.ownerUserId,
       status: filters.status ?? null,
@@ -281,6 +369,7 @@ export class SqliteFileRepository implements FileRepository {
       WHERE owner_user_id = @ownerUserId
         AND is_deleted = 0
         AND (@folderId IS NULL OR folder_id = @folderId)
+        AND (@groupId IS NULL OR group_id = @groupId)
         AND (@status IS NULL OR status = @status)
         AND (@cursor IS NULL OR created_at < @cursor)
       ORDER BY created_at DESC
@@ -456,10 +545,10 @@ export class SqliteFileRepository implements FileRepository {
       this.connection
         .prepare(
           `
-        UPDATE files SET group_id = NULL WHERE group_id = ?
+        UPDATE files SET is_deleted = 1, updated_at = ? WHERE group_id = ? AND is_deleted = 0
       `,
         )
-        .run(groupId);
+        .run(deletedAt, groupId);
       this.connection
         .prepare(
           `

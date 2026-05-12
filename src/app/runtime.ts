@@ -73,6 +73,7 @@ export async function createRuntime(config: AppConfig): Promise<AppRuntime> {
   await storage.ensureBaseDirectories();
   const runtimeStateReset = database.resetRuntimeState(clock.nowIsoString());
   await storage.clearTransientUploadRoot();
+  await storage.ensureDirectUploadRoot();
   await Promise.all([
     ...runtimeStateReset.previewPaths.map((filePath) =>
       storage.removeFile(filePath),

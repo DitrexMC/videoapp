@@ -212,6 +212,7 @@ export class FileApplicationService {
     filters: {
       cursor?: string;
       folderId?: string;
+      groupId?: string;
       limit?: number;
       status?: FileRecord["status"];
     },
@@ -229,6 +230,10 @@ export class FileApplicationService {
 
     if (filters.folderId) {
       fileListFilters.folderId = filters.folderId;
+    }
+
+    if (filters.groupId) {
+      fileListFilters.groupId = filters.groupId;
     }
 
     if (filters.status) {
@@ -382,7 +387,8 @@ export class FileApplicationService {
     this.fileRepository.softDeleteFile(file.id, this.clock.nowIsoString());
 
     if (file.storagePath) {
-      const remainingRefs = this.fileRepository.countNonDeletedFilesByStoragePath(file.storagePath);
+      const remainingRefs =
+        this.fileRepository.countNonDeletedFilesByStoragePath(file.storagePath);
       if (remainingRefs === 0) {
         await this.storage.removeFile(file.storagePath);
       }

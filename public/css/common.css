@@ -19,11 +19,11 @@
 [data-theme="light"] {
   --bg: #f1f5f9;
   --bg2: #ffffff;
-  --bg3: #e8eef6;
+  --bg3: #eaeff6;
   --text: #0f172a;
-  --text-sub: #475569;
-  --border: rgba(59, 130, 246, 0.48);
-  --glow: rgba(59, 130, 246, 0.3);
+  --text-sub: #4b5563;
+  --border: rgba(0, 0, 0, 0.12);
+  --glow: rgba(59, 130, 246, 0.2);
 }
 
 *,
@@ -90,15 +90,39 @@ body {
   height: 60px;
   background: rgba(15, 17, 23, 0.75);
   border-bottom: 1px solid var(--border);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
   transition:
     box-shadow 0.3s,
     background 0.3s;
 }
 
 [data-theme="light"] #nav {
-  background: rgba(241, 245, 249, 0.75);
+  background: rgba(241, 245, 249, 0.88);
+  border-bottom-color: rgba(0, 0, 0, 0.1);
+}
+[data-theme="light"] .table-wrap {
+  border-color: rgba(0, 0, 0, 0.1);
+}
+[data-theme="light"] .table th,
+[data-theme="light"] .table td {
+  border-bottom-color: rgba(0, 0, 0, 0.07);
+}
+[data-theme="light"] .btn-ghost {
+  border-color: rgba(0, 0, 0, 0.15);
+  color: #374151;
+}
+[data-theme="light"] .btn-ghost:hover {
+  border-color: var(--accent2);
+  color: var(--accent);
+}
+[data-theme="light"] .card {
+  box-shadow:
+    0 1px 4px rgba(0, 0, 0, 0.06),
+    0 4px 16px rgba(0, 0, 0, 0.05);
+}
+[data-theme="light"] .nav-drawer {
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.12);
 }
 #nav.scrolled {
   box-shadow: 0 4px 28px rgba(0, 0, 0, 0.45);
@@ -396,6 +420,9 @@ body {
   transition: opacity 0.3s;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
+  transform: translateZ(0);
+  will-change: opacity;
+  isolation: isolate;
 }
 
 .drawer-overlay.open {
@@ -639,6 +666,7 @@ body {
 main {
   position: relative;
   z-index: 1;
+  isolation: isolate;
   padding-top: 60px;
   min-height: 100vh;
   transition:
@@ -676,7 +704,8 @@ main {
   transform: translateY(-2px);
 }
 .btn:active {
-  transform: scale(0.97);
+  transform: translateY(0) scale(0.97);
+  transition-duration: 0.06s;
 }
 
 .btn-primary {
@@ -1306,7 +1335,9 @@ html.vt-navigated .viewer {
     height: 36px;
     border-radius: 8px;
     padding: 0;
-    transition: color 0.2s, background 0.2s;
+    transition:
+      color 0.2s,
+      background 0.2s;
   }
   .nav-links a::after {
     display: none;

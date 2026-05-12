@@ -55,6 +55,10 @@ export class LocalFileStorage {
     await mkdir(this.tempUploadRoot, { recursive: true });
   }
 
+  async ensureDirectUploadRoot(): Promise<void> {
+    await mkdir(join(this.tempUploadRoot, "direct"), { recursive: true });
+  }
+
   async fileExists(filePath: string): Promise<boolean> {
     try {
       await access(filePath);
@@ -149,12 +153,16 @@ export class LocalFileStorage {
           "ffmpeg",
           [
             "-y",
-            "-threads", "1",
-            "-ss", "00:00:01",
+            "-threads",
+            "1",
+            "-ss",
+            "00:00:01",
             "-i",
             sourcePath,
-            "-vframes", "1",
-            "-vf", "scale=640:-1",
+            "-vframes",
+            "1",
+            "-vf",
+            "scale=640:-1",
             previewPath,
           ],
           {
@@ -258,6 +266,31 @@ export class LocalFileStorage {
     await mkdir(dirname(targetPath), { recursive: true });
     await rm(targetPath, { force: true });
     await writeFile(targetPath, body);
+  }
+
+  async storeDirectFile(sourcePath: string): Promise<FinalizedUpload> {
+    const hash = createHash("sha256");
+    let sizeBytes = 0;
+
+    for await (const chunk of createReadStream(sourcePath)) {
+      const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      hash.update(buf);
+      sizeBytes += buf.length;
+    }
+
+    const checksum = hash.digest("hex");
+    const storagePath = this.getBlobPath(checksum);
+
+    await mkdir(dirname(storagePath), { recursive: true });
+
+    if (!(await this.fileExists(storagePath))) {
+      await pipeline(
+        createReadStream(sourcePath),
+        createWriteStream(storagePath),
+      );
+    }
+
+    return { checksum, sizeBytes, storagePath };
   }
 
   ensureReadable(filePath: string): Promise<void> {
