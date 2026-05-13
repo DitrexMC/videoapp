@@ -695,6 +695,15 @@
             document.getElementById('drawerUsername').textContent = me.username ?? '';
             if (auth.isAdmin()) document.getElementById('drawer-admin').classList.remove('hidden');
 
+            document.getElementById('file-tbody').addEventListener('click', e => {
+                const btn = e.target.closest('.fr-actions .btn.btn-ghost, .fr-actions a.btn.btn-ghost');
+                if (!btn) return;
+                btn.classList.remove('btn-press-ok');
+                btn.getBoundingClientRect();
+                btn.classList.add('btn-press-ok');
+                setTimeout(() => btn.classList.remove('btn-press-ok'), 2000);
+            });
+
             document.getElementById('breadcrumb-root').addEventListener('click', async () => {
                 folderId = null; folderName = null; groupId = null; groupLabel = null; page = 1;
                 await slideTransition(50, -50, reload);

@@ -74,7 +74,7 @@
         var actions = [];
         actions = actions.concat(extraActions);
         if (showDl && item.status === 'ready') {
-            actions.push('<a class="btn btn-ghost btn-sm fr-dl-btn" href="/files/' + frEsc(item.id) + '/download" style="' + ICON_BTN_STYLE + '" title="\u30c0\u30a6\u30f3\u30ed\u30fc\u30c9">' + DL_ICON + '</a>');
+            actions.push('<a class="btn btn-ghost btn-sm fr-dl-btn" href="/files/' + frEsc(item.id) + '/download" download data-no-spa="1" style="' + ICON_BTN_STYLE + '" title="\u30c0\u30a6\u30f3\u30ed\u30fc\u30c9">' + DL_ICON + '</a>');
             actions.push('<button class="btn btn-ghost btn-sm fr-discord-btn" data-url="/files/' + frEsc(item.id) + '/stream" style="' + ICON_BTN_STYLE + '" title="Discord\u5411\u3051\u751fURL\u3092\u30b3\u30d4\u30fc">' + DISCORD_ICON + '</button>');
             actions.push('<button class="btn btn-ghost btn-sm fr-urlcopy-btn" data-url="/file.html?id=' + frEsc(item.id) + '" style="' + ICON_BTN_STYLE + '" title="\u30d7\u30ec\u30d3\u30e5\u30fc\u30da\u30fc\u30b8URL\u3092\u30b3\u30d4\u30fc">' + LINK_ICON + '</button>');
         }

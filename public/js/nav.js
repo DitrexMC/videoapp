@@ -421,7 +421,7 @@ function initSpaNav() {
   document.addEventListener('click', e => {
     const link = e.target.closest('a[href]');
     if (!link) return;
-    if (link.hasAttribute('download') || link.target === '_blank') return;
+    if (link.hasAttribute('download') || link.dataset.noSpa === '1' || link.target === '_blank') return;
     if (e.ctrlKey || e.metaKey || e.shiftKey) return;
 
     let url;
