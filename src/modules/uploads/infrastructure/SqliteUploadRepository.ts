@@ -59,6 +59,7 @@ export class SqliteUploadRepository implements UploadRepository {
           id,
           upload_id,
           folder_id,
+          group_id,
           name,
           safe_name,
           size_bytes,
@@ -75,13 +76,14 @@ export class SqliteUploadRepository implements UploadRepository {
           created_at,
           updated_at,
           is_deleted
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, 1, 'uploading', ?, 'none', NULL, NULL, ?, ?, 0)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, 1, 'uploading', ?, 'none', NULL, NULL, ?, ?, 0)
       `,
         )
         .run(
           input.fileId,
           input.id,
           input.folderId,
+          input.groupId,
           input.fileName,
           input.safeName,
           input.sizeBytes,

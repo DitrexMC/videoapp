@@ -1,13 +1,18 @@
 import type Database from "better-sqlite3";
 import type { NewsRepository } from "../application/NewsRepository.js";
-import type { CreateNewsArticleInput, NewsArticle, UpdateNewsArticleInput } from "../domain/NewsArticle.js";
+import type {
+  CreateNewsArticleInput,
+  NewsArticle,
+  NewsArticleType,
+  UpdateNewsArticleInput,
+} from "../domain/NewsArticle.js";
 
 interface NewsArticleRow {
   id: string;
   slug: string;
   title: string;
   subtitle: string;
-  type: "news" | "update" | "guide" | "note" | "danger";
+  type: NewsArticleType;
   date: string;
   tags: string;
   image: string;
@@ -41,9 +46,10 @@ export class SqliteNewsRepository implements NewsRepository {
 
   getReadUrls(userId: string): string[] {
     const rows = this.connection
-      .prepare<[string], { article_url: string }>(
-        `SELECT article_url FROM announcement_reads WHERE user_id = ?`,
-      )
+      .prepare<
+        [string],
+        { article_url: string }
+      >(`SELECT article_url FROM announcement_reads WHERE user_id = ?`)
       .all(userId);
 
     return rows.map((r) => r.article_url);
@@ -59,9 +65,10 @@ export class SqliteNewsRepository implements NewsRepository {
 
   listArticles(): NewsArticle[] {
     const rows = this.connection
-      .prepare<[], NewsArticleRow>(
-        `SELECT * FROM news_articles ORDER BY date DESC`,
-      )
+      .prepare<
+        [],
+        NewsArticleRow
+      >(`SELECT * FROM news_articles ORDER BY date DESC`)
       .all();
 
     return rows.map(mapRow);
@@ -69,9 +76,10 @@ export class SqliteNewsRepository implements NewsRepository {
 
   getArticleBySlug(slug: string): NewsArticle | null {
     const row = this.connection
-      .prepare<[string], NewsArticleRow>(
-        `SELECT * FROM news_articles WHERE slug = ?`,
-      )
+      .prepare<
+        [string],
+        NewsArticleRow
+      >(`SELECT * FROM news_articles WHERE slug = ?`)
       .get(slug);
 
     return row ? mapRow(row) : null;
@@ -79,9 +87,10 @@ export class SqliteNewsRepository implements NewsRepository {
 
   getArticleById(id: string): NewsArticle | null {
     const row = this.connection
-      .prepare<[string], NewsArticleRow>(
-        `SELECT * FROM news_articles WHERE id = ?`,
-      )
+      .prepare<
+        [string],
+        NewsArticleRow
+      >(`SELECT * FROM news_articles WHERE id = ?`)
       .get(id);
 
     return row ? mapRow(row) : null;
@@ -90,22 +99,28 @@ export class SqliteNewsRepository implements NewsRepository {
   slugExists(slug: string, excludeId?: string): boolean {
     if (excludeId) {
       const row = this.connection
-        .prepare<[string, string], { 1: number }>(
-          `SELECT 1 FROM news_articles WHERE slug = ? AND id != ? LIMIT 1`,
-        )
+        .prepare<
+          [string, string],
+          { 1: number }
+        >(`SELECT 1 FROM news_articles WHERE slug = ? AND id != ? LIMIT 1`)
         .get(slug, excludeId);
       return !!row;
     }
     const row = this.connection
-      .prepare<[string], { 1: number }>(
-        `SELECT 1 FROM news_articles WHERE slug = ? LIMIT 1`,
-      )
+      .prepare<
+        [string],
+        { 1: number }
+      >(`SELECT 1 FROM news_articles WHERE slug = ? LIMIT 1`)
       .get(slug);
     return !!row;
   }
 
   createArticle(
-    input: CreateNewsArticleInput & { id: string; createdAt: string; updatedAt: string },
+    input: CreateNewsArticleInput & {
+      id: string;
+      createdAt: string;
+      updatedAt: string;
+    },
   ): void {
     this.connection
       .prepare(
@@ -127,18 +142,45 @@ export class SqliteNewsRepository implements NewsRepository {
       );
   }
 
-  updateArticle(id: string, input: UpdateNewsArticleInput & { updatedAt: string }): void {
+  updateArticle(
+    id: string,
+    input: UpdateNewsArticleInput & { updatedAt: string },
+  ): void {
     const fields: string[] = [];
     const values: (string | null)[] = [];
 
-    if (input.slug !== undefined) { fields.push("slug = ?"); values.push(input.slug); }
-    if (input.title !== undefined) { fields.push("title = ?"); values.push(input.title); }
-    if (input.subtitle !== undefined) { fields.push("subtitle = ?"); values.push(input.subtitle); }
-    if (input.type !== undefined) { fields.push("type = ?"); values.push(input.type); }
-    if (input.date !== undefined) { fields.push("date = ?"); values.push(input.date); }
-    if (input.tags !== undefined) { fields.push("tags = ?"); values.push(input.tags); }
-    if (input.image !== undefined) { fields.push("image = ?"); values.push(input.image); }
-    if (input.content !== undefined) { fields.push("content = ?"); values.push(input.content); }
+    if (input.slug !== undefined) {
+      fields.push("slug = ?");
+      values.push(input.slug);
+    }
+    if (input.title !== undefined) {
+      fields.push("title = ?");
+      values.push(input.title);
+    }
+    if (input.subtitle !== undefined) {
+      fields.push("subtitle = ?");
+      values.push(input.subtitle);
+    }
+    if (input.type !== undefined) {
+      fields.push("type = ?");
+      values.push(input.type);
+    }
+    if (input.date !== undefined) {
+      fields.push("date = ?");
+      values.push(input.date);
+    }
+    if (input.tags !== undefined) {
+      fields.push("tags = ?");
+      values.push(input.tags);
+    }
+    if (input.image !== undefined) {
+      fields.push("image = ?");
+      values.push(input.image);
+    }
+    if (input.content !== undefined) {
+      fields.push("content = ?");
+      values.push(input.content);
+    }
 
     fields.push("updated_at = ?");
     values.push(input.updatedAt);
@@ -150,8 +192,6 @@ export class SqliteNewsRepository implements NewsRepository {
   }
 
   deleteArticle(id: string): void {
-    this.connection
-      .prepare(`DELETE FROM news_articles WHERE id = ?`)
-      .run(id);
+    this.connection.prepare(`DELETE FROM news_articles WHERE id = ?`).run(id);
   }
 }

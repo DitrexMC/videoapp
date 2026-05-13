@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { rm } from "node:fs/promises";
 
 import type { ServicePolicyRepository } from "../../../shared/application/ServicePolicyRepository.js";
 import type { FileRepository } from "../../files/application/FileRepository.js";
@@ -132,6 +133,158 @@ export class UploadApplicationService {
     });
 
     return { fileId, url: `/file.html?id=${fileId}` };
+  }
+
+  initDirectUpload(
+    sessionToken: string,
+    input: {
+      expiresAt: string | null;
+      groupId: string | null;
+      isPublic: boolean;
+      mimeType: string;
+      name: string;
+      size: number;
+    },
+  ): { fileId: string; uploadId: string; url: string } {
+    const actor = this.authService.authenticate(sessionToken).user;
+    const policies = this.policyRepository.findPolicies();
+    const normalizedName = input.name.trim() || "upload";
+
+    if (input.size <= 0) {
+      throw new ValidationError("ファイルサイズが不正です。");
+    }
+
+    if (input.size > actor.maxFileSizeBytes) {
+      throw new ValidationError("ユーザーの最大ファイルサイズを超えています。");
+    }
+
+    const currentStorageUsage = this.fileRepository.getStorageUsage(actor.id);
+    if (currentStorageUsage + input.size > actor.storageLimitBytes) {
+      throw new ValidationError("ユーザーのストレージ上限を超えています。");
+    }
+
+    const resolvedExpiresAt = resolveExpiresAt(
+      this.clock.now(),
+      input.expiresAt,
+      policies.defaultFileExpiryDays,
+      policies.maxFileExpiryDays,
+    );
+
+    if (input.groupId) {
+      const existing = this.fileRepository.findGroupById(input.groupId);
+      if (!existing) {
+        this.fileRepository.createGroup({
+          createdAt: this.clock.nowIsoString(),
+          expiresAt: resolvedExpiresAt,
+          id: input.groupId,
+          isPrivate: !input.isPublic,
+          label: "",
+          ownerUserId: actor.id,
+          updatedAt: this.clock.nowIsoString(),
+        });
+      }
+    }
+
+    const existingNames = this.fileRepository.listSafeNames(actor.id, null);
+    const safeName = resolveSafeName(normalizedName, existingNames);
+    const timestamp = this.clock.nowIsoString();
+    const fileId = generateId();
+    const uploadId = generateId();
+
+    this.uploadRepository.createPendingUpload({
+      chunkSizeBytes: input.size,
+      createdAt: timestamp,
+      expiresAt: resolvedExpiresAt,
+      fileId,
+      fileName: normalizedName,
+      folderId: null,
+      groupId: input.groupId,
+      id: uploadId,
+      mimeType: input.mimeType,
+      ownerUserId: actor.id,
+      safeName,
+      sizeBytes: input.size,
+      totalChunks: 1,
+      updatedAt: timestamp,
+      visibility: input.isPublic,
+    });
+
+    return {
+      fileId,
+      uploadId,
+      url: `/file.html?id=${fileId}`,
+    };
+  }
+
+  async completeDirectUpload(
+    sessionToken: string,
+    input: {
+      tempPath: string;
+      uploadId: string;
+    },
+  ): Promise<{ fileId: string; status: "ready"; url: string }> {
+    const actor = this.authService.authenticate(sessionToken).user;
+    const upload = this.uploadRepository.findUploadById(input.uploadId);
+
+    if (!upload || upload.ownerUserId !== actor.id) {
+      throw new NotFoundError("アップロードが見つかりません。");
+    }
+
+    const file = this.fileRepository.findFileById(upload.fileId);
+
+    if (!file || file.isDeleted || file.status === "deleted") {
+      throw new ConflictError(
+        "削除済みファイルのアップロードは完了できません。",
+      );
+    }
+
+    if (upload.status !== "uploading") {
+      throw new ConflictError("このアップロードは完了できない状態です。", {
+        status: upload.status,
+      });
+    }
+
+    const tempFile = await this.storage.stat(input.tempPath);
+
+    if (tempFile.size !== upload.totalSizeBytes) {
+      throw new ValidationError("アップロード済みサイズが一致しません。");
+    }
+
+    const processingAt = this.clock.nowIsoString();
+    this.uploadRepository.markUploadProcessing(upload.id, processingAt);
+
+    try {
+      const finalized = await this.storage.storeDirectFile(input.tempPath);
+      const preview = await this.storage.generatePreview(
+        file.id,
+        file.mimeType,
+        finalized.storagePath,
+      );
+      const updatedAt = this.clock.nowIsoString();
+
+      this.uploadRepository.markUploadReadyFile(upload.id, {
+        checksum: finalized.checksum,
+        previewPath: preview.previewPath,
+        previewStatus: preview.previewStatus,
+        sizeBytes: finalized.sizeBytes,
+        storagePath: finalized.storagePath,
+        updatedAt,
+      });
+
+      return {
+        fileId: file.id,
+        status: "ready",
+        url: `/file.html?id=${file.id}`,
+      };
+    } catch (error) {
+      const updatedAt = this.clock.nowIsoString();
+      const message =
+        error instanceof Error ? error.message : "アップロードに失敗しました。";
+      this.uploadRepository.markUploadFailed(upload.id, updatedAt, message);
+      throw error;
+    } finally {
+      await rm(input.tempPath, { force: true }).catch(() => {});
+    }
   }
 
   async completeUpload(
@@ -327,6 +480,7 @@ export class UploadApplicationService {
       fileId,
       fileName: normalizedName,
       folderId,
+      groupId: null,
       id: uploadId,
       mimeType: input.mime_type,
       ownerUserId: actor.id,

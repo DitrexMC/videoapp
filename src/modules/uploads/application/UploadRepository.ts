@@ -8,6 +8,7 @@ export interface CreatePendingUploadInput {
   fileId: string;
   fileName: string;
   folderId: string | null;
+  groupId: string | null;
   id: string;
   mimeType: string;
   ownerUserId: string;
@@ -46,12 +47,42 @@ export interface UploadRepository {
   findUploadSafeNames(ownerUserId: string, folderId: string | null): string[];
   findUserFolder(folderId: string, ownerUserId: string): FolderRecord | null;
   markFinalizeJobCompleted(jobId: string, updatedAt: string): void;
-  markFinalizeJobFailed(jobId: string, updatedAt: string, errorMessage: string, retryAfter: string): void;
+  markFinalizeJobFailed(
+    jobId: string,
+    updatedAt: string,
+    errorMessage: string,
+    retryAfter: string,
+  ): void;
   markFinalizeJobRunning(jobId: string, updatedAt: string): void;
   markUploadCancelled(uploadId: string, updatedAt: string): void;
-  markUploadFailed(uploadId: string, updatedAt: string, errorMessage: string): void;
+  markUploadFailed(
+    uploadId: string,
+    updatedAt: string,
+    errorMessage: string,
+  ): void;
+  markUploadProcessing(uploadId: string, updatedAt: string): void;
   markUploadReady(uploadId: string, updatedAt: string): void;
-  markUploadReadyFile(uploadId: string, data: { checksum: string; previewPath: string | null; previewStatus: "failed" | "none" | "ready"; sizeBytes: number; storagePath: string; updatedAt: string }): void;
-  markUploadProcessingAndQueueJob(jobId: string, uploadId: string, createdAt: string): void;
-  storeUploadPart(uploadId: string, index: number, sizeBytes: number, checksum: string, createdAt: string): void;
+  markUploadReadyFile(
+    uploadId: string,
+    data: {
+      checksum: string;
+      previewPath: string | null;
+      previewStatus: "failed" | "none" | "ready";
+      sizeBytes: number;
+      storagePath: string;
+      updatedAt: string;
+    },
+  ): void;
+  markUploadProcessingAndQueueJob(
+    jobId: string,
+    uploadId: string,
+    createdAt: string,
+  ): void;
+  storeUploadPart(
+    uploadId: string,
+    index: number,
+    sizeBytes: number,
+    checksum: string,
+    createdAt: string,
+  ): void;
 }

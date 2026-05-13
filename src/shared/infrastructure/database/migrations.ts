@@ -189,7 +189,7 @@ const migrations = [
         slug TEXT NOT NULL UNIQUE,
         title TEXT NOT NULL,
         subtitle TEXT NOT NULL DEFAULT '',
-        type TEXT NOT NULL CHECK (type IN ('news', 'update', 'guide', 'note', 'danger')),
+        type TEXT NOT NULL CHECK (type IN ('news', 'update', 'feature', 'guide', 'note', 'info', 'warning', 'maintenance', 'danger', 'security', 'hotfix', 'release', 'event')),
         date TEXT NOT NULL,
         tags TEXT NOT NULL DEFAULT '',
         image TEXT NOT NULL DEFAULT '',
@@ -197,6 +197,31 @@ const migrations = [
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       );
+    `,
+  },
+  {
+    id: "008_expand_news_article_types",
+    sql: `
+      CREATE TABLE IF NOT EXISTS news_articles_next (
+        id TEXT PRIMARY KEY,
+        slug TEXT NOT NULL UNIQUE,
+        title TEXT NOT NULL,
+        subtitle TEXT NOT NULL DEFAULT '',
+        type TEXT NOT NULL CHECK (type IN ('news', 'update', 'feature', 'guide', 'note', 'info', 'warning', 'maintenance', 'danger', 'security', 'hotfix', 'release', 'event')),
+        date TEXT NOT NULL,
+        tags TEXT NOT NULL DEFAULT '',
+        image TEXT NOT NULL DEFAULT '',
+        content TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      INSERT INTO news_articles_next (id, slug, title, subtitle, type, date, tags, image, content, created_at, updated_at)
+      SELECT id, slug, title, subtitle, type, date, tags, image, content, created_at, updated_at
+      FROM news_articles;
+
+      DROP TABLE news_articles;
+      ALTER TABLE news_articles_next RENAME TO news_articles;
     `,
   },
 ] as const;

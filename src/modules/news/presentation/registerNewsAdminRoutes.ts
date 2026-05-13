@@ -2,15 +2,22 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 
 import type { AppRuntime } from "../../../app/runtime.js";
-import type { UpdateNewsArticleInput } from "../domain/NewsArticle.js";
-import { AuthenticationError, AuthorizationError, ValidationError } from "../../../shared/domain/errors.js";
+import {
+  NEWS_ARTICLE_TYPES,
+  type UpdateNewsArticleInput,
+} from "../domain/NewsArticle.js";
+import {
+  AuthenticationError,
+  AuthorizationError,
+  ValidationError,
+} from "../../../shared/domain/errors.js";
 import { isAdmin } from "../../identity/domain/User.js";
 
 const createArticleSchema = z.object({
   slug: z.string().min(1),
   title: z.string().min(1),
   subtitle: z.string().optional().default(""),
-  type: z.enum(["news", "update", "guide", "note", "danger"]),
+  type: z.enum(NEWS_ARTICLE_TYPES),
   date: z.string().min(1),
   tags: z.string().optional().default(""),
   image: z.string().optional().default(""),
@@ -21,7 +28,7 @@ const updateArticleSchema = z.object({
   slug: z.string().min(1).optional(),
   title: z.string().min(1).optional(),
   subtitle: z.string().optional(),
-  type: z.enum(["news", "update", "guide", "note", "danger"]).optional(),
+  type: z.enum(NEWS_ARTICLE_TYPES).optional(),
   date: z.string().min(1).optional(),
   tags: z.string().optional(),
   image: z.string().optional(),
@@ -65,7 +72,8 @@ export async function registerNewsAdminRoutes(
     requireAdmin(sessionToken, runtime);
     const params = z.object({ id: z.string().min(1) }).parse(request.params);
 
-    const article = runtime.newsService.listArticles(sessionToken)
+    const article = runtime.newsService
+      .listArticles(sessionToken)
       .find((a) => a.id === params.id);
 
     if (!article) {
@@ -127,7 +135,11 @@ export async function registerNewsAdminRoutes(
       throw new ValidationError("更新するフィールドがありません。");
     }
 
-    const article = runtime.newsService.updateArticle(sessionToken, params.id, buildUpdateInput(body.data));
+    const article = runtime.newsService.updateArticle(
+      sessionToken,
+      params.id,
+      buildUpdateInput(body.data),
+    );
 
     return {
       id: article.id,
@@ -155,7 +167,9 @@ export async function registerNewsAdminRoutes(
   });
 }
 
-function buildUpdateInput(data: z.infer<typeof updateArticleSchema>): UpdateNewsArticleInput {
+function buildUpdateInput(
+  data: z.infer<typeof updateArticleSchema>,
+): UpdateNewsArticleInput {
   const input: UpdateNewsArticleInput = {};
 
   if (data.slug !== undefined) input.slug = data.slug;
@@ -170,7 +184,9 @@ function buildUpdateInput(data: z.infer<typeof updateArticleSchema>): UpdateNews
   return input;
 }
 
-function getRequiredBearerToken(authorizationHeader: string | string[] | undefined): string {
+function getRequiredBearerToken(
+  authorizationHeader: string | string[] | undefined,
+): string {
   if (typeof authorizationHeader !== "string") {
     throw new AuthenticationError();
   }

@@ -28,9 +28,21 @@
             </a>
         </div>
         <ul class="nav-links">
-            <li><a href="/"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span class="nav-label">ホーム</span></a></li>
-            <li><a href="/upload.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><span class="nav-label">アップロード</span></a></li>
-            <li><a href="/files.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg><span class="nav-label">マイファイル</span></a></li>
+            <li><a href="/"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                        <polyline points="9 22 9 12 15 12 15 22" />
+                    </svg><span class="nav-label">ホーム</span></a></li>
+            <li><a href="/upload.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="17 8 12 3 7 8" />
+                        <line x1="12" y1="3" x2="12" y2="15" />
+                    </svg><span class="nav-label">アップロード</span></a></li>
+            <li><a href="/files.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                    </svg><span class="nav-label">マイファイル</span></a></li>
         </ul>
         <div class="nav-right">
             <span id="nav-username" class="nav-username"></span>
@@ -124,7 +136,11 @@
                 <a href="/news.html" class="article-back reveal">← 一覧に戻る</a>
                 <div class="article-main">
                     <div class="article-crumb reveal">
-                        <a href="/"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span class="nav-label">ホーム</span></a>
+                        <a href="/"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                                <polyline points="9 22 9 12 15 12 15 22" />
+                            </svg><span class="nav-label">ホーム</span></a>
                         <span>›</span>
                         <a href="/news.html">お知らせ</a>
                         <span>›</span>
@@ -172,9 +188,17 @@
         const TYPE_CLASS = {
             News: 'nb-news',
             Update: 'nb-update',
+            Feature: 'nb-feature',
             Guide: 'nb-guide',
             Note: 'nb-note',
+            Info: 'nb-info',
+            Warning: 'nb-warning',
+            Maintenance: 'nb-maintenance',
             Danger: 'nb-danger',
+            Security: 'nb-security',
+            Hotfix: 'nb-hotfix',
+            Release: 'nb-release',
+            Event: 'nb-event',
         };
 
         function renderMD(md) {
@@ -241,7 +265,7 @@
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({ article_url: slug }),
-                }).catch(() => {});
+                }).catch(() => { });
 
             } catch (e) {
                 document.getElementById('articleContent').innerHTML =

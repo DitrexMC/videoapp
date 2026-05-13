@@ -91,10 +91,22 @@ export const dialog = {
     setTimeout(() => { const i = el.querySelector('#d-token-val'); i?.select(); }, 50);
     el.querySelector('#d-ok').addEventListener('click', close);
     el.querySelector('#d-token-copy').addEventListener('click', () => {
-      navigator.clipboard?.writeText(token).catch(() => {});
+      navigator.clipboard?.writeText(token).catch(() => { });
       const btn = el.querySelector('#d-token-copy');
       btn.textContent = 'コピー済み';
       setTimeout(() => { btn.textContent = 'コピー'; }, 2000);
+    });
+  },
+
+  htmlAlert(bodyHTML, title = 'お知らせ') {
+    return new Promise(resolve => {
+      const { el, close } = modal.open({
+        title,
+        bodyHTML,
+        footerHTML: `<button class="btn btn-primary btn-sm" id="d-ok">閉じる</button>`,
+        onClose: resolve,
+      });
+      el.querySelector('#d-ok').addEventListener('click', close);
     });
   },
 };

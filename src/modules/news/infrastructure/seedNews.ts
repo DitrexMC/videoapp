@@ -1,11 +1,12 @@
 import type Database from "better-sqlite3";
 import { generateId } from "../../../shared/domain/id.js";
+import type { NewsArticleType } from "../domain/NewsArticle.js";
 
 interface SeedArticle {
   slug: string;
   title: string;
   subtitle: string;
-  type: "news" | "update" | "guide" | "note" | "danger";
+  type: NewsArticleType;
   date: string;
   tags: string;
   image: string;
@@ -16,7 +17,8 @@ const defaultArticles: SeedArticle[] = [
   {
     slug: "videoapp-launch",
     title: "videoapp サービス開始のお知らせ",
-    subtitle: "プライベートファイルストレージサービス videoapp の提供を開始しました。",
+    subtitle:
+      "プライベートファイルストレージサービス videoapp の提供を開始しました。",
     type: "news",
     date: "2026-05-09",
     tags: "新機能, リリース",
@@ -54,7 +56,8 @@ videoapp のサービスを正式に開始しました。
   {
     slug: "chunk-upload",
     title: "チャンクアップロード機能を実装しました",
-    subtitle: "最大5GBまでの大容量ファイルを安定してアップロードできるようになりました。",
+    subtitle:
+      "最大5GBまでの大容量ファイルを安定してアップロードできるようになりました。",
     type: "update",
     date: "2026-05-09",
     tags: "アップロード, 改善",

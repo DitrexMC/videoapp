@@ -1,9 +1,27 @@
+export const NEWS_ARTICLE_TYPES = [
+  "news",
+  "update",
+  "feature",
+  "guide",
+  "note",
+  "info",
+  "warning",
+  "maintenance",
+  "danger",
+  "security",
+  "hotfix",
+  "release",
+  "event",
+] as const;
+
+export type NewsArticleType = (typeof NEWS_ARTICLE_TYPES)[number];
+
 export interface NewsArticle {
   id: string;
   slug: string;
   title: string;
   subtitle: string;
-  type: "news" | "update" | "feature" | "guide" | "note" | "info" | "warning" | "maintenance" | "danger" | "security" | "hotfix" | "release" | "event";
+  type: NewsArticleType;
   date: string;
   tags: string;
   image: string;
@@ -21,7 +39,7 @@ export type UpdateNewsArticleInput = {
   slug?: string;
   title?: string;
   subtitle?: string;
-  type?: "news" | "update" | "feature" | "guide" | "note" | "info" | "warning" | "maintenance" | "danger" | "security" | "hotfix" | "release" | "event";
+  type?: NewsArticleType;
   date?: string;
   tags?: string;
   image?: string;

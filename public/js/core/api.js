@@ -215,6 +215,11 @@ export const api = {
   },
 
   upload: {
+    directInit: (payload, opts) => request('POST', '/upload/direct/init', {
+      body: payload,
+      retry: { maxRetries: 2, retryDelay: 2000, timeout: 30000 },
+      ...opts
+    }),
     init: (payload, opts) => request('POST', '/upload/init', {
       body: payload,
       retry: { maxRetries: 2, retryDelay: 2000, timeout: 30000 },
