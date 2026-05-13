@@ -3,7 +3,7 @@ export interface NewsArticle {
   slug: string;
   title: string;
   subtitle: string;
-  type: "news" | "update" | "guide" | "note" | "danger";
+  type: "news" | "update" | "feature" | "guide" | "note" | "info" | "warning" | "maintenance" | "danger" | "security" | "hotfix" | "release" | "event";
   date: string;
   tags: string;
   image: string;
@@ -21,7 +21,7 @@ export type UpdateNewsArticleInput = {
   slug?: string;
   title?: string;
   subtitle?: string;
-  type?: "news" | "update" | "guide" | "note" | "danger";
+  type?: "news" | "update" | "feature" | "guide" | "note" | "info" | "warning" | "maintenance" | "danger" | "security" | "hotfix" | "release" | "event";
   date?: string;
   tags?: string;
   image?: string;

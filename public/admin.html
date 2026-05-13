@@ -196,9 +196,21 @@
             </a>
         </div>
         <ul class="nav-links">
-            <li><a href="/"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span class="nav-label">ホーム</span></a></li>
-            <li><a href="/upload.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><span class="nav-label">アップロード</span></a></li>
-            <li><a href="/files.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg><span class="nav-label">マイファイル</span></a></li>
+            <li><a href="/"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                        <polyline points="9 22 9 12 15 12 15 22" />
+                    </svg><span class="nav-label">ホーム</span></a></li>
+            <li><a href="/upload.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="17 8 12 3 7 8" />
+                        <line x1="12" y1="3" x2="12" y2="15" />
+                    </svg><span class="nav-label">アップロード</span></a></li>
+            <li><a href="/files.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                    </svg><span class="nav-label">マイファイル</span></a></li>
         </ul>
         <div class="nav-right">
             <span id="nav-username" class="nav-username"></span>
@@ -643,6 +655,8 @@
     <script type="module">
         import { auth } from '/js/core/auth.js';
         import { api } from '/js/core/api.js';
+        import { dialog } from '/js/ui/dialog.js';
+        import { initDropdowns } from '/js/ui/dropdown.js';
 
         if (window.__vaAdminInit) throw new Error('already initialized');
         window.__vaAdminInit = true;
@@ -731,18 +745,24 @@
                         </td>
                         <td>${u.status === 'active' ? '<span class="badge badge-green">有効</span>' : '<span class="badge badge-red">無効</span>'}</td>
                         <td>
-                            <select class="input admin-action-select" data-id="${esc(u.id)}" data-username="${esc(u.username)}" data-quota="${quota}" data-limit="${u.maxFileSizeBytes ?? 0}" data-status="${u.status}" style="width:auto;min-width:110px;font-size:.75rem;padding:.3rem .5rem">
-                                <option value="">操作...</option>
-                                ${u.status === 'active'
-                        ? '<option value="deactivate">無効化</option>'
-                        : '<option value="activate">有効化</option>'}
-                                <option value="quota">クォータ変更</option>
-                                <option value="filelimit">ファイル上限変更</option>
-                                <option value="rename">名前変更</option>
-                                <option value="rotate-token">トークン再発行</option>
-                                <option value="sessions">セッション確認</option>
-                                <option value="delete" style="color:var(--red)">削除</option>
-                            </select>
+                            <div class="dd admin-action-dd" data-id="${esc(u.id)}" data-username="${esc(u.username)}" data-quota="${quota}" data-limit="${u.maxFileSizeBytes ?? 0}" data-status="${u.status}">
+                                <button type="button" class="dd-trigger btn btn-secondary btn-sm" style="width:auto;font-size:.75rem;display:inline-flex;align-items:center;gap:.3rem">
+                                    <span>操作</span>
+                                    <svg viewBox="0 0 20 20" fill="currentColor" style="width:11px;height:11px;flex-shrink:0"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                                </button>
+                                <div class="dd-menu dd-menu-right">
+                                    ${u.status === 'active'
+                        ? '<button type="button" class="dd-item" data-action="deactivate">無効化</button>'
+                        : '<button type="button" class="dd-item" data-action="activate">有効化</button>'}
+                                    <button type="button" class="dd-item" data-action="quota">クォータ変更</button>
+                                    <button type="button" class="dd-item" data-action="filelimit">ファイル上限変更</button>
+                                    <button type="button" class="dd-item" data-action="rename">名前変更</button>
+                                    <button type="button" class="dd-item" data-action="rotate-token">トークン再発行</button>
+                                    <button type="button" class="dd-item" data-action="sessions">セッション確認</button>
+                                    <div class="dd-sep"></div>
+                                    <button type="button" class="dd-item dd-item-danger" data-action="delete">削除</button>
+                                </div>
+                            </div>
                         </td>
                     </tr>`;
             }).join('');
@@ -751,69 +771,72 @@
         }
 
         function bindUserEvents() {
-            document.querySelectorAll('.admin-action-select').forEach(sel => {
-                sel.addEventListener('change', async function () {
-                    const action = this.value;
-                    if (!action) return;
-                    this.value = '';
-                    const id = this.dataset.id;
-                    const username = this.dataset.username;
+            const tbody = document.getElementById('user-list');
+            initDropdowns(tbody);
+            tbody.querySelectorAll('.admin-action-dd').forEach(dd => {
+                dd.querySelectorAll('.dd-item[data-action]').forEach(item => {
+                    item.addEventListener('click', async () => {
+                        const action = item.dataset.action;
+                        const id = dd.dataset.id;
+                        const username = dd.dataset.username;
 
-                    try {
-                        switch (action) {
-                            case 'deactivate':
-                                if (!confirm(`${username} を無効化しますか？`)) return;
-                                await api.admin.users.disable(id);
-                                break;
-                            case 'activate':
-                                await api.admin.users.enable(id);
-                                break;
-                            case 'quota': {
-                                const currentMB = Math.round((parseInt(this.dataset.quota, 10) || 0) / 1048576);
-                                const input = prompt(`新しいクォータ (MB):\n現在: ${currentMB} MB\n※0=無制限`, currentMB);
-                                if (input === null) return;
-                                const mb = parseInt(input, 10);
-                                if (isNaN(mb) || mb < 0) { alert('無効な値です'); return; }
-                                await api.admin.users.storageLimit(id, mb * 1048576);
-                                break;
+                        try {
+                            switch (action) {
+                                case 'deactivate':
+                                    if (!await dialog.confirm({ title: '確認', message: `${username} を無効化しますか？`, confirmLabel: '無効化', danger: true })) return;
+                                    await api.admin.users.disable(id);
+                                    break;
+                                case 'activate':
+                                    await api.admin.users.enable(id);
+                                    break;
+                                case 'quota': {
+                                    const currentMB = Math.round((parseInt(dd.dataset.quota, 10) || 0) / 1048576);
+                                    const input = await dialog.prompt({ title: 'クォータ変更', label: `新しいクォータ (MB) \u00a0現在: ${currentMB} MB \u00a0※0=無制限`, placeholder: String(currentMB), defaultValue: String(currentMB) });
+                                    if (input === null) return;
+                                    const mb = parseInt(input, 10);
+                                    if (isNaN(mb) || mb < 0) { await dialog.alert('無効な値です', 'エラー'); return; }
+                                    await api.admin.users.storageLimit(id, mb * 1048576);
+                                    break;
+                                }
+                                case 'filelimit': {
+                                    const currentMB = Math.round((parseInt(dd.dataset.limit, 10) || 0) / 1048576);
+                                    const input = await dialog.prompt({ title: 'ファイル上限変更', label: `1ファイル最大サイズ (MB) \u00a0現在: ${currentMB} MB`, placeholder: String(currentMB), defaultValue: String(currentMB) });
+                                    if (input === null) return;
+                                    const mb = parseInt(input, 10);
+                                    if (isNaN(mb) || mb <= 0) { await dialog.alert('無効な値です', 'エラー'); return; }
+                                    await api.admin.users.fileLimit(id, mb * 1048576);
+                                    break;
+                                }
+                                case 'rename': {
+                                    const name = await dialog.prompt({ title: 'ユーザー名変更', label: '新しいユーザー名', defaultValue: username });
+                                    if (!name || !name.trim()) return;
+                                    await api.admin.users.rename(id, name.trim());
+                                    break;
+                                }
+                                case 'rotate-token': {
+                                    if (!await dialog.confirm({ title: 'トークン再発行', message: `${username} のログイントークンを再発行しますか？\n既存の全セッションが無効になります。`, confirmLabel: '再発行', danger: true })) return;
+                                    const res = await api.admin.users.rotateToken(id);
+                                    dialog.showToken({ title: '新しいログイントークン', token: res?.login_token ?? res?.loginToken ?? '—', description: `${username} の新しいトークンです。このウィンドウを閉じると確認できなくなります。` });
+                                    break;
+                                }
+                                case 'sessions': {
+                                    const sres = await api.admin.users.sessions(id);
+                                    const items = sres?.items ?? [];
+                                    if (!items.length) { await dialog.alert(`${username} のセッションはありません`, 'セッション一覧'); return; }
+                                    const text = items.map(s =>
+                                        `• ${s.ip_address ?? '不明'} / ${s.user_agent ? s.user_agent.slice(0, 50) : '—'}\n  作成: ${new Date(s.created_at).toLocaleString('ja-JP')}`
+                                    ).join('\n\n');
+                                    await dialog.alert(`${username} のセッション (${items.length}件):\n\n${text}`, 'セッション一覧');
+                                    break;
+                                }
+                                case 'delete':
+                                    if (!await dialog.confirm({ title: 'ユーザー削除', message: `「${username}」を完全に削除しますか？\nこの操作は取り消せません。`, confirmLabel: '削除', danger: true })) return;
+                                    await api.admin.users.delete(id);
+                                    break;
                             }
-                            case 'filelimit': {
-                                const currentMB = Math.round((parseInt(this.dataset.limit, 10) || 0) / 1048576);
-                                const input = prompt(`1ファイル最大サイズ (MB):\n現在: ${currentMB} MB`, currentMB);
-                                if (input === null) return;
-                                const mb = parseInt(input, 10);
-                                if (isNaN(mb) || mb <= 0) { alert('無効な値です'); return; }
-                                await api.admin.users.fileLimit(id, mb * 1048576);
-                                break;
-                            }
-                            case 'rename': {
-                                const name = prompt('新しいユーザー名:', username);
-                                if (!name || !name.trim()) return;
-                                await api.admin.users.rename(id, name.trim());
-                                break;
-                            }
-                            case 'rotate-token':
-                                if (!confirm(`${username} のログイントークンを再発行しますか？\n既存の全セッションが無効になります。`)) return;
-                                const res = await api.admin.users.rotateToken(id);
-                                prompt('新しいトークン（コピーしてください）:', res?.login_token ?? res?.loginToken ?? '—');
-                                break;
-                            case 'sessions': {
-                                const sres = await api.admin.users.sessions(id);
-                                const items = sres?.items ?? [];
-                                if (!items.length) { alert(`${username} のセッションはありません`); return; }
-                                const text = items.map(s =>
-                                    `• ${s.ip_address ?? '不明'} / ${s.user_agent ? s.user_agent.slice(0, 50) : '—'}\n  作成: ${new Date(s.created_at).toLocaleString('ja-JP')}`
-                                ).join('\n\n');
-                                alert(`${username} のセッション (${items.length}件):\n\n${text}`);
-                                break;
-                            }
-                            case 'delete':
-                                if (!confirm(`「${username}」を完全に削除しますか？\nこの操作は取り消せません。`)) return;
-                                await api.admin.users.delete(id);
-                                break;
-                        }
-                        loadStats();
-                    } catch { /* ignore */ }
+                            loadStats();
+                        } catch { /* ignore */ }
+                    });
                 });
             });
         }
@@ -905,7 +928,7 @@
 
             document.querySelectorAll('.fr-del-btn').forEach(btn => {
                 btn.addEventListener('click', async () => {
-                    if (!confirm('このファイルを削除しますか？')) return;
+                    if (!await dialog.confirm({ title: 'ファイル削除', message: 'このファイルを削除しますか？', confirmLabel: '削除', danger: true })) return;
                     btn.disabled = true;
                     try {
                         await api.admin.files.delete(btn.dataset.id);
@@ -1066,14 +1089,14 @@
                         document.getElementById('news-edit-msg').textContent = '';
                         document.getElementById('news-edit-overlay').style.display = '';
                     } catch {
-                        alert('記事の取得に失敗しました');
+                        await dialog.alert('記事の取得に失敗しました', 'エラー');
                     }
                 });
             });
 
             tbody.querySelectorAll('.news-del-btn').forEach(btn => {
                 btn.addEventListener('click', async () => {
-                    if (!confirm(`「${btn.dataset.title}」を削除しますか？`)) return;
+                    if (!await dialog.confirm({ title: '記事削除', message: `「${btn.dataset.title}」を削除しますか？`, confirmLabel: '削除', danger: true })) return;
                     btn.disabled = true;
                     try {
                         await api.admin.news.delete(btn.dataset.id);
@@ -1081,7 +1104,7 @@
                         renderNewsList();
                     } catch {
                         btn.disabled = false;
-                        alert('削除に失敗しました');
+                        await dialog.alert('削除に失敗しました', 'エラー');
                     }
                 });
             });

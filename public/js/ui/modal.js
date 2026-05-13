@@ -15,10 +15,15 @@ function createBackdrop() {
 
 function closeBackdrop(backdrop, onClose) {
   backdrop.classList.remove('open');
-  backdrop.addEventListener('transitionend', () => {
+  let finished = false;
+  const finish = () => {
+    if (finished) return;
+    finished = true;
     backdrop.remove();
     onClose?.();
-  }, { once: true });
+  };
+  backdrop.addEventListener('transitionend', finish, { once: true });
+  setTimeout(finish, 400);
 }
 
 export const modal = {

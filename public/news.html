@@ -163,20 +163,28 @@
                     <input id="searchInput" type="text" placeholder="記事を検索..." autocomplete="off">
                 </div>
                 <div class="news-filter-bar" id="filterBar">
-                    <button class="news-filter-btn active" data-filter="all">All</button>
-                    <button class="news-filter-btn" data-filter="News">News</button>
-                    <button class="news-filter-btn" data-filter="Update">Update</button>
-                    <button class="news-filter-btn" data-filter="Feature">Feature</button>
-                    <button class="news-filter-btn" data-filter="Guide">Guide</button>
-                    <button class="news-filter-btn" data-filter="Note">Note</button>
-                    <button class="news-filter-btn" data-filter="Info">Info</button>
-                    <button class="news-filter-btn" data-filter="Warning">Warning</button>
-                    <button class="news-filter-btn" data-filter="Maintenance">Maintenance</button>
-                    <button class="news-filter-btn" data-filter="Danger">Danger</button>
-                    <button class="news-filter-btn" data-filter="Security">Security</button>
-                    <button class="news-filter-btn" data-filter="Hotfix">Hotfix</button>
-                    <button class="news-filter-btn" data-filter="Release">Release</button>
-                    <button class="news-filter-btn" data-filter="Event">Event</button>
+                    <div class="dd" id="news-type-dd">
+                        <button type="button" class="dd-trigger news-filter-dd-btn" id="news-type-btn">
+                            <span class="dd-label" id="news-type-label">すべて</span>
+                            <svg viewBox="0 0 20 20" fill="currentColor" style="width:13px;height:13px;flex-shrink:0"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                        </button>
+                        <div class="dd-menu">
+                            <button type="button" class="dd-item" data-filter="all">すべて</button>
+                            <button type="button" class="dd-item" data-filter="News">News</button>
+                            <button type="button" class="dd-item" data-filter="Update">Update</button>
+                            <button type="button" class="dd-item" data-filter="Feature">Feature</button>
+                            <button type="button" class="dd-item" data-filter="Guide">Guide</button>
+                            <button type="button" class="dd-item" data-filter="Note">Note</button>
+                            <button type="button" class="dd-item" data-filter="Info">Info</button>
+                            <button type="button" class="dd-item" data-filter="Warning">Warning</button>
+                            <button type="button" class="dd-item" data-filter="Maintenance">Maintenance</button>
+                            <button type="button" class="dd-item" data-filter="Danger">Danger</button>
+                            <button type="button" class="dd-item" data-filter="Security">Security</button>
+                            <button type="button" class="dd-item" data-filter="Hotfix">Hotfix</button>
+                            <button type="button" class="dd-item" data-filter="Release">Release</button>
+                            <button type="button" class="dd-item" data-filter="Event">Event</button>
+                        </div>
+                    </div>
                 </div>
             </div>
 

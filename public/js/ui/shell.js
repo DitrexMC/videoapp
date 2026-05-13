@@ -7,6 +7,7 @@ import { auth } from '../core/auth.js';
 import { theme } from './theme.js';
 import { api }  from '../core/api.js';
 import { toast } from './toast.js';
+import { dialog } from './dialog.js';
 
 const NAV_ITEMS = [
   {
