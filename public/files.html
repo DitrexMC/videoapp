@@ -150,16 +150,22 @@
         }
 
         .breadcrumb {
-            display: none;
+            display: flex;
             align-items: center;
             gap: .4rem;
-            padding: .4rem 0 .6rem;
             font-size: .85rem;
             color: var(--text-sub);
+            overflow: hidden;
+            max-height: 0;
+            opacity: 0;
+            padding: 0;
+            transition: max-height 0.22s ease, opacity 0.2s ease, padding 0.22s ease;
         }
 
         .breadcrumb.visible {
-            display: flex;
+            max-height: 3rem;
+            opacity: 1;
+            padding: .4rem 0 .6rem;
         }
 
         .breadcrumb-sep {
@@ -371,6 +377,15 @@
                 <button class="btn btn-ghost btn-sm" id="breadcrumb-root" style="padding:.15rem .5rem">← マイファイル</button>
                 <span class="breadcrumb-sep">/</span>
                 <span class="breadcrumb-folder" id="breadcrumb-name"></span>
+                <span class="breadcrumb-sep" id="breadcrumb-count"></span>
+                <button class="btn btn-ghost btn-sm" id="breadcrumb-rename-btn"
+                    style="display:none;width:1.9rem;min-width:1.9rem;height:1.75rem;padding:0;justify-content:center;font-size:.78rem"
+                    title="フォルダ名変更"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                    </svg></button>
             </div>
 
             <!-- Table -->
@@ -451,6 +466,25 @@
         let groupId = null;
         let groupLabel = null;
         let filterType = 'all';
+
+        /* ─── helpers ───────────────────────────────────────── */
+        async function slideTransition(exitX, enterX, work) {
+            const tableWrap = document.querySelector('.table-wrap');
+            tableWrap.style.transition = 'opacity 0.18s ease, transform 0.2s ease';
+            tableWrap.style.opacity = '0';
+            tableWrap.style.transform = 'translateX(' + exitX + 'px)';
+            await new Promise(r => setTimeout(r, 210));
+            await work();
+            tableWrap.style.transition = 'none';
+            tableWrap.style.opacity = '0';
+            tableWrap.style.transform = 'translateX(' + enterX + 'px)';
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+                tableWrap.style.transition = 'opacity 0.25s ease, transform 0.28s ease';
+                tableWrap.style.opacity = '1';
+                tableWrap.style.transform = 'translateX(0)';
+                setTimeout(() => { tableWrap.style.transition = ''; tableWrap.style.transform = ''; }, 300);
+            }));
+        }
 
         /* ─── helpers ───────────────────────────────────────── */
         function fmtBytes(b) {
@@ -549,24 +583,10 @@
 
             document.querySelectorAll('.fr-folder-name').forEach(el =>
                 el.addEventListener('click', async () => {
-                    const tableWrap = document.querySelector('.table-wrap');
-                    tableWrap.style.transition = 'opacity 0.18s ease, transform 0.2s ease';
-                    tableWrap.style.opacity = '0';
-                    tableWrap.style.transform = 'translateX(50px)';
                     folderId = el.dataset.folderId;
                     folderName = el.dataset.folderName;
                     page = 1;
-                    await new Promise(r => setTimeout(r, 210));
-                    await reload();
-                    tableWrap.style.transition = 'none';
-                    tableWrap.style.opacity = '0';
-                    tableWrap.style.transform = 'translateX(50px)';
-                    requestAnimationFrame(() => requestAnimationFrame(() => {
-                        tableWrap.style.transition = 'opacity 0.25s ease, transform 0.28s ease';
-                        tableWrap.style.opacity = '1';
-                        tableWrap.style.transform = 'translateX(0)';
-                        setTimeout(() => { tableWrap.style.transition = ''; tableWrap.style.transform = ''; }, 300);
-                    }));
+                    await slideTransition(-50, 50, reload);
                 }));
 
             document.querySelectorAll('.fr-rename-btn').forEach(btn =>
@@ -580,24 +600,10 @@
 
             document.querySelectorAll('.fr-group-name').forEach(el =>
                 el.addEventListener('click', async () => {
-                    const tableWrap = document.querySelector('.table-wrap');
-                    tableWrap.style.transition = 'opacity 0.18s ease, transform 0.2s ease';
-                    tableWrap.style.opacity = '0';
-                    tableWrap.style.transform = 'translateX(50px)';
                     groupId = el.dataset.groupId;
                     groupLabel = el.dataset.groupLabel;
                     page = 1;
-                    await new Promise(r => setTimeout(r, 210));
-                    await reload();
-                    tableWrap.style.transition = 'none';
-                    tableWrap.style.opacity = '0';
-                    tableWrap.style.transform = 'translateX(50px)';
-                    requestAnimationFrame(() => requestAnimationFrame(() => {
-                        tableWrap.style.transition = 'opacity 0.25s ease, transform 0.28s ease';
-                        tableWrap.style.opacity = '1';
-                        tableWrap.style.transform = 'translateX(0)';
-                        setTimeout(() => { tableWrap.style.transition = ''; tableWrap.style.transform = ''; }, 300);
-                    }));
+                    await slideTransition(-50, 50, reload);
                 }));
 
             document.querySelectorAll('.fr-rename-group-btn').forEach(btn =>
@@ -662,17 +668,20 @@
 
         function updateBreadcrumb() {
             const crumb = document.getElementById('breadcrumb');
+            const renameBtn = document.getElementById('breadcrumb-rename-btn');
+            const countEl = document.getElementById('breadcrumb-count');
             if (folderId) {
                 document.getElementById('breadcrumb-name').textContent = folderName || 'フォルダ';
+                countEl.textContent = allItems.length + '件';
+                renameBtn.style.display = '';
                 crumb.classList.add('visible');
-                document.getElementById('filter-type-wrap').style.display = 'none';
             } else if (groupId) {
                 document.getElementById('breadcrumb-name').textContent = groupLabel || 'グループ';
+                countEl.textContent = allItems.length + '件';
+                renameBtn.style.display = 'none';
                 crumb.classList.add('visible');
-                document.getElementById('filter-type-wrap').style.display = 'none';
             } else {
                 crumb.classList.remove('visible');
-                document.getElementById('filter-type-wrap').style.display = '';
             }
         }
 
@@ -774,22 +783,21 @@
             if (auth.isAdmin()) document.getElementById('drawer-admin').classList.remove('hidden');
 
             document.getElementById('breadcrumb-root').addEventListener('click', async () => {
-                const tableWrap = document.querySelector('.table-wrap');
-                tableWrap.style.transition = 'opacity 0.18s ease, transform 0.2s ease';
-                tableWrap.style.opacity = '0';
-                tableWrap.style.transform = 'translateX(-50px)';
                 folderId = null; folderName = null; groupId = null; groupLabel = null; page = 1;
-                await new Promise(r => setTimeout(r, 210));
-                await reload();
-                tableWrap.style.transition = 'none';
-                tableWrap.style.opacity = '0';
-                tableWrap.style.transform = 'translateX(-50px)';
-                requestAnimationFrame(() => requestAnimationFrame(() => {
-                    tableWrap.style.transition = 'opacity 0.25s ease, transform 0.28s ease';
-                    tableWrap.style.opacity = '1';
-                    tableWrap.style.transform = 'translateX(0)';
-                    setTimeout(() => { tableWrap.style.transition = ''; tableWrap.style.transform = ''; }, 300);
-                }));
+                await slideTransition(50, -50, reload);
+            });
+
+            document.getElementById('breadcrumb-rename-btn').addEventListener('click', async () => {
+                const name = prompt('新しいフォルダ名:', folderName || '');
+                if (!name || !name.trim()) return;
+                const btn = document.getElementById('breadcrumb-rename-btn');
+                btn.disabled = true;
+                try {
+                    await api.folders.rename(folderId, name.trim());
+                    folderName = name.trim();
+                    document.getElementById('breadcrumb-name').textContent = folderName;
+                } catch { alert('名前変更に失敗しました'); }
+                btn.disabled = false;
             });
 
             document.getElementById('refresh-btn').addEventListener('click', () => reload());
