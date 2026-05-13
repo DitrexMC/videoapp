@@ -166,23 +166,27 @@
                     <div class="dd" id="news-type-dd">
                         <button type="button" class="dd-trigger news-filter-dd-btn" id="news-type-btn">
                             <span class="dd-label" id="news-type-label">すべて</span>
-                            <svg viewBox="0 0 20 20" fill="currentColor" style="width:13px;height:13px;flex-shrink:0"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                            <svg viewBox="0 0 20 20" fill="currentColor" style="width:13px;height:13px;flex-shrink:0">
+                                <path fill-rule="evenodd"
+                                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                                    clip-rule="evenodd" />
+                            </svg>
                         </button>
                         <div class="dd-menu">
-                            <button type="button" class="dd-item" data-filter="all">すべて</button>
-                            <button type="button" class="dd-item" data-filter="News">News</button>
-                            <button type="button" class="dd-item" data-filter="Update">Update</button>
-                            <button type="button" class="dd-item" data-filter="Feature">Feature</button>
-                            <button type="button" class="dd-item" data-filter="Guide">Guide</button>
-                            <button type="button" class="dd-item" data-filter="Note">Note</button>
-                            <button type="button" class="dd-item" data-filter="Info">Info</button>
-                            <button type="button" class="dd-item" data-filter="Warning">Warning</button>
-                            <button type="button" class="dd-item" data-filter="Maintenance">Maintenance</button>
-                            <button type="button" class="dd-item" data-filter="Danger">Danger</button>
-                            <button type="button" class="dd-item" data-filter="Security">Security</button>
-                            <button type="button" class="dd-item" data-filter="Hotfix">Hotfix</button>
-                            <button type="button" class="dd-item" data-filter="Release">Release</button>
-                            <button type="button" class="dd-item" data-filter="Event">Event</button>
+                            <button type="button" class="dd-item dd-active" data-value="all">すべて</button>
+                            <button type="button" class="dd-item" data-value="News">News</button>
+                            <button type="button" class="dd-item" data-value="Update">Update</button>
+                            <button type="button" class="dd-item" data-value="Feature">Feature</button>
+                            <button type="button" class="dd-item" data-value="Guide">Guide</button>
+                            <button type="button" class="dd-item" data-value="Note">Note</button>
+                            <button type="button" class="dd-item" data-value="Info">Info</button>
+                            <button type="button" class="dd-item" data-value="Warning">Warning</button>
+                            <button type="button" class="dd-item" data-value="Maintenance">Maintenance</button>
+                            <button type="button" class="dd-item" data-value="Danger">Danger</button>
+                            <button type="button" class="dd-item" data-value="Security">Security</button>
+                            <button type="button" class="dd-item" data-value="Hotfix">Hotfix</button>
+                            <button type="button" class="dd-item" data-value="Release">Release</button>
+                            <button type="button" class="dd-item" data-value="Event">Event</button>
                         </div>
                     </div>
                 </div>
@@ -211,6 +215,7 @@
     <script type="module" src="/js/nav.js"></script>
     <script type="module">
         import { auth } from '/js/core/auth.js';
+        import { bindTypeDropdown } from '/js/ui/dropdown.js';
 
         if (window.__vaNewsInit) throw new Error('already initialized');
         window.__vaNewsInit = true;
@@ -243,6 +248,22 @@
         let readUrls = new Set();
         let currentFilter = 'all';
         let currentSearch = '';
+
+        function animateNewsPage() {
+            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+            [document.querySelector('.news-banner'), document.querySelector('.news-wrap')].forEach((el, index) => {
+                if (!el) return;
+                el.animate([
+                    { opacity: 0, transform: 'translateY(18px)' },
+                    { opacity: 1, transform: 'translateY(0)' }
+                ], {
+                    duration: 400,
+                    delay: index * 60,
+                    easing: 'ease',
+                    fill: 'both'
+                });
+            });
+        }
 
         function buildCard(art) {
             const a = document.createElement('a');
@@ -331,13 +352,12 @@
             }
         }
 
-        document.getElementById('filterBar').addEventListener('click', e => {
-            const btn = e.target.closest('.news-filter-btn');
-            if (!btn) return;
-            document.querySelectorAll('.news-filter-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            currentFilter = btn.dataset.filter;
-            render();
+        bindTypeDropdown({
+            ddEl: document.getElementById('news-type-dd'),
+            onSelect(value) {
+                currentFilter = value;
+                render();
+            }
         });
 
         let searchTimer;
@@ -345,6 +365,8 @@
             clearTimeout(searchTimer);
             searchTimer = setTimeout(() => { currentSearch = e.target.value; render(); }, 300);
         });
+
+        animateNewsPage();
 
         (async () => {
             try {
