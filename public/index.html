@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>videoapp — ダッシュボード</title>
+    <link rel="icon" href="/icons/icon-192.png">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+JP:wght@400;500;700&display=swap"
+        rel="stylesheet">
+
+    <script src="/js/nav-theme.js"></script>
+    <link rel="stylesheet" href="/css/common.css">
+    <link rel="stylesheet" href="/css/app.css">
+</head>
+
+<body>
+    <canvas id="canvas"></canvas>
+    <div class="page-glow page-glow-1"></div>
+
+    <nav id="nav">
+        <div class="nav-left">
+            <a class="nav-logo" href="/">
+                <span class="logo-text">video<em>app</em></span>
+            </a>
+        </div>
+        <ul class="nav-links">
+            <li><a href="/" class="active"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span class="nav-label">ホーム</span></a></li>
+            <li><a href="/upload.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><span class="nav-label">アップロード</span></a></li>
+            <li><a href="/files.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg><span class="nav-label">マイファイル</span></a></li>
+        </ul>
+        <div class="nav-right">
+            <span id="nav-username" class="nav-username"></span>
+            <button class="theme-toggle" id="theme-toggle"></button>
+            <button class="nav-hamburger" id="hamburger" aria-label="メニューを開く">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+    </nav>
+
+    <div class="drawer-overlay" id="drawerOverlay"></div>
+    <aside class="nav-drawer" id="navDrawer">
+        <div class="drawer-header">
+            <span class="drawer-username" id="drawerUsername"></span>
+            <button class="drawer-close" id="drawerClose" aria-label="閉じる">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+            </button>
+        </div>
+        <nav class="drawer-nav">
+            <a href="/settings.html" class="drawer-link">
+                <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3" />
+                    <path
+                        d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                </svg>
+                設定
+            </a>
+            <a href="/news.html" class="drawer-link">
+                <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                </svg>
+                お知らせ
+            </a>
+            <a href="/admin.html" class="drawer-link hidden" id="drawer-admin">
+                <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+                管理
+            </a>
+            <a href="/files.html" class="drawer-link">
+                <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                </svg>
+                マイファイル
+            </a>
+            <a href="/upload.html" class="drawer-link">
+                <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+                    <polyline points="16 6 12 2 8 6" />
+                    <line x1="12" y1="2" x2="12" y2="15" />
+                </svg>
+                アップロード
+            </a>
+        </nav>
+        <div class="drawer-divider"></div>
+        <button class="drawer-logout" id="drawer-logout">
+            <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            ログアウト
+        </button>
+        <div class="drawer-footer">
+            <div class="drawer-footer-brand">
+                <span class="drawer-footer-logo">video<em>app</em></span>
+                <span class="drawer-footer-ver">v1.0</span>
+            </div>
+            <p class="drawer-footer-desc">プライベートファイルストレージ</p>
+            <div class="drawer-footer-credits">
+
+                <span>© 2026 Videoapp</span><span class="dot">·</span>
+                <span>DitrexMC</span>
+            </div>
+            <div class="drawer-footer-links">
+                <a href="/terms.html">利用規約</a><span>·</span><a href="/privacy.html">プライバシー</a>
+            </div>
+        </div>
+    </aside>
+
+    <main>
+        <!-- Hero -->
+        <section class="hero">
+            <div class="hero-glow"></div>
+            <div class="hero-inner">
+                <div class="hero-eyebrow reveal">
+                    <span class="hero-tag-dot"></span>
+                    Private File Storage
+                </div>
+
+                <h1 class="hero-title reveal reveal-d1">
+                    <span class="hero-title-sub">Welcome back,</span>
+                    <span class="hero-title-name" id="hero-name">—</span>
+                </h1>
+
+                <div class="hero-tw reveal reveal-d2">
+                    <span class="hero-tw-prefix">&gt;&nbsp;</span><span id="tw"></span><span id="tw-cursor"></span>
+                </div>
+
+                <div class="hero-stats reveal reveal-d3" id="hero-stats">
+                    <div class="hs-item">
+                        <span class="hs-val" id="hc-files">—</span>
+                        <span class="hs-lbl">ファイル数</span>
+                    </div>
+                    <div class="hs-sep"></div>
+                    <div class="hs-item">
+                        <span class="hs-val" id="hc-used">—</span>
+                        <span class="hs-lbl">使用量</span>
+                    </div>
+                    <div class="hs-sep"></div>
+                    <div class="hs-item">
+                        <span class="hs-val" id="hc-quota">—</span>
+                        <span class="hs-lbl">クォータ</span>
+                    </div>
+                    <div class="hs-sep"></div>
+                    <div class="hs-item">
+                        <span class="hs-val" id="hc-pct">—%</span>
+                        <span class="hs-lbl">使用率</span>
+                    </div>
+                </div>
+
+                <div class="hero-usage reveal reveal-d3">
+                    <div class="hero-usage-bar-wrap">
+                        <div class="usage-bar" id="usage-bar" style="width:0%"></div>
+                    </div>
+                    <span class="hero-usage-txt" id="hc-usage-txt">— / —</span>
+                </div>
+
+                <div class="hero-btns reveal reveal-d4">
+                    <a href="/upload.html" class="btn btn-primary btn-hero">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="16 16 12 12 8 16" />
+                            <line x1="12" y1="12" x2="12" y2="21" />
+                            <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" />
+                        </svg>
+                        アップロード
+                    </a>
+                    <a href="/files.html" class="btn btn-outline btn-hero">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                        </svg>
+                        マイファイル
+                    </a>
+                </div>
+
+                <div class="hero-badges reveal reveal-d4" id="hero-badges"></div>
+            </div>
+        </section>
+
+        <!-- Quick Actions -->
+        <div class="container">
+            <!-- Quick Actions -->
+            <div class="sec-eye reveal">
+                <div class="sec-eye-text">
+                    <div class="sec-lbl">Quick Actions</div>
+                    <h2>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                        </svg>
+                        クイックアクション
+                    </h2>
+                </div>
+            </div>
+
+            <div class="dash-cards">
+                <a class="dash-card reveal reveal-d1" href="/upload.html">
+                    <div class="dash-card-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="16 16 12 12 8 16" />
+                            <line x1="12" y1="12" x2="12" y2="21" />
+                            <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" />
+                        </svg>
+                    </div>
+                    <div class="dash-card-title">アップロード</div>
+                    <div class="dash-card-desc">ファイルをアップロードしてURLを即取得。ドラッグ＆ドロップ・貼り付け対応。</div>
+                </a>
+                <a class="dash-card reveal reveal-d2" href="/files.html">
+                    <div class="dash-card-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                        </svg>
+                    </div>
+                    <div class="dash-card-title">マイファイル</div>
+                    <div class="dash-card-desc">アップロード済みファイルを管理・検索・削除。期限管理も一括で。</div>
+                </a>
+                <a class="dash-card reveal reveal-d3" href="/settings.html">
+                    <div class="dash-card-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="3" />
+                            <path
+                                d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                        </svg>
+                    </div>
+                    <div class="dash-card-title">設定</div>
+                    <div class="dash-card-desc">アカウント設定・パスワード変更・表示オプション。</div>
+                </a>
+            </div>
+
+            <!-- Features -->
+            <div class="mt-3">
+                <div class="sec-eye reveal">
+                    <div class="sec-eye-text">
+                        <div class="sec-lbl">Features</div>
+                        <h2>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                            </svg>
+                            主な機能
+                        </h2>
+                    </div>
+                </div>
+                <div class="feat-grid">
+                    <div class="feat-card reveal reveal-d1">
+                        <div class="feat-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <polyline points="16 16 12 12 8 16" />
+                                <line x1="12" y1="12" x2="12" y2="21" />
+                                <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" />
+                            </svg>
+                        </div>
+                        <div class="feat-body">
+                            <div class="feat-title">チャンクアップロード</div>
+                            <div class="feat-desc">大容量ファイルも分割で安定転送。速度・進捗をリアルタイム表示。最大5GBまで対応。</div>
+                        </div>
+                    </div>
+                    <div class="feat-card reveal reveal-d2">
+                        <div class="feat-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                            </svg>
+                        </div>
+                        <div class="feat-body">
+                            <div class="feat-title">URL即時共有</div>
+                            <div class="feat-desc">アップロード後すぐに共有URLを発行。Discord・SNS・チャットにそのまま貼り付けOK。</div>
+                        </div>
+                    </div>
+                    <div class="feat-card reveal reveal-d3">
+                        <div class="feat-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10" />
+                                <polyline points="12 6 12 12 16 14" />
+                            </svg>
+                        </div>
+                        <div class="feat-body">
+                            <div class="feat-title">期限付きストレージ</div>
+                            <div class="feat-desc">保存期間を自由に設定。期限切れファイルは自動削除。ストレージを無駄なく使用。</div>
+                        </div>
+                    </div>
+                    <div class="feat-card reveal reveal-d4">
+                        <div class="feat-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                                <circle cx="8.5" cy="8.5" r="1.5" />
+                                <polyline points="21 15 16 10 5 21" />
+                            </svg>
+                        </div>
+                        <div class="feat-body">
+                            <div class="feat-title">ブラウザプレビュー</div>
+                            <div class="feat-desc">動画・画像・音声・PDFをブラウザ内で直接表示。コード・Markdownも対応。</div>
+                        </div>
+                    </div>
+                    <div class="feat-card reveal reveal-d1">
+                        <div class="feat-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                            </svg>
+                        </div>
+                        <div class="feat-body">
+                            <div class="feat-title">公開設定</div>
+                            <div class="feat-desc">ファイルごとに公開・非公開を設定。非公開ファイルはログインユーザーのみアクセス可。</div>
+                        </div>
+                    </div>
+                    <div class="feat-card reveal reveal-d2">
+                        <div class="feat-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <polyline points="21 8 21 21 3 21 3 8" />
+                                <rect x="1" y="3" width="22" height="5" />
+                                <line x1="10" y1="12" x2="14" y2="12" />
+                            </svg>
+                        </div>
+                        <div class="feat-body">
+                            <div class="feat-title">ZIPダウンロード</div>
+                            <div class="feat-desc">複数ファイルをまとめてZIP化してダウンロード。フォルダ単位でも対応。</div>
+                        </div>
+                    </div>
+                    <div class="feat-card reveal reveal-d3">
+                        <div class="feat-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                                <circle cx="12" cy="7" r="4" />
+                            </svg>
+                        </div>
+                        <div class="feat-body">
+                            <div class="feat-title">投稿者表示</div>
+                            <div class="feat-desc">ファイルの投稿者名を表示・非表示を自由に制御。ファイル単位で設定可。</div>
+                        </div>
+                    </div>
+                    <div class="feat-card reveal reveal-d4">
+                        <div class="feat-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="3" />
+                                <path
+                                    d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                            </svg>
+                        </div>
+                        <div class="feat-body">
+                            <div class="feat-title">管理者ダッシュボード</div>
+                            <div class="feat-desc">ユーザー・ファイル・ストレージポリシーを管理者が一元管理。</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- How it works -->
+            <div class="mt-3">
+                <div class="sec-eye reveal">
+                    <div class="sec-eye-text">
+                        <div class="sec-lbl">How it works</div>
+                        <h2>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10" />
+                                <line x1="12" y1="8" x2="12" y2="12" />
+                                <line x1="12" y1="16" x2="12.01" y2="16" />
+                            </svg>
+                            使い方
+                        </h2>
+                    </div>
+                </div>
+                <div class="howto-steps">
+                    <div class="howto-step reveal reveal-d1">
+                        <div class="howto-num">01</div>
+                        <div class="howto-body">
+                            <div class="howto-title">ファイルを選択</div>
+                            <div class="howto-desc">アップロードページでドラッグ＆ドロップ、またはクリックして複数ファイルを選択。クリップボードからの貼り付けも対応。</div>
+                        </div>
+                    </div>
+                    <div class="howto-step reveal reveal-d2">
+                        <div class="howto-num">02</div>
+                        <div class="howto-body">
+                            <div class="howto-title">期限・公開設定を選ぶ</div>
+                            <div class="howto-desc">保存期間（1日〜無制限）と公開/非公開を設定してアップロード開始。大容量でもチャンク転送で安定。</div>
+                        </div>
+                    </div>
+                    <div class="howto-step reveal reveal-d3">
+                        <div class="howto-num">03</div>
+                        <div class="howto-body">
+                            <div class="howto-title">URLをコピーして共有</div>
+                            <div class="howto-desc">アップロード完了後にURLを即コピー。Discord埋め込み用のダイレクトURLも取得できます。</div>
+                        </div>
+                    </div>
+                    <div class="howto-step reveal reveal-d4">
+                        <div class="howto-num">04</div>
+                        <div class="howto-body">
+                            <div class="howto-title">マイファイルで管理</div>
+                            <div class="howto-desc">アップロード済みファイルの一覧確認・削除・期限変更・公開切替をいつでも実行可能。</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="/js/particles.js"></script>
+    <script type="module" src="/js/nav.js"></script>
+    <script type="module">
+        import { auth } from '/js/core/auth.js';
+        import { api } from '/js/core/api.js';
+        import { cache } from '/js/core/cache.js';
+
+        if (window.__vaIndexInit) throw new Error('already initialized');
+        window.__vaIndexInit = true;
+        document.addEventListener('va:navigate-away', () => { window.__vaIndexInit = false; });
+
+        if (!auth.requireAuth()) {
+            throw new Error('redirect');
+        }
+
+        const words = ['プライベートファイル共有', '動画・画像・すべて対応', '安全なファイルストレージ', 'Chunked Upload対応', '期限付きで自動管理'];
+        let wordIndex = 0, charIndex = 0, deleting = false;
+        const twEl = document.getElementById('tw');
+
+        function typeLoop() {
+            const word = words[wordIndex];
+            if (!deleting) {
+                charIndex += 1;
+                twEl.textContent = word.slice(0, charIndex);
+                if (charIndex === word.length) {
+                    deleting = true;
+                    setTimeout(typeLoop, 1800);
+                    return;
+                }
+            } else {
+                charIndex -= 1;
+                twEl.textContent = word.slice(0, charIndex);
+                if (charIndex === 0) {
+                    deleting = false;
+                    wordIndex = (wordIndex + 1) % words.length;
+                    setTimeout(typeLoop, 400);
+                    return;
+                }
+            }
+            setTimeout(typeLoop, deleting ? 35 : 70);
+        }
+        typeLoop();
+
+        // Show cached user immediately — no network wait
+        const cachedUser = auth.getUser();
+        if (cachedUser) {
+            document.getElementById('nav-username').textContent = cachedUser.username ?? '';
+            document.getElementById('drawerUsername').textContent = cachedUser.username ?? '';
+            document.getElementById('hero-name').textContent = cachedUser.username ?? 'guest';
+            if (cachedUser.role === 'admin') {
+                document.getElementById('drawer-admin').classList.remove('hidden');
+            }
+        }
+
+        async function init() {
+            const me = await api.auth.me();
+            auth.updateUser(me);
+            document.getElementById('nav-username').textContent = me.username ?? '';
+            document.getElementById('drawerUsername').textContent = me.username ?? '';
+            document.getElementById('hero-name').textContent = me.username ?? 'guest';
+            if (auth.isAdmin()) {
+                document.getElementById('drawer-admin').classList.remove('hidden');
+            }
+
+            loadContent(me);
+        }
+
+        async function loadContent(me) {
+            const meCacheKey = 'me:' + (me.id || 'anon');
+            const filesCacheKey = 'files:list:' + (me.id || 'anon');
+
+            // Show cached file stats immediately if available
+            const cachedFiles = cache.getSync(filesCacheKey);
+            if (cachedFiles) {
+                const files = cachedFiles?.items ?? [];
+                const cachedUsedBytes = files.reduce((sum, f) => sum + (f.size ?? 0), 0);
+                const cachedQuotaBytes = me.storage_limit_bytes ?? 0;
+                const cachedPct = Math.min(100, cachedQuotaBytes > 0 ? (cachedUsedBytes / cachedQuotaBytes) * 100 : 0);
+                document.getElementById('usage-bar').style.width = cachedPct + '%';
+                document.getElementById('hc-used').textContent = fmtBytes(cachedUsedBytes);
+                document.getElementById('hc-quota').textContent = cachedQuotaBytes > 0 ? fmtBytes(cachedQuotaBytes) : '無制限';
+                document.getElementById('hc-usage-txt').textContent = cachedQuotaBytes > 0
+                    ? `${fmtBytes(cachedUsedBytes)} / ${fmtBytes(cachedQuotaBytes)}`
+                    : `${fmtBytes(cachedUsedBytes)} / 無制限`;
+                document.getElementById('hero-badges').innerHTML = `
+                    <span class="badge badge-blue">${files.length} ファイル</span>
+                    <span class="badge badge-gray">${fmtBytes(cachedUsedBytes)} 使用中</span>
+                    ${auth.isAdmin() ? '<span class="badge badge-gold">管理者</span>' : ''}
+                `;
+            }
+
+            const filesResponse = await api.files.list({ limit: 100 });
+            cache.set(filesCacheKey, filesResponse);
+            const files = filesResponse?.items ?? [];
+
+            const usedBytes = files.reduce((sum, f) => sum + (f.size ?? 0), 0);
+            const quotaBytes = me.storage_limit_bytes ?? 0;
+            const usagePercent = Math.min(100, quotaBytes > 0 ? (usedBytes / quotaBytes) * 100 : 0);
+
+            document.getElementById('usage-bar').style.width = usagePercent + '%';
+            document.getElementById('hc-used').textContent = fmtBytes(usedBytes);
+            document.getElementById('hc-quota').textContent = quotaBytes > 0 ? fmtBytes(quotaBytes) : '無制限';
+            document.getElementById('hc-usage-txt').textContent = quotaBytes > 0
+                ? `${fmtBytes(usedBytes)} / ${fmtBytes(quotaBytes)}`
+                : `${fmtBytes(usedBytes)} / 無制限`;
+
+            animateValue(document.getElementById('hc-files'), 0, files.length, 600, v => String(Math.round(v)));
+            animateValue(document.getElementById('hc-pct'), 0, usagePercent, 800, v => v.toFixed(1) + '%');
+
+            document.getElementById('hero-badges').innerHTML = `
+                <span class="badge badge-blue">${files.length} ファイル</span>
+                <span class="badge badge-gray">${fmtBytes(usedBytes)} 使用中</span>
+                ${auth.isAdmin() ? '<span class="badge badge-gold">管理者</span>' : ''}
+            `;
+
+            cardHoverEffect();
+        }
+
+        function cardHoverEffect() {
+            document.querySelectorAll('.dash-card').forEach(card => {
+                card.addEventListener('mousemove', e => {
+                    const r = card.getBoundingClientRect();
+                    const dx = (e.clientX - r.left - r.width / 2) / (r.width / 2);
+                    const dy = (e.clientY - r.top - r.height / 2) / (r.height / 2);
+                    card.style.transition = 'transform .08s';
+                    card.style.transform = `perspective(700px) rotateY(${dx * 3}deg) rotateX(${-dy * 3}deg) translateY(-4px)`;
+                });
+                card.addEventListener('mouseleave', () => {
+                    card.style.transition = 'transform .4s ease,box-shadow .3s,border-color .3s';
+                    card.style.transform = '';
+                });
+            });
+        }
+
+        function fmtBytes(b) {
+            if (!b && b !== 0) return '0 B';
+            if (b >= 1073741824) return (b / 1073741824).toFixed(2) + ' GB';
+            if (b >= 1048576) return (b / 1048576).toFixed(1) + ' MB';
+            if (b >= 1024) return (b / 1024).toFixed(0) + ' KB';
+            return b + ' B';
+        }
+
+        function animateValue(el, start, end, duration, fmt) {
+            const began = performance.now();
+            function step(now) {
+                const p = Math.min((now - began) / duration, 1);
+                el.textContent = fmt(start + (end - start) * p);
+                if (p < 1) requestAnimationFrame(step);
+            }
+            requestAnimationFrame(step);
+        }
+
+        function esc(s) {
+            return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        init();
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(() => { });
+        }
+    </script>
+    <script src="/js/dev-reload.js?v=1" defer></script>
+</body>
+
+</html>

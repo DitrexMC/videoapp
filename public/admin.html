@@ -1,0 +1,1368 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>videoapp — 管理画面</title>
+    <link rel="icon" href="/icons/icon-192.png">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+JP:wght@400;500;700&display=swap"
+        rel="stylesheet">
+
+    <script src="/js/nav-theme.js"></script>
+    <link rel="stylesheet" href="/css/common.css">
+    <link rel="stylesheet" href="/css/app.css">
+    <style>
+        .admin-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        @media(max-width:700px) {
+            .admin-stats {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .empty-row td {
+            padding: 2rem;
+            text-align: center;
+            color: var(--text-sub);
+        }
+
+        .fr-cb-cell,
+        .fr-cb-head {
+            width: 2rem;
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        .fr-actions {
+            white-space: nowrap;
+            display: flex;
+            gap: .25rem;
+            align-items: center;
+        }
+
+        .fr-action-cell {
+            white-space: nowrap;
+        }
+
+        .table td,
+        .table th {
+            white-space: nowrap;
+        }
+
+        .fr-name-cell {
+            max-width: 280px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .fr-name-row {
+            display: flex;
+            align-items: center;
+            gap: .15rem;
+        }
+
+        .fr-name-text {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 240px;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        #msg {
+            min-height: 1.2rem;
+            font-size: .82rem;
+            font-weight: 700;
+            margin-top: .4rem;
+        }
+
+        #msg.ok {
+            color: var(--green);
+        }
+
+        #msg.err {
+            color: var(--red);
+        }
+
+        .create-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1rem;
+        }
+
+        .admin-usage-inline {
+            display: flex;
+            align-items: center;
+            gap: .4rem;
+            white-space: nowrap;
+            min-width: 0;
+        }
+
+        .admin-usage-inline .quota-text {
+            font-size: .78rem;
+            color: var(--text-sub);
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .admin-usage-inline .file-count-text {
+            font-size: .72rem;
+            color: var(--text-sub);
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .quota-bar-wrap {
+            height: 4px;
+            flex: 1 1 60px;
+            min-width: 40px;
+            max-width: 120px;
+            background: var(--bg3);
+            border-radius: 2px;
+        }
+
+        .quota-bar {
+            height: 100%;
+            background: var(--accent3);
+            border-radius: 2px;
+        }
+
+        .admin-table {
+            table-layout: fixed;
+        }
+
+        #admin-bulk-delete-btn {
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(-4px);
+            transition: opacity .18s ease, transform .18s ease;
+        }
+
+        #admin-bulk-delete-btn.bulk-visible {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(0);
+        }
+
+        .ellipsis-cell {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .ellipsis-cell strong {
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .fr-user-cell {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        #user-list tr> :first-child {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .search-row {
+            display: flex;
+            gap: .5rem;
+            margin-bottom: 1rem;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: .5rem .25rem 0;
+        }
+
+        .search-row .input {
+            flex: 1;
+        }
+
+        @keyframes newsModalIn {
+            from { opacity: 0; transform: scale(0.88) translateY(-40px); }
+            to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        @keyframes newsModalOut {
+            from { opacity: 1; transform: scale(1) translateY(0); }
+            to   { opacity: 0; transform: scale(0.88) translateY(-30px); }
+        }
+        #news-edit-overlay {
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            transition: opacity 0.3s ease;
+        }
+        #news-edit-overlay.closing {
+            opacity: 0;
+            pointer-events: none;
+        }
+        #news-edit-modal {
+            animation: newsModalIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
+        }
+        #news-edit-modal.closing {
+            animation: newsModalOut 0.28s ease both;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="canvas"></canvas>
+    <div class="page-glow page-glow-1"></div>
+    <div class="page-glow page-glow-2"></div>
+
+    <nav id="nav">
+        <div class="nav-left">
+            <a class="nav-logo" href="/">
+                <span class="logo-text">video<em>app</em></span>
+            </a>
+        </div>
+        <ul class="nav-links">
+            <li><a href="/"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                        <polyline points="9 22 9 12 15 12 15 22" />
+                    </svg><span class="nav-label">ホーム</span></a></li>
+            <li><a href="/upload.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="17 8 12 3 7 8" />
+                        <line x1="12" y1="3" x2="12" y2="15" />
+                    </svg><span class="nav-label">アップロード</span></a></li>
+            <li><a href="/files.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                    </svg><span class="nav-label">マイファイル</span></a></li>
+        </ul>
+        <div class="nav-right">
+            <span id="nav-username" class="nav-username"></span>
+            <button class="theme-toggle" id="theme-toggle"></button>
+            <button class="nav-hamburger" id="hamburger" aria-label="メニューを開く">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+    </nav>
+
+    <div class="drawer-overlay" id="drawerOverlay"></div>
+    <aside class="nav-drawer" id="navDrawer">
+        <div class="drawer-header">
+            <span class="drawer-username" id="drawerUsername"></span>
+            <button class="drawer-close" id="drawerClose" aria-label="閉じる">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+            </button>
+        </div>
+        <nav class="drawer-nav">
+            <a href="/settings.html" class="drawer-link">
+                <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3" />
+                    <path
+                        d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                </svg>
+                設定
+            </a>
+            <a href="/news.html" class="drawer-link">
+                <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                </svg>
+                お知らせ
+            </a>
+            <a href="/admin.html" class="drawer-link" id="drawer-admin">
+                <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+                管理
+            </a>
+            <a href="/files.html" class="drawer-link">
+                <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                </svg>
+                マイファイル
+            </a>
+            <a href="/upload.html" class="drawer-link">
+                <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+                    <polyline points="16 6 12 2 8 6" />
+                    <line x1="12" y1="2" x2="12" y2="15" />
+                </svg>
+                アップロード
+            </a>
+        </nav>
+        <div class="drawer-divider"></div>
+        <button class="drawer-logout" id="drawer-logout">
+            <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            ログアウト
+        </button>
+        <div class="drawer-footer">
+            <div class="drawer-footer-brand">
+                <span class="drawer-footer-logo">video<em>app</em></span>
+                <span class="drawer-footer-ver">v1.0</span>
+            </div>
+            <p class="drawer-footer-desc">プライベートファイルストレージ</p>
+            <div class="drawer-footer-credits">
+                <span>© 2026 Videoapp</span><span class="dot">·</span>
+                <span>DitrexMC</span>
+            </div>
+        </div>
+    </aside>
+
+    <main>
+        <div class="container">
+            <div class="stat-tag reveal">
+                <span class="stat-tag-dot"></span>
+                Admin Panel
+            </div>
+
+            <div class="sec-eye reveal reveal-d1">
+                <div class="sec-eye-text">
+                    <div class="sec-lbl">Management</div>
+                    <h1>管理画面</h1>
+                </div>
+            </div>
+
+            <!-- Stats bar -->
+            <div class="admin-stats reveal reveal-d2">
+                <div class="asc">
+                    <div class="asc-icon"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
+                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                            <circle cx="12" cy="7" r="4" />
+                        </svg></div>
+                    <div class="asc-val" id="stat-users">—</div>
+                    <div class="asc-lbl">ユーザー数</div>
+                </div>
+                <div class="asc">
+                    <div class="asc-icon"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
+                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" />
+                            <polyline points="13 2 13 9 20 9" />
+                        </svg></div>
+                    <div class="asc-val" id="stat-files">—</div>
+                    <div class="asc-lbl">総ファイル数</div>
+                </div>
+                <div class="asc">
+                    <div class="asc-icon"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
+                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <ellipse cx="12" cy="5" rx="9" ry="3" />
+                            <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
+                            <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+                        </svg></div>
+                    <div class="asc-val" id="stat-storage">—</div>
+                    <div class="asc-lbl">総ストレージ</div>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="tabs reveal reveal-d3">
+                <button class="tab-btn active" data-tab="users">ユーザー管理</button>
+                <button class="tab-btn" data-tab="files">ファイル管理</button>
+                <button class="tab-btn" data-tab="news">ニュース管理</button>
+                <button class="tab-btn" data-tab="policies">設定</button>
+            </div>
+
+            <!-- Users tab -->
+            <div class="tab-panel active" id="tab-users">
+                <div class="card mb-2">
+                    <div class="section-title">新規ユーザー作成</div>
+                    <form id="create-user-form" style="margin-top:.6rem">
+                        <div class="create-form">
+                            <div class="form-group">
+                                <label for="new-username">ユーザー名</label>
+                                <input class="input" id="new-username" type="text" placeholder="例: alice" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="new-role">権限</label>
+                                <select class="input" id="new-role">
+                                    <option value="user">user</option>
+                                    <option value="admin">admin</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="justify-content:flex-end;padding-top:1.4rem">
+                                <button type="submit" class="btn btn-primary">ユーザーを作成</button>
+                            </div>
+                        </div>
+                        <div id="msg"></div>
+                        <div id="new-token-area" style="display:none;margin-top:.8rem">
+                            <label
+                                style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-sub)">ログイントークン（一度しか表示されません）</label>
+                            <div class="url-row" style="margin-top:.4rem">
+                                <input class="input" id="new-token-out" type="text" readonly onclick="this.select()">
+                                <button class="copy-btn" id="copy-token-btn" type="button">コピー</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="table-wrap">
+                    <table class="table admin-table">
+                        <colgroup>
+                            <col style="width:auto">
+                            <col style="width:6rem">
+                            <col style="width:28rem">
+                            <col style="width:5rem">
+                            <col style="width:10rem">
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th class="ellipsis-cell">ユーザー名</th>
+                                <th>権限</th>
+                                <th>クォータ / 使用量</th>
+                                <th>状態</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="user-list">
+                            <tr class="empty-row">
+                                <td colspan="5">読み込み中...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Files tab -->
+            <div class="tab-panel" id="tab-files">
+                <div class="search-row">
+                    <input class="input" id="file-search-input" placeholder="ファイル名で検索..." type="search">
+                    <button class="btn btn-primary" id="file-search-btn">検索</button>
+                    <button class="btn btn-danger" id="admin-bulk-delete-btn">選択を削除</button>
+                </div>
+                <div class="table-wrap">
+                    <table class="table admin-table">
+                        <colgroup>
+                            <col style="width:2rem">
+                            <col style="width:auto">
+                            <col style="width:8rem">
+                            <col style="width:6rem">
+                            <col style="width:8rem">
+                            <col style="width:8rem">
+                            <col style="width:6rem">
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th>
+                                    <label class="custom-cb"
+                                        style="display:inline-flex;align-items:center;justify-content:center;padding:0;margin:0">
+                                        <input type="checkbox" id="admin-select-all">
+                                        <span class="custom-cb-box"></span>
+                                    </label>
+                                </th>
+                                <th class="ellipsis-cell">ファイル名</th>
+                                <th>ユーザー</th>
+                                <th>サイズ</th>
+                                <th>作成日</th>
+                                <th>期限</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-file-list">
+                            <tr class="empty-row">
+                                <td colspan="7">読み込み中...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="pagination" id="file-pagination">
+                    <span class="text-sm text-sub" id="file-page-info">0件</span>
+                    <div style="display:flex;gap:.4rem">
+                        <button class="btn btn-ghost btn-sm" id="file-page-prev">← 前へ</button>
+                        <button class="btn btn-ghost btn-sm" id="file-page-next">次へ →</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- News tab -->
+            <div class="tab-panel" id="tab-news" style="display:none">
+                <div class="card mb-2">
+                    <div class="section-title">新規記事作成</div>
+                    <form id="news-create-form" style="margin-top:.6rem">
+                        <div class="create-form">
+                            <div class="form-group">
+                                <label for="nc-slug">スラッグ</label>
+                                <input class="input" id="nc-slug" type="text" placeholder="例: my-article" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="nc-title">タイトル</label>
+                                <input class="input" id="nc-title" type="text" placeholder="記事タイトル" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="nc-subtitle">サブタイトル</label>
+                                <input class="input" id="nc-subtitle" type="text" placeholder="サブタイトル（任意）">
+                            </div>
+                            <div class="form-group">
+                                <label for="nc-type">タイプ</label>
+                                <div id="nc-type-slot"></div>
+                            </div>
+                            <div class="form-group">
+                                <label for="nc-date">日付</label>
+                                <input class="input" id="nc-date" type="date" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="nc-tags">タグ</label>
+                                <input class="input" id="nc-tags" type="text" placeholder="カンマ区切り（任意）">
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-top:.6rem">
+                            <label for="nc-content">本文（Markdown）</label>
+                            <textarea class="input" id="nc-content" rows="12" placeholder="記事の本文..."
+                                style="resize:vertical;font-family:monospace;font-size:.85rem"></textarea>
+                        </div>
+                        <div style="margin-top:.6rem;display:flex;gap:.6rem;align-items:center">
+                            <button type="submit" class="btn btn-primary">記事を作成</button>
+                            <span id="news-msg" style="font-size:.82rem;font-weight:700"></span>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="table-wrap">
+                    <table class="table admin-table">
+                        <colgroup>
+                            <col style="width:auto">
+                            <col style="width:6rem">
+                            <col style="width:7rem">
+                            <col style="width:8rem">
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th class="ellipsis-cell">タイトル / スラッグ</th>
+                                <th>タイプ</th>
+                                <th>日付</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="news-list">
+                            <tr class="empty-row">
+                                <td colspan="4">読み込み中...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- News edit modal -->
+            <div id="news-edit-overlay"
+                style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;overflow-y:auto">
+                <div id="news-edit-modal"
+                    style="max-width:1000px;margin:2rem auto;padding:2rem;background:var(--bg2);border-radius:16px;border:1px solid var(--border);box-shadow:0 24px 80px rgba(0,0,0,.55)">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.2rem">
+                        <strong style="font-size:1.15rem">記事を編集</strong>
+                        <button id="news-edit-close" class="btn btn-ghost btn-sm">✕ 閉じる</button>
+                    </div>
+                    <form id="news-edit-form">
+                        <input type="hidden" id="ne-id">
+                        <div class="create-form">
+                            <div class="form-group">
+                                <label for="ne-slug">スラッグ</label>
+                                <input class="input" id="ne-slug" type="text" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="ne-title">タイトル</label>
+                                <input class="input" id="ne-title" type="text" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="ne-subtitle">サブタイトル</label>
+                                <input class="input" id="ne-subtitle" type="text">
+                            </div>
+                            <div class="form-group">
+                                <label for="ne-type">タイプ</label>
+                                <div id="ne-type-slot"></div>
+                            </div>
+                            <div class="form-group">
+                                <label for="ne-date">日付</label>
+                                <input class="input" id="ne-date" type="date" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="ne-tags">タグ</label>
+                                <input class="input" id="ne-tags" type="text">
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-top:.6rem">
+                            <label for="ne-content">本文（Markdown）</label>
+                            <textarea class="input" id="ne-content" rows="16"
+                                style="resize:vertical;font-family:monospace;font-size:.85rem"></textarea>
+                        </div>
+                        <div style="margin-top:.8rem;display:flex;gap:.6rem;align-items:center">
+                            <button type="submit" class="btn btn-primary">保存</button>
+                            <span id="news-edit-msg" style="font-size:.82rem;font-weight:700"></span>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Policies tab -->
+            <div class="tab-panel" id="tab-policies" style="display:none">
+                <div class="card">
+                    <div class="section-title">サービスポリシー設定</div>
+                    <form id="policy-form" style="margin-top:1rem;display:grid;gap:.8rem">
+                        <div class="create-form">
+                            <div class="form-group">
+                                <label>デフォルトストレージ上限 (MB)</label>
+                                <input class="input" id="pol-storage" type="number" min="0" placeholder="例: 10240">
+                            </div>
+                            <div class="form-group">
+                                <label>最大ファイルサイズ (MB)</label>
+                                <input class="input" id="pol-filesize" type="number" min="0" placeholder="例: 5120">
+                            </div>
+                            <div class="form-group">
+                                <label>デフォルト有効期限 (日)</label>
+                                <input class="input" id="pol-expiry" type="number" min="0" placeholder="0=無制限">
+                            </div>
+                            <div class="form-group">
+                                <label>最大有効期限 (日)</label>
+                                <input class="input" id="pol-max-expiry" type="number" min="0" placeholder="0=無制限">
+                            </div>
+                            <div class="form-group">
+                                <label>セッション有効期間 (秒)</label>
+                                <input class="input" id="pol-session" type="number" min="0" placeholder="例: 2592000">
+                            </div>
+                            <div class="form-group">
+                                <label>デフォルトチャンクサイズ (MB)</label>
+                                <input class="input" id="pol-chunk" type="number" min="0" placeholder="例: 10">
+                            </div>
+                            <div class="form-group">
+                                <label>最大同時チャンク数</label>
+                                <input class="input" id="pol-chunk-concurrency" type="number" min="1"
+                                    placeholder="例: 12">
+                            </div>
+                            <div class="form-group">
+                                <label>ZIP最大ファイル数</label>
+                                <input class="input" id="pol-zip-count" type="number" min="0" placeholder="例: 100">
+                            </div>
+                            <div class="form-group">
+                                <label>ZIP最大合計サイズ (MB)</label>
+                                <input class="input" id="pol-zip-size" type="number" min="0" placeholder="例: 2048">
+                            </div>
+                        </div>
+                        <div>
+                            <button type="submit" class="btn btn-primary">ポリシーを保存</button>
+                            <span id="pol-msg" style="margin-left:.8rem;font-size:.85rem;font-weight:700"></span>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="/js/particles.js"></script>
+    <script src="/js/file-row.js"></script>
+    <script type="module" src="/js/nav.js"></script>
+    <script type="module">
+        import { auth } from '/js/core/auth.js';
+        import { api } from '/js/core/api.js';
+        import { dialog } from '/js/ui/dialog.js';
+        import { bindTypeDropdown, buildTypeDropdownHTML, initDropdowns } from '/js/ui/dropdown.js';
+
+        if (window.__vaAdminInit) throw new Error('already initialized');
+        window.__vaAdminInit = true;
+        document.addEventListener('va:navigate-away', () => { window.__vaAdminInit = false; });
+
+        if (!auth.requireAuth()) throw new Error('redirect');
+        if (!auth.isAdmin()) { location.href = '/'; throw new Error('not admin'); }
+
+        const me = auth.getUser();
+        document.getElementById('nav-username').textContent = me?.username ?? '';
+        document.getElementById('drawerUsername').textContent = me?.username ?? '';
+
+        function esc(s) { return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+        function fmtBytes(b) {
+            if (!b && b !== 0) return '—';
+            if (b >= 1073741824) return (b / 1073741824).toFixed(2) + ' GB';
+            if (b >= 1048576) return (b / 1048576).toFixed(1) + ' MB';
+            if (b >= 1024) return (b / 1024).toFixed(0) + ' KB';
+            return b + ' B';
+        }
+
+        function fmtDate(ts) {
+            if (!ts) return '—';
+            return new Date(typeof ts === 'number' ? ts * 1000 : ts).toLocaleDateString('ja-JP');
+        }
+
+        const NEWS_TYPE_OPTIONS = [
+            { value: 'news', label: 'news' },
+            { value: 'update', label: 'update' },
+            { value: 'feature', label: 'feature' },
+            { value: 'guide', label: 'guide' },
+            { value: 'note', label: 'note' },
+            { value: 'info', label: 'info' },
+            { value: 'warning', label: 'warning' },
+            { value: 'maintenance', label: 'maintenance' },
+            { value: 'danger', label: 'danger' },
+            { value: 'security', label: 'security' },
+            { value: 'hotfix', label: 'hotfix' },
+            { value: 'release', label: 'release' },
+            { value: 'event', label: 'event' },
+        ];
+
+        function animateAdminPage() {
+            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+            [document.querySelector('.admin-stats'), document.querySelector('.tabs'), document.querySelector('.tab-panel.active')].forEach((el, index) => {
+                if (!el) return;
+                el.animate([
+                    { opacity: 0, transform: 'translateY(18px)' },
+                    { opacity: 1, transform: 'translateY(0)' }
+                ], {
+                    duration: 400,
+                    delay: index * 60,
+                    easing: 'ease',
+                    fill: 'both'
+                });
+            });
+        }
+
+        function setDropdownValue(inputId, value) {
+            const hidden = document.getElementById(inputId);
+            const ddEl = document.getElementById(`${inputId}-dd`);
+            if (!hidden || !ddEl) return;
+            const menu = ddEl._ddMenu ?? ddEl.querySelector(':scope > .dd-menu');
+            const item = menu?.querySelector(`.dd-item[data-value="${value}"]`) ?? menu?.querySelector('.dd-item');
+            if (!item) return;
+            hidden.value = item.dataset.value;
+            const labelEl = ddEl.querySelector('.dd-label');
+            if (labelEl) labelEl.textContent = item.textContent.trim();
+            menu.querySelectorAll('.dd-item').forEach(menuItem => menuItem.classList.remove('dd-active'));
+            item.classList.add('dd-active');
+        }
+
+        function switchTab(nextTab) {
+            const nextPanel = document.getElementById('tab-' + nextTab);
+            if (!nextPanel || nextPanel.classList.contains('active')) return;
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === nextTab));
+            document.querySelectorAll('.tab-panel').forEach(panel => {
+                if (panel === nextPanel) return;
+                panel.classList.remove('active');
+                panel.style.display = 'none';
+            });
+            nextPanel.style.display = '';
+            nextPanel.classList.add('active');
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                nextPanel.animate([
+                    { opacity: 0, transform: 'translateY(18px)' },
+                    { opacity: 1, transform: 'translateY(0)' }
+                ], {
+                    duration: 400,
+                    easing: 'ease',
+                    fill: 'both'
+                });
+            }
+        }
+
+        document.getElementById('nc-type-slot').innerHTML = buildTypeDropdownHTML('nc-type', NEWS_TYPE_OPTIONS, 'news');
+        document.getElementById('ne-type-slot').innerHTML = buildTypeDropdownHTML('ne-type', NEWS_TYPE_OPTIONS, 'news');
+
+        bindTypeDropdown({ ddEl: document.getElementById('nc-type-dd'), hiddenInput: document.getElementById('nc-type') });
+        bindTypeDropdown({ ddEl: document.getElementById('ne-type-dd'), hiddenInput: document.getElementById('ne-type') });
+
+        // Tabs
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                switchTab(btn.dataset.tab);
+            });
+        });
+
+        animateAdminPage();
+
+        // ── Stats ──────────────────────────────────────────────
+        let allUsers = [];
+        let allFiles = [];
+
+        async function loadStats() {
+            try {
+                const res = await api.admin.users.list();
+                allUsers = res?.items ?? [];
+                document.getElementById('stat-users').textContent = allUsers.length;
+                const totalStorage = allUsers.reduce((acc, u) => acc + (u.storageUsedBytes ?? 0), 0);
+                document.getElementById('stat-storage').textContent = fmtBytes(totalStorage);
+                renderUsers(allUsers);
+            } catch { }
+        }
+
+        async function loadFileStats() {
+            try {
+                const res = await api.admin.files.list({});
+                allFiles = res?.items ?? [];
+                filePage = 1;
+                document.getElementById('stat-files').textContent = allFiles.length;
+                renderAdminFiles();
+            } catch { }
+        }
+
+        // ── User Management ────────────────────────────────────
+        function renderUsers(users) {
+            const tbody = document.getElementById('user-list');
+            if (!users.length) {
+                tbody.innerHTML = '<tr class="empty-row"><td colspan="5">ユーザーがいません</td></tr>';
+                return;
+            }
+            tbody.innerHTML = users.map(u => {
+                const used = u.storageUsedBytes ?? 0;
+                const quota = u.storageLimitBytes ?? 0;
+                const usedPct = quota > 0 ? Math.min(100, (used / quota) * 100) : 0;
+                return `
+                    <tr>
+                        <td class="ellipsis-cell" title="${esc(u.username)}"><strong>${esc(u.username)}</strong></td>
+                        <td>${u.role === 'admin' ? '<span class="badge badge-gold">admin</span>' : '<span class="badge badge-gray">user</span>'}</td>
+                        <td>
+                            <div class="admin-usage-inline">
+                                <span class="quota-text">${fmtBytes(used)} / ${fmtBytes(quota)}</span>
+                                <div class="quota-bar-wrap"><div class="quota-bar" style="width:${usedPct.toFixed(1)}%"></div></div>
+                                <span class="file-count-text">${u.fileCount ?? 0}件</span>
+                            </div>
+                        </td>
+                        <td>${u.status === 'active' ? '<span class="badge badge-green">有効</span>' : '<span class="badge badge-red">無効</span>'}</td>
+                        <td>
+                            <div class="dd admin-action-dd" data-id="${esc(u.id)}" data-username="${esc(u.username)}" data-quota="${quota}" data-limit="${u.maxFileSizeBytes ?? 0}" data-status="${u.status}">
+                                <button type="button" class="dd-trigger btn btn-secondary btn-sm" style="width:auto;font-size:.75rem;display:inline-flex;align-items:center;gap:.3rem">
+                                    <span>操作</span>
+                                    <svg viewBox="0 0 20 20" fill="currentColor" style="width:11px;height:11px;flex-shrink:0"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                                </button>
+                                <div class="dd-menu dd-menu-right">
+                                    ${u.status === 'active'
+                        ? '<button type="button" class="dd-item" data-action="deactivate">無効化</button>'
+                        : '<button type="button" class="dd-item" data-action="activate">有効化</button>'}
+                                    <button type="button" class="dd-item" data-action="quota">クォータ変更</button>
+                                    <button type="button" class="dd-item" data-action="filelimit">ファイル上限変更</button>
+                                    <button type="button" class="dd-item" data-action="rename">名前変更</button>
+                                    <button type="button" class="dd-item" data-action="rotate-token">トークン再発行</button>
+                                    <button type="button" class="dd-item" data-action="sessions">セッション確認</button>
+                                    <div class="dd-sep"></div>
+                                    <button type="button" class="dd-item dd-item-danger" data-action="delete">削除</button>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>`;
+            }).join('');
+
+            bindUserEvents();
+        }
+
+        function bindUserEvents() {
+            const tbody = document.getElementById('user-list');
+            initDropdowns(tbody);
+            tbody.querySelectorAll('.admin-action-dd').forEach(dd => {
+                dd.querySelectorAll('.dd-item[data-action]').forEach(item => {
+                    item.addEventListener('click', async () => {
+                        const action = item.dataset.action;
+                        const id = dd.dataset.id;
+                        const username = dd.dataset.username;
+
+                        try {
+                            switch (action) {
+                                case 'deactivate':
+                                    if (!await dialog.confirm({ title: '確認', message: `${username} を無効化しますか？`, confirmLabel: '無効化', danger: true })) return;
+                                    await api.admin.users.disable(id);
+                                    break;
+                                case 'activate':
+                                    await api.admin.users.enable(id);
+                                    break;
+                                case 'quota': {
+                                    const currentMB = Math.round((parseInt(dd.dataset.quota, 10) || 0) / 1048576);
+                                    const input = await dialog.prompt({ title: 'クォータ変更', label: `新しいクォータ (MB) \u00a0現在: ${currentMB} MB \u00a0※0=無制限`, placeholder: String(currentMB), defaultValue: String(currentMB) });
+                                    if (input === null) return;
+                                    const mb = parseInt(input, 10);
+                                    if (isNaN(mb) || mb < 0) { await dialog.alert('無効な値です', 'エラー'); return; }
+                                    await api.admin.users.storageLimit(id, mb * 1048576);
+                                    break;
+                                }
+                                case 'filelimit': {
+                                    const currentMB = Math.round((parseInt(dd.dataset.limit, 10) || 0) / 1048576);
+                                    const input = await dialog.prompt({ title: 'ファイル上限変更', label: `1ファイル最大サイズ (MB) \u00a0現在: ${currentMB} MB`, placeholder: String(currentMB), defaultValue: String(currentMB) });
+                                    if (input === null) return;
+                                    const mb = parseInt(input, 10);
+                                    if (isNaN(mb) || mb <= 0) { await dialog.alert('無効な値です', 'エラー'); return; }
+                                    await api.admin.users.fileLimit(id, mb * 1048576);
+                                    break;
+                                }
+                                case 'rename': {
+                                    const name = await dialog.prompt({ title: 'ユーザー名変更', label: '新しいユーザー名', defaultValue: username });
+                                    if (!name || !name.trim()) return;
+                                    await api.admin.users.rename(id, name.trim());
+                                    break;
+                                }
+                                case 'rotate-token': {
+                                    if (!await dialog.confirm({ title: 'トークン再発行', message: `${username} のログイントークンを再発行しますか？\n既存の全セッションが無効になります。`, confirmLabel: '再発行', danger: true })) return;
+                                    const res = await api.admin.users.rotateToken(id);
+                                    dialog.showToken({ title: '新しいログイントークン', token: res?.login_token ?? res?.loginToken ?? '—', description: `${username} の新しいトークンです。このウィンドウを閉じると確認できなくなります。` });
+                                    break;
+                                }
+                                case 'sessions': {
+                                    const sres = await api.admin.users.sessions(id);
+                                    const items = sres?.items ?? [];
+                                    if (!items.length) { await dialog.alert(`${username} のセッションはありません`, 'セッション一覧'); return; }
+                                    const esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                                    const now = Date.now();
+                                    const rows = items.map(s => {
+                                        const status = s.revokedAt ? `<span style="color:var(--red)">失効</span>` : new Date(s.expiresAt).getTime() < now ? `<span style="color:var(--text-sub)">期限切れ</span>` : `<span style="color:var(--green)">有効</span>`;
+                                        return `<tr>
+                                            <td style="white-space:nowrap">${esc(s.ipAddress ?? '不明')}</td>
+                                            <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(s.userAgent)}">${esc(s.userAgent ?? '—')}</td>
+                                            <td style="white-space:nowrap">${esc(new Date(s.createdAt).toLocaleString('ja-JP'))}</td>
+                                            <td style="white-space:nowrap">${esc(new Date(s.lastUsedAt).toLocaleString('ja-JP'))}</td>
+                                            <td>${status}</td>
+                                        </tr>`;
+                                    }).join('');
+                                    await dialog.htmlAlert(
+                                        `<div style="overflow-x:auto"><table class="table" style="font-size:.8rem;width:100%"><thead><tr><th>IP</th><th>UA</th><th>作成日時</th><th>最終使用</th><th>状態</th></tr></thead><tbody>${rows}</tbody></table></div>`,
+                                        `${esc(username)} のセッション (${items.length}件)`
+                                    );
+                                    break;
+                                }
+                                case 'delete':
+                                    if (!await dialog.confirm({ title: 'ユーザー削除', message: `「${username}」を完全に削除しますか？\nこの操作は取り消せません。`, confirmLabel: '削除', danger: true })) return;
+                                    await api.admin.users.delete(id);
+                                    break;
+                            }
+                            loadStats();
+                        } catch { /* ignore */ }
+                    });
+                });
+            });
+        }
+
+        // ── Create User ────────────────────────────────────────
+        document.getElementById('create-user-form').addEventListener('submit', async e => {
+            e.preventDefault();
+            const username = document.getElementById('new-username').value.trim();
+            const role = document.getElementById('new-role').value;
+            const msg = document.getElementById('msg');
+            if (!username) { msg.textContent = 'ユーザー名を入力してください'; msg.className = 'err'; return; }
+            msg.textContent = '';
+            try {
+                const res = await api.admin.users.create({ username, role });
+                const token = res?.login_token;
+                msg.textContent = 'ユーザーを作成しました';
+                msg.className = 'ok';
+                document.getElementById('new-username').value = '';
+                if (token) {
+                    document.getElementById('new-token-out').value = token;
+                    document.getElementById('new-token-area').style.display = '';
+                }
+                loadStats();
+            } catch (err) {
+                msg.textContent = err?.message ?? '作成に失敗しました';
+                msg.className = 'err';
+            }
+        });
+
+        function copyToClipboard(text) {
+            if (navigator.clipboard) {
+                return navigator.clipboard.writeText(text);
+            }
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            return Promise.resolve();
+        }
+        document.getElementById('copy-token-btn').addEventListener('click', () => {
+            const input = document.getElementById('new-token-out');
+            copyToClipboard(input.value).catch(() => { });
+            const btn = document.getElementById('copy-token-btn');
+            btn.textContent = 'コピー済み';
+            btn.classList.add('copied');
+            setTimeout(() => { btn.textContent = 'コピー'; btn.classList.remove('copied'); }, 2000);
+        });
+
+        // ── File Management ────────────────────────────────────
+        const FILE_PAGE_SIZE = 100;
+        let filePage = 1;
+        function updateAdminBulkDeleteButton() {
+            const checked = Array.from(document.querySelectorAll('.admin-file-check:checked'));
+            const total = document.querySelectorAll('.admin-file-check').length;
+            const selectAll = document.getElementById('admin-select-all');
+            const button = document.getElementById('admin-bulk-delete-btn');
+
+            if (selectAll) {
+                selectAll.checked = total > 0 && checked.length === total;
+                selectAll.indeterminate = checked.length > 0 && checked.length < total;
+            }
+
+            button.classList.toggle('bulk-visible', checked.length > 0);
+            button.textContent = checked.length > 0 ? `選択を削除 (${checked.length})` : '選択を削除';
+        }
+
+        function renderAdminFiles() {
+            const tbody = document.getElementById('admin-file-list');
+            const totalPages = Math.max(1, Math.ceil(allFiles.length / FILE_PAGE_SIZE));
+            if (filePage > totalPages) filePage = totalPages;
+            const start = (filePage - 1) * FILE_PAGE_SIZE;
+            const slice = allFiles.slice(start, start + FILE_PAGE_SIZE);
+
+            if (!allFiles.length) {
+                tbody.innerHTML = '<tr class="empty-row"><td colspan="7">ファイルがありません</td></tr>';
+            } else {
+                tbody.innerHTML = slice.map(f => {
+                    return window.buildFileRow({
+                        id: f.id,
+                        safe_name: f.safe_name,
+                        size: f.size,
+                        created_at: f.created_at,
+                        expires_at: f.expires_at,
+                        owner_username: f.owner_username,
+                        public: f.public
+                    }, {
+                        cbClass: 'admin-file-check',
+                        showUser: true,
+                        showDl: false
+                    });
+                }).join('');
+            }
+
+            document.getElementById('file-page-info').textContent = allFiles.length > 0
+                ? (start + 1) + '\u2013' + Math.min(start + FILE_PAGE_SIZE, allFiles.length) + ' / ' + allFiles.length + '\u4ef6'
+                : '0\u4ef6';
+            document.getElementById('file-page-prev').disabled = filePage <= 1;
+            document.getElementById('file-page-next').disabled = filePage >= totalPages;
+
+            document.querySelectorAll('.fr-del-btn').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    if (!await dialog.confirm({ title: 'ファイル削除', message: 'このファイルを削除しますか？', confirmLabel: '削除', danger: true })) return;
+                    btn.disabled = true;
+                    try {
+                        await api.admin.files.delete(btn.dataset.id);
+                        allFiles = allFiles.filter(f => f.id !== btn.dataset.id);
+                        document.getElementById('stat-files').textContent = allFiles.length;
+                        renderAdminFiles();
+                    } catch { btn.disabled = false; }
+                });
+            });
+            document.querySelectorAll('.admin-file-check').forEach(cb => {
+                cb.addEventListener('change', updateAdminBulkDeleteButton);
+            });
+
+            const selectAll = document.getElementById('admin-select-all');
+            if (selectAll) {
+                selectAll.checked = false;
+                selectAll.indeterminate = false;
+                selectAll.onchange = function () {
+                    document.querySelectorAll('.admin-file-check').forEach(cb => { cb.checked = this.checked; });
+                    updateAdminBulkDeleteButton();
+                };
+            }
+            updateAdminBulkDeleteButton();
+        }
+
+        document.getElementById('file-search-btn').addEventListener('click', async () => {
+            const q = document.getElementById('file-search-input').value.trim();
+            try {
+                const res = await api.admin.files.list({ search: q || undefined });
+                allFiles = res?.items ?? [];
+                filePage = 1;
+                document.getElementById('stat-files').textContent = allFiles.length;
+                renderAdminFiles();
+            } catch { }
+        });
+
+        document.getElementById('file-search-input').addEventListener('keydown', e => {
+            if (e.key === 'Enter') document.getElementById('file-search-btn').click();
+        });
+
+        document.getElementById('file-page-prev').addEventListener('click', () => {
+            if (filePage > 1) { filePage--; renderAdminFiles(); }
+        });
+        document.getElementById('file-page-next').addEventListener('click', () => {
+            filePage++; renderAdminFiles();
+        });
+        document.getElementById('admin-bulk-delete-btn').addEventListener('click', async e => {
+            const button = e.currentTarget;
+            const checked = Array.from(document.querySelectorAll('.admin-file-check:checked'));
+            if (!checked.length) return;
+            if (!e.shiftKey && !await dialog.confirm({ title: '一括削除', message: checked.length + ' 件を削除しますか？', confirmLabel: '削除', danger: true })) return;
+
+            button.disabled = true;
+            try {
+                const fileIds = checked.map(cb => String(cb.dataset.id || '')).filter(id => id.startsWith('f:')).map(id => id.slice(2));
+                await Promise.all(fileIds.map(id => api.admin.files.delete(id).catch(() => { })));
+                const deletedIds = new Set(fileIds);
+                allFiles = allFiles.filter(file => !deletedIds.has(file.id));
+                document.getElementById('stat-files').textContent = allFiles.length;
+                const totalPages = Math.max(1, Math.ceil(allFiles.length / FILE_PAGE_SIZE));
+                if (filePage > totalPages) filePage = totalPages;
+                renderAdminFiles();
+            } finally {
+                button.disabled = false;
+            }
+        });
+
+        // ── Policies ───────────────────────────────────────────
+        async function loadPolicies() {
+            try {
+                const p = await api.admin.policies.get();
+                document.getElementById('pol-storage').value = p.defaultStorageLimitBytes ? Math.round(p.defaultStorageLimitBytes / 1048576) : '';
+                document.getElementById('pol-filesize').value = p.defaultMaxFileSizeBytes ? Math.round(p.defaultMaxFileSizeBytes / 1048576) : '';
+                document.getElementById('pol-expiry').value = p.defaultFileExpiryDays ?? 0;
+                document.getElementById('pol-max-expiry').value = p.maxFileExpiryDays ?? 0;
+                document.getElementById('pol-session').value = p.sessionTtlSeconds ?? '';
+                document.getElementById('pol-chunk').value = p.defaultChunkSizeBytes ? Math.round(p.defaultChunkSizeBytes / 1048576) : '';
+                document.getElementById('pol-chunk-concurrency').value = p.maxChunkConcurrencyPerUser ?? 12;
+                document.getElementById('pol-zip-count').value = p.maxZipFileCount ?? '';
+                document.getElementById('pol-zip-size').value = p.maxZipTotalBytes ? Math.round(p.maxZipTotalBytes / 1048576) : '';
+            } catch { }
+        }
+
+        document.getElementById('policy-form').addEventListener('submit', async e => {
+            e.preventDefault();
+            const msg = document.getElementById('pol-msg');
+            const v = n => { const x = parseFloat(n.value); return isNaN(x) ? undefined : x; };
+            const mb = n => { const x = parseFloat(n.value); return isNaN(x) || x <= 0 ? undefined : Math.round(x * 1048576); };
+            const payload = {};
+            const storage = mb(document.getElementById('pol-storage'));
+            if (storage !== undefined) payload.defaultStorageLimitBytes = storage;
+            const filesize = mb(document.getElementById('pol-filesize'));
+            if (filesize !== undefined) payload.defaultMaxFileSizeBytes = filesize;
+            const expiry = v(document.getElementById('pol-expiry'));
+            if (expiry !== undefined) payload.defaultFileExpiryDays = expiry === 0 ? null : expiry;
+            const maxExpiry = v(document.getElementById('pol-max-expiry'));
+            if (maxExpiry !== undefined) payload.maxFileExpiryDays = maxExpiry === 0 ? null : maxExpiry;
+            const session = v(document.getElementById('pol-session'));
+            if (session !== undefined) payload.sessionTtlSeconds = session;
+            const chunk = mb(document.getElementById('pol-chunk'));
+            if (chunk !== undefined) payload.defaultChunkSizeBytes = chunk;
+            const chunkConcurrency = v(document.getElementById('pol-chunk-concurrency'));
+            if (chunkConcurrency !== undefined) payload.maxChunkConcurrencyPerUser = chunkConcurrency;
+            const zipCount = v(document.getElementById('pol-zip-count'));
+            if (zipCount !== undefined) payload.maxZipFileCount = zipCount;
+            const zipSize = mb(document.getElementById('pol-zip-size'));
+            if (zipSize !== undefined) payload.maxZipTotalBytes = zipSize;
+
+            try {
+                await api.admin.policies.update(payload);
+                msg.textContent = '保存しました';
+                msg.style.color = 'var(--green)';
+            } catch {
+                msg.textContent = '保存に失敗しました';
+                msg.style.color = 'var(--red)';
+            }
+            setTimeout(() => { msg.textContent = ''; }, 3000);
+        });
+
+        // ── Init ───────────────────────────────────────────────
+        loadStats();
+        loadFileStats();
+        loadPolicies();
+        loadNews();
+
+        // ── News Management ────────────────────────────────────
+        let allNews = [];
+
+        async function loadNews() {
+            try {
+                const res = await api.admin.news.list();
+                allNews = res?.items ?? [];
+                renderNewsList();
+            } catch {
+                document.getElementById('news-list').innerHTML =
+                    '<tr class="empty-row"><td colspan="5">読み込みに失敗しました</td></tr>';
+            }
+        }
+
+        const newsTypeColors = {
+            news: 'var(--accent3)',
+            update: 'var(--accent2)',
+            feature: '#8b5cf6',
+            guide: 'var(--green)',
+            note: 'var(--text-sub)',
+            info: '#06b6d4',
+            warning: '#f59e0b',
+            maintenance: '#64748b',
+            danger: 'var(--red)',
+            security: '#dc2626',
+            hotfix: '#f97316',
+            release: '#10b981',
+            event: '#ec4899',
+        };
+
+        function renderNewsList() {
+            const tbody = document.getElementById('news-list');
+            if (!allNews.length) {
+                tbody.innerHTML = '<tr class="empty-row"><td colspan="5">記事がありません</td></tr>';
+                return;
+            }
+            tbody.innerHTML = allNews.map(a => `
+                <tr>
+                    <td class="ellipsis-cell" title="${esc(a.slug)}">
+                        <strong>${esc(a.title)}</strong>
+                        <span style="font-size:.75rem;color:var(--text-sub);display:block">${esc(a.slug)}</span>
+                    </td>
+                    <td><span class="badge" style="background:${newsTypeColors[a.type] ?? 'var(--bg3)'};color:#fff">${esc(a.type)}</span></td>
+                    <td>${esc(a.date)}</td>
+                    <td>
+                        <div class="fr-actions">
+                            <button class="btn btn-ghost btn-sm news-edit-btn" data-id="${esc(a.id)}">編集</button>
+                            <button class="btn btn-ghost btn-sm news-del-btn" data-id="${esc(a.id)}" data-title="${esc(a.title)}" style="color:var(--red)">削除</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+
+            tbody.querySelectorAll('.news-edit-btn').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const id = btn.dataset.id;
+                    try {
+                        const a = await api.admin.news.get(id);
+                        document.getElementById('ne-id').value = a.id;
+                        document.getElementById('ne-slug').value = a.slug;
+                        document.getElementById('ne-title').value = a.title;
+                        document.getElementById('ne-subtitle').value = a.subtitle ?? '';
+                        setDropdownValue('ne-type', a.type);
+                        document.getElementById('ne-date').value = a.date;
+                        document.getElementById('ne-tags').value = a.tags ?? '';
+                        document.getElementById('ne-content').value = a.content ?? '';
+                        document.getElementById('news-edit-msg').textContent = '';
+                        const overlay = document.getElementById('news-edit-overlay');
+                        const modal = document.getElementById('news-edit-modal');
+                        overlay.classList.remove('closing');
+                        modal.classList.remove('closing');
+                        overlay.style.display = '';
+                        void modal.offsetWidth;
+                        modal.style.animation = 'none';
+                        void modal.offsetWidth;
+                        modal.style.animation = '';
+                    } catch {
+                        await dialog.alert('記事の取得に失敗しました', 'エラー');
+                    }
+                });
+            });
+
+            tbody.querySelectorAll('.news-del-btn').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    if (!await dialog.confirm({ title: '記事削除', message: `「${btn.dataset.title}」を削除しますか？`, confirmLabel: '削除', danger: true })) return;
+                    btn.disabled = true;
+                    try {
+                        await api.admin.news.delete(btn.dataset.id);
+                        allNews = allNews.filter(a => a.id !== btn.dataset.id);
+                        renderNewsList();
+                    } catch {
+                        btn.disabled = false;
+                        await dialog.alert('削除に失敗しました', 'エラー');
+                    }
+                });
+            });
+        }
+
+        document.getElementById('nc-date').value = new Date().toISOString().slice(0, 10);
+
+        document.getElementById('news-create-form').addEventListener('submit', async e => {
+            e.preventDefault();
+            const msg = document.getElementById('news-msg');
+            msg.textContent = '';
+            msg.style.color = '';
+            const payload = {
+                slug: document.getElementById('nc-slug').value.trim(),
+                title: document.getElementById('nc-title').value.trim(),
+                subtitle: document.getElementById('nc-subtitle').value.trim(),
+                type: document.getElementById('nc-type').value,
+                date: document.getElementById('nc-date').value,
+                tags: document.getElementById('nc-tags').value.trim(),
+                content: document.getElementById('nc-content').value,
+            };
+            try {
+                await api.admin.news.create(payload);
+                msg.textContent = '記事を作成しました';
+                msg.style.color = 'var(--green)';
+                document.getElementById('nc-slug').value = '';
+                document.getElementById('nc-title').value = '';
+                document.getElementById('nc-subtitle').value = '';
+                setDropdownValue('nc-type', 'news');
+                document.getElementById('nc-tags').value = '';
+                document.getElementById('nc-content').value = '';
+                await loadNews();
+            } catch (err) {
+                msg.textContent = err?.message ?? '作成に失敗しました';
+                msg.style.color = 'var(--red)';
+            }
+            setTimeout(() => { msg.textContent = ''; }, 4000);
+        });
+
+        document.getElementById('news-edit-close').addEventListener('click', () => {
+            const overlay = document.getElementById('news-edit-overlay');
+            const modal = document.getElementById('news-edit-modal');
+            overlay.classList.add('closing');
+            modal.classList.add('closing');
+            modal.addEventListener('animationend', function h() {
+                modal.removeEventListener('animationend', h);
+                overlay.style.display = 'none';
+                overlay.classList.remove('closing');
+                modal.classList.remove('closing');
+            });
+        });
+
+        document.getElementById('news-edit-form').addEventListener('submit', async e => {
+            e.preventDefault();
+            const msg = document.getElementById('news-edit-msg');
+            msg.textContent = '';
+            const id = document.getElementById('ne-id').value;
+            const payload = {
+                slug: document.getElementById('ne-slug').value.trim(),
+                title: document.getElementById('ne-title').value.trim(),
+                subtitle: document.getElementById('ne-subtitle').value.trim(),
+                type: document.getElementById('ne-type').value,
+                date: document.getElementById('ne-date').value,
+                tags: document.getElementById('ne-tags').value.trim(),
+                content: document.getElementById('ne-content').value,
+            };
+            try {
+                await api.admin.news.update(id, payload);
+                msg.textContent = '保存しました';
+                msg.style.color = 'var(--green)';
+                await loadNews();
+                setTimeout(() => {
+                    const overlay = document.getElementById('news-edit-overlay');
+                    const modal = document.getElementById('news-edit-modal');
+                    overlay.classList.add('closing');
+                    modal.classList.add('closing');
+                    modal.addEventListener('animationend', function h() {
+                        modal.removeEventListener('animationend', h);
+                        overlay.style.display = 'none';
+                        overlay.classList.remove('closing');
+                        modal.classList.remove('closing');
+                    });
+                }, 800);
+            } catch (err) {
+                msg.textContent = err?.message ?? '保存に失敗しました';
+                msg.style.color = 'var(--red)';
+            }
+        });
+
+        if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => { });
+    </script>
+    <script src="/js/dev-reload.js?v=1" defer></script>
+</body>
+
+</html>

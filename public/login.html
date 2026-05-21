@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>videoapp — ログイン</title>
+    <link rel="icon" href="/icons/icon-192.png">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+JP:wght@400;500;700&display=swap"
+        rel="stylesheet">
+
+    <script src="/js/nav-theme.js"></script>
+    <link rel="stylesheet" href="/css/common.css">
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .login-wrap {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 420px;
+            padding: 0 1.5rem;
+            animation: fadeUp .5s ease both;
+        }
+
+        .login-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(59, 130, 246, .1);
+            border: 1px solid var(--border);
+            color: var(--accent2);
+            font-size: .75rem;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            padding: 4px 14px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            margin-bottom: 1.4rem;
+        }
+
+        .login-tag-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--accent2);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .login-logo {
+            font-size: 2.4rem;
+            font-weight: 900;
+            letter-spacing: -1px;
+            margin-bottom: .4rem;
+            background: linear-gradient(90deg, #3b82f6, #60a5fa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            filter: drop-shadow(0 0 20px rgba(59, 130, 246, .4));
+        }
+
+        .login-sub {
+            color: var(--text-sub);
+            font-size: .9rem;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+
+        .login-card {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 2rem;
+            box-shadow: 0 24px 64px rgba(0, 0, 0, .4);
+        }
+
+        #error-msg {
+            min-height: 1.4rem;
+            color: var(--red);
+            font-size: .85rem;
+            margin-top: .8rem;
+            font-weight: 600;
+            transition: opacity .2s;
+        }
+
+        #error-msg.visible {
+            background: rgba(239, 68, 68, .12);
+            border: 1px solid rgba(239, 68, 68, .35);
+            padding: .55rem .75rem;
+            border-radius: 8px;
+            line-height: 1.5;
+        }
+
+        .login-footer {
+            text-align: center;
+            margin-top: 1.5rem;
+            font-size: .78rem;
+            color: var(--text-sub);
+        }
+
+        .token-wrap {
+            position: relative;
+        }
+
+        .token-eye {
+            position: absolute;
+            right: .75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-sub);
+            cursor: pointer;
+            display: flex;
+            padding: 2px;
+        }
+
+        .token-eye svg {
+            width: 16px;
+            height: 16px;
+        }
+    </style>
+</head>
+
+<body>
+    <button class="theme-toggle" id="theme-toggle" style="position:fixed;top:1rem;right:1rem;z-index:100"></button>
+    <canvas id="canvas"></canvas>
+    <div class="page-glow page-glow-1"></div>
+    <div class="page-glow page-glow-2"></div>
+
+    <div class="login-wrap">
+        <div class="login-tag">
+            <span class="login-tag-dot"></span>
+            Private File Storage
+        </div>
+        <div class="login-logo">videoapp</div>
+        <div class="login-sub">ログイントークンを入力してアクセスしてください</div>
+
+        <div class="login-card">
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="token-input">ログイントークン</label>
+                    <div class="token-wrap">
+                        <input id="token-input" class="input" type="password" placeholder="トークンを入力" required
+                            autocomplete="current-password" style="padding-right:2.5rem">
+                        <button type="button" class="token-eye" id="toggle-vis">
+                            <svg id="eye-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
+                                fill="currentColor">
+                                <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                                <path fill-rule="evenodd"
+                                    d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary w-full" style="justify-content:center;margin-top:.5rem"
+                    id="submit-btn">
+                    ログイン
+                </button>
+                <div id="error-msg"></div>
+            </form>
+        </div>
+        <div class="login-footer">videoapp — Restricted Access</div>
+    </div>
+
+    <script src="/js/particles.js"></script>
+    <script type="module">
+        import { auth } from '/js/core/auth.js';
+        import { api } from '/js/core/api.js';
+
+        if (window.__vaLoginInit) throw new Error('already initialized');
+        window.__vaLoginInit = true;
+        document.addEventListener('va:navigate-away', () => { window.__vaLoginInit = false; });
+
+        auth.requireGuest('/');
+
+        const form = document.getElementById('login-form');
+        const tokenEl = document.getElementById('token-input');
+        const errorEl = document.getElementById('error-msg');
+        const submitBtn = document.getElementById('submit-btn');
+        const toggleVis = document.getElementById('toggle-vis');
+
+        function finishLogin(result) {
+            auth.setSession(result.sessionToken ?? result.session_token, result.user, true);
+            window.location.href = '/';
+        }
+
+        function setLoadingState(isLoading) {
+            submitBtn.disabled = isLoading;
+            submitBtn.textContent = isLoading ? '認証中...' : 'ログイン';
+        }
+
+        toggleVis.addEventListener('click', () => {
+            const isPass = tokenEl.type === 'password';
+            tokenEl.type = isPass ? 'text' : 'password';
+        });
+
+        tokenEl.addEventListener('input', () => {
+            errorEl.textContent = '';
+            errorEl.classList.remove('visible');
+        });
+
+        form.addEventListener('submit', async e => {
+            e.preventDefault();
+            errorEl.textContent = '';
+            errorEl.classList.remove('visible');
+            setLoadingState(true);
+            try {
+                const res = await api.auth.login(tokenEl.value.trim());
+                finishLogin(res);
+            } catch (err) {
+                errorEl.textContent = err.status === 401
+                    ? 'トークンが正しくありません'
+                    : err?.message || 'ログインに失敗しました';
+                errorEl.classList.add('visible');
+                setLoadingState(false);
+            }
+        });
+
+    </script>
+    <script src="/js/dev-reload.js?v=1" defer></script>
+</body>
+
+</html>

@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>videoapp — 設定</title>
+    <link rel="icon" href="/icons/icon-192.png">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+JP:wght@400;500;700&display=swap"
+        rel="stylesheet">
+
+    <script src="/js/nav-theme.js"></script>
+    <link rel="stylesheet" href="/css/common.css">
+    <link rel="stylesheet" href="/css/app.css">
+    <style>
+        .settings-sections {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        #msg {
+            min-height: 1.4rem;
+            font-size: .85rem;
+            font-weight: 700;
+            margin-top: .5rem;
+        }
+
+        #msg.ok {
+            color: var(--green);
+        }
+
+        #msg.err {
+            color: var(--red);
+        }
+
+        .session-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: .6rem 0;
+            border-bottom: 1px solid var(--border);
+            gap: .5rem;
+        }
+
+        .session-row:last-child {
+            border-bottom: none;
+        }
+
+        .session-meta {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .session-device {
+            font-weight: 600;
+            font-size: .82rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .session-detail {
+            font-size: .72rem;
+            color: var(--text-sub);
+            display: flex;
+            gap: .8rem;
+            flex-wrap: wrap;
+        }
+
+        .session-badge {
+            font-size: .64rem;
+            padding: .1rem .45rem;
+            border-radius: 99px;
+            font-weight: 600;
+            letter-spacing: .02em;
+            flex-shrink: 0;
+        }
+
+        .session-badge-current {
+            background: rgba(34, 197, 94, .12);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, .3);
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="canvas"></canvas>
+    <div class="page-glow page-glow-1"></div>
+    <div class="page-glow page-glow-2"></div>
+
+    <nav id="nav">
+        <div class="nav-left">
+            <a class="nav-logo" href="/">
+                <span class="logo-text">video<em>app</em></span>
+            </a>
+        </div>
+        <ul class="nav-links">
+            <li><a href="/"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span class="nav-label">ホーム</span></a></li>
+            <li><a href="/upload.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><span class="nav-label">アップロード</span></a></li>
+            <li><a href="/files.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg><span class="nav-label">マイファイル</span></a></li>
+        </ul>
+        <div class="nav-right">
+            <span id="nav-username" class="nav-username"></span>
+            <button class="theme-toggle" id="theme-toggle"></button>
+            <button class="nav-hamburger" id="hamburger" aria-label="メニューを開く">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+    </nav>
+
+    <div class="drawer-overlay" id="drawerOverlay"></div>
+    <aside class="nav-drawer" id="navDrawer">
+        <div class="drawer-header">
+            <span class="drawer-username" id="drawerUsername"></span>
+            <button class="drawer-close" id="drawerClose" aria-label="閉じる">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+            </button>
+        </div>
+        <nav class="drawer-nav">
+            <a href="/settings.html" class="drawer-link">
+                <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3" />
+                    <path
+                        d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                </svg>
+                設定
+            </a>
+            <a href="/news.html" class="drawer-link">
+                <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                </svg>
+                お知らせ
+            </a>
+            <a href="/admin.html" class="drawer-link hidden" id="drawer-admin">
+                <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+                管理
+            </a>
+            <a href="/files.html" class="drawer-link">
+                <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                </svg>
+                マイファイル
+            </a>
+            <a href="/upload.html" class="drawer-link">
+                <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+                    <polyline points="16 6 12 2 8 6" />
+                    <line x1="12" y1="2" x2="12" y2="15" />
+                </svg>
+                アップロード
+            </a>
+        </nav>
+        <div class="drawer-divider"></div>
+        <button class="drawer-logout" id="drawer-logout">
+            <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            ログアウト
+        </button>
+        <div class="drawer-footer">
+            <div class="drawer-footer-brand">
+                <span class="drawer-footer-logo">video<em>app</em></span>
+                <span class="drawer-footer-ver">v1.0</span>
+            </div>
+            <p class="drawer-footer-desc">プライベートファイルストレージ</p>
+            <div class="drawer-footer-credits">
+
+                <span>© 2026 Videoapp</span><span class="dot">·</span>
+                <span>DitrexMC</span>
+            </div>
+            <div class="drawer-footer-links">
+                <a href="/terms.html">利用規約</a><span>·</span><a href="/privacy.html">プライバシー</a>
+            </div>
+        </div>
+    </aside>
+
+    <main>
+        <div class="container">
+            <div class="stat-tag reveal"><span class="stat-tag-dot"></span>Settings</div>
+            <div class="sec-eye reveal reveal-d1">
+                <div class="sec-eye-text">
+                    <div class="sec-lbl">Config</div>
+                    <h1>設定</h1>
+                </div>
+            </div>
+
+            <div class="settings-sections mt-2">
+                <div class="card reveal reveal-d2">
+                    <div class="section-title">アカウント情報</div>
+                    <div style="display:grid;gap:.6rem;margin-top:1rem">
+                        <div
+                            style="display:flex;justify-content:space-between;align-items:center;padding:.4rem 0;border-bottom:1px solid var(--border)">
+                            <span
+                                style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-sub)">ユーザー名</span>
+                            <div style="display:flex;gap:.3rem;align-items:center">
+                                <input class="input" id="edit-username"
+                                    style="width:auto;min-width:100px;font-size:.82rem;padding:.25rem .5rem"
+                                    maxlength="32">
+                                <button class="btn btn-ghost btn-sm" id="save-username-btn"
+                                    style="font-size:.7rem;padding:.18rem .6rem;flex-shrink:0">保存</button>
+                            </div>
+                        </div>
+                        <div
+                            style="display:flex;justify-content:space-between;align-items:center;padding:.4rem 0;border-bottom:1px solid var(--border)">
+                            <span
+                                style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-sub)">ユーザーID</span>
+                            <span id="info-uid"
+                                style="font-size:.72rem;font-family:monospace;color:var(--text-sub)">—</span>
+                        </div>
+                        <div
+                            style="display:flex;justify-content:space-between;align-items:center;padding:.4rem 0;border-bottom:1px solid var(--border)">
+                            <span
+                                style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-sub)">権限</span>
+                            <span id="info-role">—</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;padding:.4rem 0">
+                            <span
+                                style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-sub)">ストレージ</span>
+                            <span id="info-storage">—</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card reveal reveal-d3">
+                    <div class="section-title">ログインセッション</div>
+                    <p style="color:var(--text-sub);font-size:.82rem;margin-top:.3rem;margin-bottom:.8rem">
+                        現在ログインしている端末の一覧です。不要なセッションはここから削除できます。</p>
+                    <div id="session-list">
+                        <span class="text-sm text-sub">読み込み中…</span>
+                    </div>
+                </div>
+
+                <div class="card reveal reveal-d4">
+                    <div class="section-title">セキュリティ</div>
+                    <p style="color:var(--text-sub);font-size:.85rem;margin-top:.4rem;margin-bottom:1rem">
+                        ログイントークンを再生成するか、全セッションをログアウトします。</p>
+                    <div style="display:flex;gap:.6rem;flex-wrap:wrap">
+                        <button class="btn btn-outline btn-sm" id="rotate-btn">トークンを再生成</button>
+                        <button class="btn btn-danger btn-sm" id="logout-all-btn">全ログアウト</button>
+                    </div>
+                    <div id="msg"></div>
+                    <div id="new-token-wrap" style="display:none;margin-top:1rem">
+                        <label
+                            style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-sub)">新しいトークン</label>
+                        <div class="url-row" style="margin-top:.4rem">
+                            <input class="input" id="new-token-input" type="text" readonly onclick="this.select()">
+                            <button class="copy-btn" id="copy-token-btn">コピー</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card reveal reveal-d5">
+                    <div class="section-title">その他</div>
+                    <p style="color:var(--text-sub);font-size:.85rem;margin-top:.4rem;margin-bottom:1rem">
+                        利用規約およびプライバシーポリシーをご確認いただけます。</p>
+                    <div style="display:flex;gap:.6rem;flex-wrap:wrap">
+                        <a href="/terms.html" class="btn btn-outline btn-sm" style="text-decoration:none">利用規約</a>
+                        <a href="/privacy.html" class="btn btn-outline btn-sm"
+                            style="text-decoration:none">プライバシーポリシー</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="/js/particles.js"></script>
+    <script type="module" src="/js/nav.js"></script>
+    <script type="module">
+        import { auth } from '/js/core/auth.js?v=1';
+        import { api } from '/js/core/api.js?v=1';
+        import { dialog } from '/js/ui/dialog.js';
+
+        if (window.__vaSettingsInit) throw new Error('already initialized');
+        window.__vaSettingsInit = true;
+        document.addEventListener('va:navigate-away', () => { window.__vaSettingsInit = false; });
+
+        if (!auth.requireAuth()) throw new Error('redirect');
+
+        const me = auth.getUser();
+        document.getElementById('nav-username').textContent = me?.username ?? '';
+        document.getElementById('drawerUsername').textContent = me?.username ?? '';
+        if (auth.isAdmin()) document.getElementById('drawer-admin').classList.remove('hidden');
+
+        function esc(s) {
+            return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function fmtBytes(b) {
+            if (!b) return '—';
+            const u = ['B', 'KB', 'MB', 'GB'];
+            let i = 0;
+            while (b >= 1024 && i < u.length - 1) { b /= 1024; i++; }
+            return b.toFixed(i ? 1 : 0) + ' ' + u[i];
+        }
+
+        function fmtDate(ts) {
+            if (!ts) return '—';
+            const d = new Date(ts);
+            return d.toLocaleDateString('ja-JP') + ' ' + d.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function showMsg(text, ok) {
+            const el = document.getElementById('msg');
+            el.textContent = text;
+            el.className = ok ? 'ok' : 'err';
+        }
+
+        // Session validity check on load (redirects to login if invalid)
+        await api.auth.check();
+
+        try {
+            const user = await api.auth.me();
+            document.getElementById('edit-username').value = user.username ?? '';
+            document.getElementById('info-uid').textContent = user.user_id ?? user.id ?? '—';
+            document.getElementById('info-role').textContent = user.role ?? '—';
+            const used = user.storage_used_bytes ?? 0;
+            const limit = user.storage_limit_bytes;
+            document.getElementById('info-storage').textContent = limit
+                ? `${fmtBytes(used)} / ${fmtBytes(limit)}`
+                : `${fmtBytes(used)} (無制限)`;
+        } catch { }
+
+        document.getElementById('save-username-btn').addEventListener('click', async () => {
+            const val = document.getElementById('edit-username').value.trim();
+            if (!val) return;
+            try {
+                await api.auth.updateUsername(val);
+                document.getElementById('nav-username').textContent = val;
+                document.getElementById('drawerUsername').textContent = val;
+                auth.updateUser({ ...(auth.getUser() || {}), username: val });
+                showMsg('ユーザー名を更新しました', true);
+            } catch {
+                showMsg('更新に失敗しました', false);
+            }
+        });
+
+        // Load sessions
+        async function loadSessions() {
+            const listEl = document.getElementById('session-list');
+            try {
+                const res = await api.auth.sessions();
+                const sessions = res?.items ?? [];
+                if (!sessions.length) {
+                    listEl.innerHTML = '<span class="text-sm text-sub">セッションがありません</span>';
+                    return;
+                }
+                const currentAgo = ' (現在)';
+                listEl.innerHTML = sessions.map((s, i) => {
+                    const ua = (s.user_agent || '不明').replace(/</g, '');
+                    const ip = s.ip_address || '—';
+                    const last = fmtDate(s.last_used_at || s.created_at);
+                    const expires = new Date(s.expires_at).getTime() > Date.now() ? '<span style="color:var(--green)">有効</span>' : '<span style="color:var(--red)">期限切れ</span>';
+                    const isCurrent = i === 0;
+                    return `
+                        <div class="session-row">
+                            <div class="session-meta">
+                                <div class="session-device">
+                                    ${esc(ua)}${isCurrent ? ' <span class="session-badge session-badge-current">現在</span>' : ''}
+                                </div>
+                                <div class="session-detail">
+                                    <span>IP: ${esc(ip)}</span>
+                                    <span>最終: ${esc(last)}</span>
+                                    <span>${expires}</span>
+                                </div>
+                            </div>
+                            ${!isCurrent ? `<button class="btn btn-danger btn-sm revoke-session-btn" data-id="${esc(s.id)}" style="font-size:.7rem;flex-shrink:0">ログアウト</button>` : ''}
+                        </div>`;
+                }).join('');
+
+                document.querySelectorAll('.revoke-session-btn').forEach(btn => {
+                    btn.addEventListener('click', async () => {
+                        if (!confirm('このセッションをログアウトしますか？')) return;
+                        btn.disabled = true;
+                        try { await api.auth.revokeSession(btn.dataset.id); loadSessions(); }
+                        catch { btn.disabled = false; alert('失敗しました'); }
+                    });
+                });
+            } catch {
+                listEl.innerHTML = '<span class="text-sm text-sub" style="color:var(--red)">セッションの取得に失敗しました</span>';
+            }
+        }
+        await loadSessions();
+
+        document.getElementById('rotate-btn').addEventListener('click', async () => {
+            if (!confirm('ログイントークンを再生成しますか？\n全セッションがログアウトされます。')) return;
+            try {
+                const res = await api.auth.rotateToken();
+                const token = res.token ?? res.login_token ?? res.loginToken;
+                document.getElementById('new-token-input').value = token ?? '—';
+                document.getElementById('new-token-wrap').style.display = '';
+                showMsg('トークンを再生成しました', true);
+            } catch {
+                showMsg('再生成に失敗しました', false);
+            }
+        });
+
+        function copyToClipboard(text) {
+            if (navigator.clipboard) {
+                return navigator.clipboard.writeText(text);
+            }
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            return Promise.resolve();
+        }
+        document.getElementById('copy-token-btn').addEventListener('click', () => {
+            const val = document.getElementById('new-token-input').value;
+            copyToClipboard(val).catch(() => { });
+            const btn = document.getElementById('copy-token-btn');
+            btn.textContent = 'コピー済み';
+            btn.classList.add('copied');
+            setTimeout(() => { btn.textContent = 'コピー'; btn.classList.remove('copied'); }, 2000);
+        });
+
+        document.getElementById('logout-all-btn').addEventListener('click', async () => {
+            if (!confirm('全セッションをログアウトしますか？')) return;
+            try {
+                await api.auth.logoutAll();
+                auth.clearSession();
+                location.href = '/login.html';
+            } catch {
+                showMsg('ログアウトに失敗しました', false);
+            }
+        });
+
+        if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => { });
+    </script>
+    <script src="/js/dev-reload.js?v=1" defer></script>
+</body>
+
+</html>

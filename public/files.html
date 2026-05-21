@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>videoapp — マイファイル</title>
+    <link rel="icon" href="/icons/icon-192.png">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+JP:wght@400;500;700&display=swap"
+        rel="stylesheet">
+
+    <script src="/js/nav-theme.js"></script>
+    <link rel="stylesheet" href="/css/common.css">
+    <link rel="stylesheet" href="/css/app.css">
+    <style>
+        .files-toolbar {
+            display: flex;
+            gap: .4rem;
+            align-items: center;
+            flex-wrap: nowrap;
+            margin-bottom: .75rem;
+        }
+
+        .files-toolbar .input {
+            min-width: 0;
+            flex: 1 1 140px;
+            height: 2.1rem;
+            box-sizing: border-box;
+            padding: 0 .7rem;
+            transition: flex-basis 0.28s ease, width 0.28s ease;
+        }
+
+        .files-toolbar .btn {
+            padding: 0 .9rem;
+            font-size: 0.875rem;
+            height: 2.1rem;
+            box-sizing: border-box;
+            white-space: nowrap;
+        }
+
+        #bulk-delete-btn {
+            max-width: 0;
+            overflow: hidden;
+            padding-left: 0;
+            padding-right: 0;
+            opacity: 0;
+            pointer-events: none;
+            transition: max-width 0.28s ease, padding 0.28s ease, opacity 0.2s ease;
+            white-space: nowrap;
+        }
+
+        #bulk-delete-btn.bulk-visible {
+            max-width: 12rem;
+            padding-left: .9rem;
+            padding-right: .9rem;
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: .4rem;
+            font-size: .85rem;
+            color: var(--text-sub);
+            overflow: hidden;
+            max-height: 0;
+            opacity: 0;
+            padding: 0;
+            transition: max-height 0.22s ease, opacity 0.2s ease, padding 0.22s ease;
+        }
+
+        .breadcrumb.visible {
+            max-height: 3rem;
+            opacity: 1;
+            padding: .4rem 0 .6rem;
+        }
+
+        .breadcrumb-sep {
+            opacity: .4;
+        }
+
+        .breadcrumb-folder {
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .empty-row td {
+            padding: 2.5rem;
+            text-align: center;
+            color: var(--text-sub);
+            font-size: .9rem;
+        }
+
+        .table-clip {
+            overflow: hidden;
+            border-radius: 10px;
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: .5rem .25rem 0;
+        }
+
+        .fr-actions {
+            white-space: nowrap;
+            display: flex;
+            gap: .25rem;
+            align-items: center;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="canvas"></canvas>
+    <div class="page-glow page-glow-1"></div>
+    <div class="page-glow page-glow-2"></div>
+
+    <nav id="nav">
+        <div class="nav-left">
+            <a class="nav-logo" href="/">
+                <span class="logo-text">video<em>app</em></span>
+            </a>
+        </div>
+        <ul class="nav-links">
+            <li><a href="/"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                        <polyline points="9 22 9 12 15 12 15 22" />
+                    </svg><span class="nav-label">ホーム</span></a></li>
+            <li><a href="/upload.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="17 8 12 3 7 8" />
+                        <line x1="12" y1="3" x2="12" y2="15" />
+                    </svg><span class="nav-label">アップロード</span></a></li>
+            <li><a href="/files.html" class="active"><svg class="nav-icon" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                    </svg><span class="nav-label">マイファイル</span></a></li>
+        </ul>
+        <div class="nav-right">
+            <span id="nav-username" class="nav-username"></span>
+            <button class="theme-toggle" id="theme-toggle"></button>
+            <button class="nav-hamburger" id="hamburger" aria-label="メニューを開く">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+    </nav>
+
+    <div class="drawer-overlay" id="drawerOverlay"></div>
+    <aside class="nav-drawer" id="navDrawer">
+        <div class="drawer-header">
+            <span class="drawer-username" id="drawerUsername"></span>
+            <button class="drawer-close" id="drawerClose" aria-label="閉じる">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+            </button>
+        </div>
+        <nav class="drawer-nav">
+            <a href="/settings.html" class="drawer-link">
+                <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3" />
+                    <path
+                        d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                </svg>
+                設定
+            </a>
+            <a href="/news.html" class="drawer-link">
+                <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                </svg>
+                お知らせ
+            </a>
+            <a href="/admin.html" class="drawer-link hidden" id="drawer-admin">
+                <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+                管理
+            </a>
+            <a href="/files.html" class="drawer-link">
+                <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                </svg>
+                マイファイル
+            </a>
+            <a href="/upload.html" class="drawer-link">
+                <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+                    <polyline points="16 6 12 2 8 6" />
+                    <line x1="12" y1="2" x2="12" y2="15" />
+                </svg>
+                アップロード
+            </a>
+        </nav>
+        <div class="drawer-divider"></div>
+        <button class="drawer-logout" id="drawer-logout">
+            <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            ログアウト
+        </button>
+        <div class="drawer-footer">
+            <div class="drawer-footer-brand">
+                <span class="drawer-footer-logo">video<em>app</em></span>
+                <span class="drawer-footer-ver">v1.0</span>
+            </div>
+            <p class="drawer-footer-desc">プライベートファイルストレージ</p>
+            <div class="drawer-footer-credits">
+
+                <span>© 2026 Videoapp</span><span class="dot">·</span>
+                <span>DitrexMC</span>
+            </div>
+        </div>
+    </aside>
+
+    <main>
+        <div class="container">
+            <div class="stat-tag reveal">
+                <span class="stat-tag-dot"></span>
+                My Files
+            </div>
+
+            <div class="sec-eye reveal reveal-d1">
+                <div class="sec-eye-text">
+                    <div class="sec-lbl">Storage</div>
+                    <h1>マイファイル</h1>
+                </div>
+            </div>
+
+            <!-- Storage bar -->
+            <div class="card mb-2 reveal reveal-d2">
+                <div class="flex justify-between items-center mb-1">
+                    <span class="text-sm text-sub">ストレージ使用量</span>
+                    <span class="text-sm" id="usage-label">読み込み中…</span>
+                </div>
+                <div class="usage-bar-wrap">
+                    <div class="usage-bar" id="usage-bar" style="width:0%"></div>
+                </div>
+            </div>
+
+            <!-- Toolbar -->
+            <div class="files-toolbar reveal reveal-d2">
+                <div class="dd" id="filter-type-dd">
+                    <button class="dd-trigger btn btn-ghost btn-sm" type="button" id="filter-type-btn"
+                        style="width:auto;display:inline-flex;align-items:center;gap:.35rem;white-space:nowrap">
+                        <span class="dd-label" id="filter-type-label">すべて</span>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 12 15 18 9" />
+                        </svg>
+                    </button>
+                    <div class="dd-menu">
+                        <button type="button" class="dd-item dd-active" data-value="all">すべて</button>
+                        <button type="button" class="dd-item" data-value="group">グループのみ</button>
+                        <button type="button" class="dd-item" data-value="hidden">非表示のみ</button>
+                        <button type="button" class="dd-item" data-value="file">ファイルのみ</button>
+                    </div>
+                </div>
+                <input class="input" id="search-input" placeholder="ファイル名で検索…" type="search" autocomplete="off">
+                <button class="btn btn-ghost btn-sm" id="refresh-btn">更新</button>
+                <button class="btn btn-danger btn-sm" id="bulk-delete-btn">選択を削除</button>
+            </div>
+
+            <!-- Breadcrumb -->
+            <div class="breadcrumb" id="breadcrumb">
+                <button class="btn btn-ghost btn-sm" id="breadcrumb-root" style="padding:.15rem .5rem">← マイファイル</button>
+                <span class="breadcrumb-sep">/</span>
+                <span class="breadcrumb-folder" id="breadcrumb-name"></span>
+                <span class="breadcrumb-sep" id="breadcrumb-count"></span>
+                <button class="btn btn-ghost btn-sm" id="breadcrumb-rename-btn"
+                    style="display:none;width:1.9rem;min-width:1.9rem;height:1.75rem;padding:0;justify-content:center;font-size:.78rem"
+                    title="フォルダ名変更"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                    </svg></button>
+            </div>
+
+            <!-- Table -->
+            <div class="table-clip reveal reveal-d3">
+                <div class="table-wrap">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th style="width:2rem">
+                                    <label class="custom-cb" style="padding:0;margin:0">
+                                        <input type="checkbox" id="select-all">
+                                        <span class="custom-cb-box"></span>
+                                    </label>
+                                </th>
+                                <th>ファイル名</th>
+                                <th style="width:5.5rem">サイズ</th>
+                                <th style="width:9.5rem;white-space:nowrap">アップロード日</th>
+                                <th style="width:9.5rem;white-space:nowrap">有効期限</th>
+                                <th style="width:7.5rem">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="file-tbody">
+                            <tr class="empty-row">
+                                <td colspan="6">読み込み中…</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Pagination -->
+            <div class="pagination reveal reveal-d3">
+                <span class="text-sm text-sub" id="page-info">0件</span>
+                <div style="display:flex;gap:.4rem">
+                    <button class="btn btn-ghost btn-sm" id="page-prev">← 前へ</button>
+                    <button class="btn btn-ghost btn-sm" id="page-next">次へ →</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="/js/particles.js"></script>
+    <script src="/js/file-row.js"></script>
+    <script type="module" src="/js/nav.js"></script>
+    <script type="module">
+        import { auth } from '/js/core/auth.js';
+        import { api } from '/js/core/api.js';
+        import { cache } from '/js/core/cache.js';
+        import { dialog } from '/js/ui/dialog.js';
+        import { bindTypeDropdown } from '/js/ui/dropdown.js';
+
+        if (window.__vaFilesInit) throw new Error('already initialized');
+        window.__vaFilesInit = true;
+        document.addEventListener('va:navigate-away', () => { window.__vaFilesInit = false; });
+
+        if (!auth.requireAuth()) throw new Error('auth required');
+
+        // Show cached user immediately — no network wait
+        const cachedUser = auth.getUser();
+        if (cachedUser) {
+            document.getElementById('nav-username').textContent = cachedUser.username ?? '';
+            document.getElementById('drawerUsername').textContent = cachedUser.username ?? '';
+            if (cachedUser.role === 'admin') {
+                document.getElementById('drawer-admin').classList.remove('hidden');
+            }
+            const used = cachedUser.storage_used_bytes ?? 0;
+            const limit = cachedUser.storage_limit_bytes ?? 0;
+            const pct = limit > 0 ? Math.min(100, used / limit * 100) : 0;
+            document.getElementById('usage-bar').style.width = pct.toFixed(1) + '%';
+            document.getElementById('usage-label').textContent =
+                limit > 0 ? fmtBytes(used) + ' / ' + fmtBytes(limit) : fmtBytes(used) + ' / 無制限';
+        }
+
+        /* ─── state ─────────────────────────────────────────── */
+        const PAGE_SIZE = 50;
+        let allItems = [];
+        let page = 1;
+        let folderId = null;
+        let folderName = null;
+        let groupId = null;
+        let groupLabel = null;
+        let filterType = 'all';
+
+        /* ─── helpers ───────────────────────────────────────── */
+        async function slideTransition(exitX, enterX, work) {
+            const tableWrap = document.querySelector('.table-wrap');
+            tableWrap.style.transition = 'opacity 0.18s ease, transform 0.2s ease';
+            tableWrap.style.opacity = '0';
+            tableWrap.style.transform = 'translateX(' + exitX + 'px)';
+            await new Promise(r => setTimeout(r, 210));
+            await work();
+            tableWrap.style.transition = 'none';
+            tableWrap.style.opacity = '0';
+            tableWrap.style.transform = 'translateX(' + enterX + 'px)';
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+                tableWrap.style.transition = 'opacity 0.25s ease, transform 0.28s ease';
+                tableWrap.style.opacity = '1';
+                tableWrap.style.transform = 'translateX(0)';
+                setTimeout(() => { tableWrap.style.transition = ''; tableWrap.style.transform = ''; }, 300);
+            }));
+        }
+
+        /* ─── helpers ───────────────────────────────────────── */
+        function fmtBytes(b) {
+            if (b == null || isNaN(b)) return '0 B';
+            if (b >= 1073741824) return (b / 1073741824).toFixed(2) + ' GB';
+            if (b >= 1048576) return (b / 1048576).toFixed(1) + ' MB';
+            if (b >= 1024) return (b / 1024).toFixed(0) + ' KB';
+            return b + ' B';
+        }
+
+        function esc(s) {
+            return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function filtered() {
+            const q = document.getElementById('search-input').value.trim().toLowerCase();
+            const t = filterType;
+
+            return allItems.filter(item => {
+                if (t === 'group' && item.type !== 'group') return false;
+                if (t === 'hidden' && !(item.type === 'file' && !item.public)) return false;
+                if (t === 'file' && item.type !== 'file') return false;
+                if (!q) return true;
+                if (q.startsWith('.')) {
+                    if (item.type !== 'file') return false;
+                    const ext = (item.safe_name || '').split('.').pop().toLowerCase();
+                    return ext === q.slice(1);
+                }
+                const name = item.type === 'file' ? (item.safe_name || '') : (item.type === 'group' ? (item.label || '') : (item.name || ''));
+                return name.toLowerCase().includes(q);
+            });
+        }
+
+        /* ─── render ─────────────────────────────────────────── */
+        function render() {
+            const items = filtered();
+            const total = items.length;
+            const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+            if (page > totalPages) page = totalPages;
+
+            const start = (page - 1) * PAGE_SIZE;
+            const slice = items.slice(start, start + PAGE_SIZE);
+
+            const tbody = document.getElementById('file-tbody');
+
+            if (total === 0) {
+                tbody.innerHTML = '<tr class="empty-row"><td colspan="6">ファイルがありません</td></tr>';
+            } else {
+                tbody.innerHTML = slice.map(item => {
+                    const extras = [];
+                    if (item.type === 'folder') {
+                        extras.push('<button class="btn btn-ghost btn-sm fr-rename-btn" data-id="' + esc(item.id) + '" data-name="' + esc(item.name) + '" style="width:1.9rem;min-width:1.9rem;height:1.75rem;padding:0;justify-content:center;font-size:.78rem" title="名前変更"><svg xmlns=\'http://www.w3.org/2000/svg\' width=\'12\' height=\'12\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2.2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'><path d=\'M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7\'/><path d=\'M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z\'/></svg></button>');
+                    }
+                    if (item.type === 'group') {
+                        return window.buildGroupRow(item, { cbClass: 'file-cb' });
+                    }
+                    return window.buildFileRow(item, { cbClass: 'file-cb', actionExtras: extras });
+                }).join('');
+                tbody.querySelectorAll('tr').forEach((tr, i) => {
+                    tr.classList.add('row-reveal');
+                    requestAnimationFrame(() => {
+                        setTimeout(() => tr.classList.add('visible'), i * 30);
+                    });
+                });
+            }
+
+            document.getElementById('page-info').textContent =
+                total > 0 ? (start + 1) + '–' + Math.min(start + PAGE_SIZE, total) + ' / ' + total + '件' : '0件';
+            document.getElementById('page-prev').disabled = page <= 1;
+            document.getElementById('page-next').disabled = page >= totalPages;
+            document.getElementById('select-all').checked = false;
+
+            updateBulkBtn();
+            bindRowEvents();
+        }
+
+        function bindRowEvents() {
+            document.querySelectorAll('.file-cb').forEach(cb =>
+                cb.addEventListener('change', updateBulkBtn));
+
+            document.querySelectorAll('.fr-del-btn').forEach(btn =>
+                btn.addEventListener('click', async (e) => {
+                    if (!e.shiftKey && !await dialog.confirm({ title: 'ファイル削除', message: 'このファイルを削除しますか？', confirmLabel: '削除', danger: true })) return;
+                    btn.disabled = true;
+                    try { await api.files.delete(btn.dataset.id); await reload(); }
+                    catch { btn.disabled = false; }
+                }));
+
+            document.querySelectorAll('.fr-del-folder-btn').forEach(btn =>
+                btn.addEventListener('click', async (e) => {
+                    if (!e.shiftKey && !await dialog.confirm({ title: 'フォルダ削除', message: 'このフォルダを削除しますか？\n中のファイルもすべて削除されます。', confirmLabel: '削除', danger: true })) return;
+                    btn.disabled = true;
+                    try { await api.folders.delete(btn.dataset.id); await reload(); }
+                    catch { btn.disabled = false; }
+                }));
+
+            document.querySelectorAll('.fr-folder-name').forEach(el =>
+                el.addEventListener('click', async () => {
+                    folderId = el.dataset.folderId;
+                    folderName = el.dataset.folderName;
+                    page = 1;
+                    await slideTransition(-50, 50, reload);
+                }));
+
+            document.querySelectorAll('.fr-rename-btn').forEach(btn =>
+                btn.addEventListener('click', async () => {
+                    const name = await dialog.prompt({ title: 'フォルダ名変更', label: '新しいフォルダ名', defaultValue: btn.dataset.name });
+                    if (!name || !name.trim()) return;
+                    btn.disabled = true;
+                    try { await api.folders.rename(btn.dataset.id, name.trim()); await reload(); }
+                    catch { await dialog.alert('名前変更に失敗しました', 'エラー'); btn.disabled = false; }
+                }));
+
+            document.querySelectorAll('.fr-group-name').forEach(el =>
+                el.addEventListener('click', async () => {
+                    groupId = el.dataset.groupId;
+                    groupLabel = el.dataset.groupLabel;
+                    page = 1;
+                    await slideTransition(-50, 50, reload);
+                }));
+
+            document.querySelectorAll('.fr-rename-group-btn').forEach(btn =>
+                btn.addEventListener('click', async () => {
+                    const current = btn.dataset.label || '';
+                    const name = await dialog.prompt({ title: 'グループ名変更', label: 'グループ名', defaultValue: current });
+                    if (name === null) return;
+                    btn.disabled = true;
+                    try { await api.groups.rename(btn.dataset.id, name.trim() || '無題グループ'); await reload(); }
+                    catch { await dialog.alert('名前変更に失敗しました', 'エラー'); btn.disabled = false; }
+                }));
+
+            document.querySelectorAll('.fr-del-group-btn').forEach(btn =>
+                btn.addEventListener('click', async (e) => {
+                    if (!e.shiftKey && !await dialog.confirm({ title: 'グループ削除', message: 'このグループを削除しますか？\n中のファイルもすべて削除されます。', confirmLabel: '削除', danger: true })) return;
+                    btn.disabled = true;
+                    try { await api.groups.delete(btn.dataset.id); await reload(); }
+                    catch { await dialog.alert('削除に失敗しました', 'エラー'); btn.disabled = false; }
+                }));
+
+            document.querySelectorAll('.fr-discord-btn').forEach(btn =>
+                btn.addEventListener('click', async () => {
+                    if (btn.dataset.copying) return;
+                    const url = location.origin + btn.dataset.url;
+                    try {
+                        await navigator.clipboard.writeText(url);
+                        btn.dataset.copying = '1';
+                        btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+                        btn.style.color = 'var(--green)';
+                    } catch { dialog.showToken({ title: 'URLをコピー', token: url }); }
+                    setTimeout(() => {
+                        btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057.102 18.074.11 18.09.125 18.1a19.9 19.9 0 0 0 5.993 3.03.077.077 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>';
+                        btn.style.color = '';
+                        delete btn.dataset.copying;
+                    }, 1800);
+                }));
+
+            document.querySelectorAll('.fr-urlcopy-btn').forEach(btn =>
+                btn.addEventListener('click', async () => {
+                    if (btn.dataset.copying) return;
+                    const url = location.origin + btn.dataset.url;
+                    try {
+                        await navigator.clipboard.writeText(url);
+                        btn.dataset.copying = '1';
+                        btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+                        btn.style.color = 'var(--green)';
+                    } catch { dialog.showToken({ title: 'URLをコピー', token: url }); }
+                    setTimeout(() => {
+                        btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>';
+                        btn.style.color = '';
+                        delete btn.dataset.copying;
+                    }, 1800);
+                }));
+        }
+
+        function updateBulkBtn() {
+            const count = document.querySelectorAll('.file-cb:checked').length;
+            const btn = document.getElementById('bulk-delete-btn');
+            btn.classList.toggle('bulk-visible', count > 0);
+            if (count > 0) btn.textContent = '\u9078\u629e\u3092\u524a\u9664 (' + count + ')';
+        }
+
+        function updateBreadcrumb() {
+            const crumb = document.getElementById('breadcrumb');
+            const renameBtn = document.getElementById('breadcrumb-rename-btn');
+            const countEl = document.getElementById('breadcrumb-count');
+            if (folderId) {
+                document.getElementById('breadcrumb-name').textContent = folderName || 'フォルダ';
+                countEl.textContent = allItems.length + '件';
+                renameBtn.style.display = '';
+                crumb.classList.add('visible');
+            } else if (groupId) {
+                document.getElementById('breadcrumb-name').textContent = groupLabel || 'グループ';
+                countEl.textContent = allItems.length + '件';
+                renameBtn.style.display = 'none';
+                crumb.classList.add('visible');
+            } else {
+                crumb.classList.remove('visible');
+            }
+        }
+
+        /* ─── data loading ───────────────────────────────────── */
+        async function loadStorage() {
+            try {
+                const me = await api.auth.me();
+                const used = me.storage_used_bytes ?? 0;
+                const limit = me.storage_limit_bytes ?? 0;
+                const pct = limit > 0 ? Math.min(100, used / limit * 100) : 0;
+                document.getElementById('usage-bar').style.width = pct.toFixed(1) + '%';
+                document.getElementById('usage-label').textContent =
+                    limit > 0 ? fmtBytes(used) + ' / ' + fmtBytes(limit) : fmtBytes(used) + ' / 無制限';
+            } catch { /* ignore */ }
+        }
+
+        async function loadItems() {
+            if (folderId) {
+                const res = await api.folders.files(folderId);
+                allItems = (res?.items ?? []).map(f => ({
+                    id: f.id,
+                    safe_name: f.safe_name,
+                    size: f.size,
+                    created_at: f.created_at,
+                    expires_at: f.expires_at,
+                    public: f.public,
+                    status: f.status,
+                    type: 'file'
+                }));
+            } else if (groupId) {
+                const res = await api.groups.files(groupId);
+                allItems = (res?.items ?? []).map(f => ({
+                    id: f.id,
+                    safe_name: f.safe_name,
+                    size: f.size,
+                    created_at: f.created_at,
+                    expires_at: f.expires_at,
+                    public: f.public,
+                    status: f.status,
+                    type: 'file'
+                }));
+            } else {
+                const [fRes, dRes, gRes] = await Promise.all([
+                    api.files.list({ limit: 100 }),
+                    api.folders.list(),
+                    api.groups.list(),
+                ]);
+                const files = (fRes?.items ?? [])
+                    .filter(f => !f.folder_id && !f.group_id)
+                    .map(f => ({
+                        id: f.id,
+                        safe_name: f.safe_name,
+                        size: f.size,
+                        created_at: f.created_at,
+                        expires_at: f.expires_at,
+                        public: f.public,
+                        status: f.status,
+                        type: 'file'
+                    }));
+                const folders = (dRes?.items ?? []).map(d => ({
+                    id: d.id,
+                    name: d.name,
+                    created_at: d.created_at,
+                    type: 'folder'
+                }));
+                const groups = (gRes?.items ?? []).map(g => ({
+                    id: g.id,
+                    label: g.label,
+                    file_count: g.file_count,
+                    total_size: g.total_size,
+                    created_at: g.created_at,
+                    expires_at: g.expires_at,
+                    is_private: g.is_private,
+                    type: 'group'
+                }));
+                allItems = [...groups, ...folders, ...files];
+            }
+            allItems.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        }
+
+        async function reload() {
+            try {
+                await Promise.all([loadStorage(), loadItems()]);
+            } catch (e) {
+                document.getElementById('file-tbody').innerHTML =
+                    '<tr class="empty-row"><td colspan="6">読み込みに失敗しました: ' + esc(String(e?.message ?? e)) + '</td></tr>';
+                return;
+            }
+            updateBreadcrumb();
+            render();
+        }
+
+        /* ─── init ───────────────────────────────────────────── */
+        async function init() {
+            const me = await api.auth.me();
+            auth.updateUser(me);
+            document.getElementById('nav-username').textContent = me.username ?? '';
+            document.getElementById('drawerUsername').textContent = me.username ?? '';
+            if (auth.isAdmin()) document.getElementById('drawer-admin').classList.remove('hidden');
+
+            document.getElementById('file-tbody').addEventListener('click', e => {
+                const btn = e.target.closest('.fr-actions .btn.btn-ghost, .fr-actions a.btn.btn-ghost');
+                if (!btn) return;
+                btn.classList.remove('btn-press-ok');
+                btn.getBoundingClientRect();
+                btn.classList.add('btn-press-ok');
+                setTimeout(() => btn.classList.remove('btn-press-ok'), 2000);
+            });
+
+            document.getElementById('breadcrumb-root').addEventListener('click', async () => {
+                folderId = null; folderName = null; groupId = null; groupLabel = null; page = 1;
+                await slideTransition(50, -50, reload);
+            });
+
+            document.getElementById('breadcrumb-rename-btn').addEventListener('click', async () => {
+                const name = await dialog.prompt({ title: 'フォルダ名変更', label: '新しいフォルダ名', defaultValue: folderName || '' });
+                if (!name || !name.trim()) return;
+                const btn = document.getElementById('breadcrumb-rename-btn');
+                btn.disabled = true;
+                try {
+                    await api.folders.rename(folderId, name.trim());
+                    folderName = name.trim();
+                    document.getElementById('breadcrumb-name').textContent = folderName;
+                } catch { await dialog.alert('名前変更に失敗しました', 'エラー'); }
+                btn.disabled = false;
+            });
+
+            document.getElementById('refresh-btn').addEventListener('click', () => reload());
+
+            document.getElementById('search-input').addEventListener('input', () => { page = 1; render(); });
+
+            bindTypeDropdown({
+                ddEl: document.getElementById('filter-type-dd'),
+                onSelect(val) { filterType = val; page = 1; render(); }
+            });
+
+            document.getElementById('page-prev').addEventListener('click', () => { if (page > 1) { page--; render(); } });
+            document.getElementById('page-next').addEventListener('click', () => { page++; render(); });
+
+            document.getElementById('select-all').addEventListener('change', function () {
+                document.querySelectorAll('.file-cb').forEach(cb => { cb.checked = this.checked; });
+                updateBulkBtn();
+            });
+
+            document.getElementById('bulk-delete-btn').addEventListener('click', async (e) => {
+                const checked = Array.from(document.querySelectorAll('.file-cb:checked'));
+                if (!checked.length) return;
+                if (!e.shiftKey && !await dialog.confirm({ title: '一括削除', message: checked.length + ' 件を削除しますか？', confirmLabel: '削除', danger: true })) return;
+
+                const fileIds = checked.filter(c => c.dataset.id.startsWith('f:')).map(c => c.dataset.id.slice(2));
+                const folderIds = checked.filter(c => c.dataset.id.startsWith('d:')).map(c => c.dataset.id.slice(2));
+                const groupIds = checked.filter(c => c.dataset.id.startsWith('g:')).map(c => c.dataset.id.slice(2));
+
+                await Promise.all([
+                    ...fileIds.map(id => api.files.delete(id).catch(() => { })),
+                    ...folderIds.map(id => api.folders.delete(id).catch(() => { })),
+                    ...groupIds.map(id => api.groups.delete(id).catch(() => { })),
+                ]);
+                await reload();
+            });
+
+            await reload();
+        }
+
+        init().catch(() => { });
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(() => { });
+        }
+    </script>
+    <script src="/js/dev-reload.js?v=1" defer></script>
+</body>
+
+</html>

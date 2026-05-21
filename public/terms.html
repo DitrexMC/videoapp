@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>videoapp — 利用規約</title>
+    <link rel="icon" href="/icons/icon-192.png">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+JP:wght@400;500;700&display=swap"
+        rel="stylesheet">
+
+    <script src="/js/nav-theme.js"></script>
+    <link rel="stylesheet" href="/css/common.css">
+    <link rel="stylesheet" href="/css/app.css">
+    <style>
+        .legal-content {
+            font-size: .88rem;
+            line-height: 1.9;
+            color: var(--text-sub);
+        }
+
+        .legal-content h2 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--text);
+            margin-top: 2rem;
+            margin-bottom: .6rem;
+            letter-spacing: -.3px;
+        }
+
+        .legal-content p {
+            margin-bottom: .8rem;
+        }
+
+        .legal-content ul {
+            list-style: disc;
+            padding-left: 1.4rem;
+            margin-bottom: .8rem;
+        }
+
+        .legal-content li {
+            margin-bottom: .35rem;
+        }
+
+        .legal-content strong {
+            color: var(--text);
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="canvas"></canvas>
+    <div class="page-glow page-glow-1"></div>
+    <div class="page-glow page-glow-2"></div>
+
+    <nav id="nav">
+        <div class="nav-left">
+            <a class="nav-logo" href="/">
+                <span class="logo-text">video<em>app</em></span>
+            </a>
+        </div>
+        <ul class="nav-links">
+            <li><a href="/"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span class="nav-label">ホーム</span></a></li>
+            <li><a href="/upload.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><span class="nav-label">アップロード</span></a></li>
+            <li><a href="/files.html"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg><span class="nav-label">マイファイル</span></a></li>
+        </ul>
+        <div class="nav-right">
+            <span id="nav-username" class="nav-username"></span>
+            <button class="theme-toggle" id="theme-toggle"></button>
+            <button class="nav-hamburger" id="hamburger" aria-label="メニューを開く">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+    </nav>
+
+    <div class="drawer-overlay" id="drawerOverlay"></div>
+    <aside class="nav-drawer" id="navDrawer">
+        <div class="drawer-header">
+            <span class="drawer-username" id="drawerUsername"></span>
+            <button class="drawer-close" id="drawerClose" aria-label="閉じる">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+            </button>
+        </div>
+        <nav class="drawer-nav">
+            <a href="/settings.html" class="drawer-link">
+                <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3" />
+                    <path
+                        d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                </svg>
+                設定
+            </a>
+            <a href="/news.html" class="drawer-link">
+                <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                </svg>
+                お知らせ
+            </a>
+            <a href="/admin.html" class="drawer-link hidden" id="drawer-admin">
+                <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+                管理
+            </a>
+            <a href="/files.html" class="drawer-link">
+                <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                </svg>
+                マイファイル
+            </a>
+            <a href="/upload.html" class="drawer-link">
+                <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+                    <polyline points="16 6 12 2 8 6" />
+                    <line x1="12" y1="2" x2="12" y2="15" />
+                </svg>
+                アップロード
+            </a>
+        </nav>
+        <div class="drawer-divider"></div>
+        <button class="drawer-logout" id="drawer-logout">
+            <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            ログアウト
+        </button>
+        <div class="drawer-footer">
+            <div class="drawer-footer-brand">
+                <span class="drawer-footer-logo">video<em>app</em></span>
+                <span class="drawer-footer-ver">v1.0</span>
+            </div>
+            <p class="drawer-footer-desc">プライベートファイルストレージ</p>
+            <div class="drawer-footer-credits">
+                <span>© 2026 Videoapp</span><span class="dot">·</span>
+                <span>DitrexMC</span>
+            </div>
+            <div class="drawer-footer-links">
+                <a href="/terms.html">利用規約</a><span>·</span><a href="/privacy.html">プライバシー</a>
+            </div>
+        </div>
+    </aside>
+
+    <main>
+        <div class="container">
+            <div class="stat-tag reveal"><span class="stat-tag-dot"></span>Legal</div>
+            <div class="sec-eye reveal reveal-d1">
+                <div class="sec-eye-text">
+                    <div class="sec-lbl">Terms</div>
+                    <h1>利用規約</h1>
+                </div>
+            </div>
+
+            <div class="card reveal reveal-d2">
+                <div class="legal-content">
+                    <p>この利用規約（以下「本規約」）は、videoapp（以下「本サービス」）の利用条件を定めるものです。ユーザーは本規約に同意の上、本サービスをご利用ください。</p>
+
+                    <h2>第1条（適用）</h2>
+                    <p>本規約は、ユーザーと本サービスの運営者との間の本サービスの利用に関する一切の関係に適用されます。</p>
+
+                    <h2>第2条（利用登録）</h2>
+                    <p>ユーザーは、本サービスが定める方法により利用登録を行うものとします。本サービスは、以下の事由に該当する場合、利用登録を承認しないことがあります。</p>
+                    <ul>
+                        <li>過去に本規約に違反したことがある場合</li>
+                        <li>登録情報に虚偽の内容が含まれている場合</li>
+                        <li>その他、運営者が不適切と判断した場合</li>
+                    </ul>
+
+                    <h2>第3条（ユーザーIDおよびパスワードの管理）</h2>
+                    <p>ユーザーは、自己の責任において、本サービスのユーザーIDおよびパスワードを管理するものとします。ユーザーIDおよびパスワードが第三者に使用されたことによって生じた損害について、本サービスは一切の責任を負いません。
+                    </p>
+
+                    <h2>第4条（禁止事項）</h2>
+                    <p>ユーザーは、本サービスの利用にあたり、以下の行為を行ってはなりません。</p>
+                    <ul>
+                        <li>法令または公序良俗に違反する行為</li>
+                        <li>犯罪行為に関連する行為</li>
+                        <li>本サービスのサーバーまたはネットワーク機能を破壊・妨害する行為</li>
+                        <li>本サービスによって得られた情報を商業的に利用する行為</li>
+                        <li>本サービスの運営を妨害するおそれのある行為</li>
+                        <li>不正アクセスまたはこれを試みる行為</li>
+                        <li>他のユーザーに関する個人情報を収集・蓄積する行為</li>
+                        <li>違法なコンテンツ（児童ポルノ、著作権侵害物、マルウェア等）をアップロードする行為</li>
+                        <li>他者の知的財産権、肖像権、プライバシーを侵害するコンテンツをアップロードする行為</li>
+                        <li>本サービスが許諾しない方法での過剰なAPIリクエスト</li>
+                        <li>本サービスに過度な負荷を与える行為</li>
+                        <li>その他、運営者が不適切と判断する行為</li>
+                    </ul>
+
+                    <h2>第5条（コンテンツの取り扱い）</h2>
+                    <p>ユーザーが本サービスにアップロードしたファイルの所有権はユーザーに帰属します。ただし、本サービスはファイルの保存・配信に必要な範囲で当該ファイルを複製・配信できるものとします。</p>
+
+                    <h2>第6条（サービスの提供停止）</h2>
+                    <p>本サービスは、以下のいずれかに該当する場合、ユーザーに事前通知することなく本サービスの全部または一部の提供を停止・中断できるものとします。</p>
+                    <ul>
+                        <li>システムの保守点検または更新を行う場合</li>
+                        <li>地震、落雷、火災、停電、天災などの不可抗力により提供が困難な場合</li>
+                        <li>その他、運営者が停止を必要と判断した場合</li>
+                    </ul>
+
+                    <h2>第7条（利用制限および登録抹消）</h2>
+                    <p>本サービスは、ユーザーが以下のいずれかに該当する場合、事前の通知なくユーザーのアカウントを停止または削除できるものとします。</p>
+                    <ul>
+                        <li>本規約のいずれかの条項に違反した場合</li>
+                        <li>不正行為または不適切な利用が確認された場合</li>
+                        <li>その他、運営者が不適切と判断した場合</li>
+                    </ul>
+
+                    <h2>第8条（免責事項）</h2>
+                    <p>本サービスは、以下の事項について一切の責任を負いません。</p>
+                    <ul>
+                        <li>ユーザーがアップロードしたファイルの消失・破損</li>
+                        <li>第三者による不正アクセス</li>
+                        <li>サービス停止による損害</li>
+                        <li>ユーザー間またはユーザーと第三者間の紛争</li>
+                    </ul>
+
+                    <h2>第9条（規約の変更）</h2>
+                    <p>本サービスは、必要と判断した場合、ユーザーに通知することなく本規約を変更できるものとします。変更後の規約は本サービス上に表示された時点で効力を生じるものとします。</p>
+
+                    <h2>第10条（準拠法・管轄裁判所）</h2>
+                    <p>本規約の解釈にあたっては日本法を準拠法とします。本サービスに関して紛争が生じた場合、運営者の所在地を管轄する裁判所を専属的合意管轄とします。</p>
+
+                    <p style="margin-top:2rem;color:var(--text-sub);font-size:.78rem">制定日: 2026年4月1日</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="/js/particles.js"></script>
+    <script type="module" src="/js/nav.js"></script>
+    <script type="module">
+        import { auth } from '/js/core/auth.js';
+
+        if (window.__vaTermsInit) throw new Error('already initialized');
+        window.__vaTermsInit = true;
+        document.addEventListener('va:navigate-away', () => { window.__vaTermsInit = false; });
+
+        const user = auth.getUser();
+        if (user) {
+            document.getElementById('nav-username').textContent = user.username ?? '';
+            document.getElementById('drawerUsername').textContent = user.username ?? '';
+            if (auth.isAdmin()) document.getElementById('drawer-admin').classList.remove('hidden');
+        }
+
+        if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => { });
+    </script>
+    <script src="/js/dev-reload.js?v=1" defer></script>
+</body>
+
+</html>
